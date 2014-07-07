@@ -17,9 +17,15 @@
 #[phase(plugin)]
 extern crate peg;
 
+peg!(
+  ENTAIL = "|="
+)
+
 fn main() 
 {
-  let ntcc_grammar = peg!(
-    ENTAIL = "|="
-  );
+  let input = "|=";
+  match grammar::parse(input) {
+    Ok(()) => println!("{} matched!", input),
+    Err(msg) => println!("Error: {}", msg)
+  }
 }

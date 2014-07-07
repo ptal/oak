@@ -16,7 +16,7 @@ use std::string::String;
 use syntax::ast;
 use syntax::ast::{Ident};
 use syntax::codemap;
-use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, DummyResult};
+use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, MacItem, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::parse;
 use syntax::parse::{token, ParseSess};
@@ -34,7 +34,7 @@ struct Rule{
 }
 
 enum Expression{
-  LiteralStrExpr(String) // "match_me"
+  LiteralStrExpr(String) // "match me"
 }
 
 struct ParseError{
@@ -83,16 +83,16 @@ impl<'a> PegParser<'a>
     let token = self.rp.bump_and_get();
     match token{
       token::LIT_STR(id) => {
-        LiteralStrExpr(self.id_to_string(id))
-      }
+        LiteralStrExpr(id_to_string(id))
+      },
       _ => { self.rp.unexpected_last(&token); }
     }
   }
+}
 
-  fn id_to_string(&mut self, id: Ident) -> String
-  {
-    String::from_str(self.rp.id_to_interned_str(id).get())
-  }
+fn id_to_string(id: Ident) -> String
+{
+  String::from_str(token::get_ident(id).get())
 }
 
 #[plugin_registrar]
@@ -101,19 +101,54 @@ pub fn plugin_registrar(reg: &mut Registry) {
 }
 
 fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
-  let s = match parse(cx, tts) {
-      Some(s) => s,
-      None => return DummyResult::expr(sp)
-  };
-  // let s2 = s.as_slice();
-  MacExpr::new(quote_expr!(cx, $s))
+  parse(cx, tts)
 }
 
-fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Option<()> {
+fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
   use syntax::print::pprust;
 
   let mut parser = PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
   
-  None
+  transform(cx, &peg)
+}
+
+fn transform(cx: &mut ExtCtxt, peg: &Peg) -> Box<MacResult>
+{
+  let rule = &peg.rules.as_slice()[0];
+  let rule_name = rule.name;
+  let rule_def = transform_rule_def(cx, &rule.def);
+  MacItem::new((quote_item!(cx, 
+    pub mod grammar{
+      pub fn parse(input: &str) -> Result<(), String>
+      {
+        match $rule_name(input, 0) {
+          Ok(_) => Ok(()),
+          Err(msg) => Err(msg)
+        }
+      }
+
+      fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
+      {
+        $rule_def
+      }
+    }
+  )).unwrap())
+}
+
+fn transform_rule_def(cx: &mut ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
+{
+  match expr {
+    &LiteralStrExpr(ref lit_str) => {
+      let s_len = lit_str.len();
+      let lit_str_slice = lit_str.as_slice();
+      quote_expr!(cx,
+        if input.slice_from(pos).starts_with($lit_str_slice) {
+          Ok(pos + $s_len)
+        } else {
+          Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
+        }
+      )
+    }
+  }
 }
