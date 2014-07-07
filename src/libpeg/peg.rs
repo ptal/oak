@@ -32,14 +32,16 @@ struct Peg{
 
 struct Rule{
   name: Ident,
-  def: Expression
+  def: Box<Expression>
 }
 
 enum Expression{
   LiteralStrExpr(String), // "match me"
   AnySingleCharExpr, // .
-  NonTerminalSymbol(Ident) // another_rule
+  NonTerminalSymbol(Ident), // another_rule
+  SequenceExpr(Vec<Box<Expression>>)
 }
+
 
 struct ParseError{
   span: codemap::Span,
@@ -104,11 +106,8 @@ impl<'a> PegParser<'a>
   {
     let name = self.parse_rule_decl();
     self.rp.expect(&token::EQ);
-    let body = self.parse_rule_def();
-    match body {
-      Some(body) => Rule{name: name, def: body},
-      None => self.rp.fatal(format!("The rule {} must have a definition.", id_to_string(name)).as_slice())
-    }
+    let body = self.parse_rule_rhs(id_to_string(name).as_slice());
+    Rule{name: name, def: body}
   }
 
   fn parse_rule_decl(&mut self) -> Ident
@@ -116,35 +115,52 @@ impl<'a> PegParser<'a>
     self.rp.parse_ident()
   }
 
-  fn parse_rule_def(&mut self) -> Option<Expression>
+  fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression>
+  {
+    self.parse_rule_seq(rule_name)
+  }
+
+  fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression>
+  {
+    let mut seq = Vec::new();
+    loop{
+      match self.parse_rule_atom(rule_name){
+        Some(expr) => seq.push(expr),
+        None => break
+      }
+    }
+    if seq.len() == 0 {
+      self.rp.fatal(format!("The rule {} must have a definition body.", rule_name).as_slice());
+    }
+    box SequenceExpr(seq)
+  }
+
+  fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
   {
     let token = self.rp.token.clone();
     match token {
       token::LIT_STR(id) => {
         self.rp.bump();
-        Some(LiteralStrExpr(id_to_string(id)))
+        Some(box LiteralStrExpr(id_to_string(id)))
       },
       token::DOT => {
         self.rp.bump();
-        Some(AnySingleCharExpr)
+        Some(box AnySingleCharExpr)
       },
       token::LPAREN => {
         self.rp.bump();
-        let res = self.parse_rule_def();
-        match res {
-          None => self.rp.fatal("Only expression can be surrounded by parenthesis"),
-          _ => () 
-        };
+        let res = self.parse_rule_rhs(rule_name);
         self.rp.expect(&token::RPAREN);
-        res
+        Some(res)
       },
       token::IDENT(id, _) => {
         if(self.is_rule_decl()) { None }
         else {
           self.rp.bump();
-          Some(NonTerminalSymbol(id))
+          Some(box NonTerminalSymbol(id))
         }
-      }
+      },
+      token::EOF => { None },
       _ => { self.rp.unexpected_last(&token); }
     }
   }
@@ -178,14 +194,16 @@ fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
   compile_peg(cx, &peg)
 }
 
-struct ToTokensVec(Vec<ast::P<ast::Item>>);
+struct ToTokensVec<T>
+{
+  v: Vec<T>
+}
 
-impl ToTokens for ToTokensVec
+impl<T: ToTokens> ToTokens for ToTokensVec<T>
 {
   fn to_tokens(&self, cx: &ExtCtxt) -> Vec<ast::TokenTree> {
     let mut tts = Vec::new();
-    let ToTokensVec(ref v) = *self;
-    for e in v.iter() {
+    for e in self.v.iter() {
       tts = tts.append(e.to_tokens(cx).as_slice());
     }
     tts
@@ -212,7 +230,7 @@ fn compile_peg(cx: &ExtCtxt, peg: &Peg) -> Box<MacResult>
     ).unwrap())
   }
 
-  let items = ToTokensVec(rule_items);
+  let items = ToTokensVec{v: rule_items};
 
   MacItem::new(quote_item!(cx,
     pub mod $grammar_name
@@ -242,29 +260,58 @@ fn compile_entry_point(cx: &ExtCtxt, start_rule: &Ident) -> ast::P<ast::Item>
     })).unwrap()
 }
 
-fn compile_rule_def(cx: &ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
+fn compile_rule_def(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
 {
   match expr {
-    &LiteralStrExpr(ref lit_str) => {
+    & box LiteralStrExpr(ref lit_str) => {
       let s_len = lit_str.len();
       let lit_str_slice = lit_str.as_slice();
       quote_expr!(cx,
-        if input.slice_from(pos).starts_with($lit_str_slice) {
+        if input.len() - pos == 0 {
+          Err(format!("End of input when matching the literal `{}`", $lit_str_slice))
+        } else if input.slice_from(pos).starts_with($lit_str_slice) {
           Ok(pos + $s_len)
         } else {
           Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
         }
       )
     },
-    &AnySingleCharExpr => {
+    & box AnySingleCharExpr => {
       quote_expr!(cx,
-        Ok(pos + 1)
+        if input.len() - pos > 0 {
+          Ok(pos + 1)
+        } else {
+          Err(format!("End of input when matching `.`"))
+        }
       )
     },
-    &NonTerminalSymbol(ref id) => {
+    & box NonTerminalSymbol(ref id) => {
       quote_expr!(cx,
         $id(input, pos)
       )
+    },
+    & box SequenceExpr(ref seq) => {
+      compile_sequence(cx, seq.as_slice())
     }
   }
 }
+
+fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+{
+  assert!(seq.len() > 0);
+  let head = compile_rule_def(cx, seq.head().unwrap());
+  if seq.len() == 1 {
+    head
+  } else {
+    let tail = compile_sequence(cx, seq.tail());
+    quote_expr!(cx,
+      match $head {
+        Ok(pos) => {
+          $tail
+        }
+        x => x
+      }
+    )
+  }
+}
+

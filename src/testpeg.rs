@@ -19,14 +19,17 @@ extern crate peg;
 
 peg!(
   grammar ntcc;
-  ENTAIL = test
-  test = .
-  another_test = "blah"
+
+  test = STORE ENTAIL
+
+  ENTAIL = "|="
+  STORE = "store" spacing
+  spacing = .
 )
 
 fn main() 
 {
-  let input = "|=";
+  let input = "store |=";
   match ntcc::parse(input) {
     Ok(None) => println!("{} fully matched!", input),
     Ok(Some(remain)) => println!("{} partially matched, it remains `{}`", input, remain),
