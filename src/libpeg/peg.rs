@@ -25,6 +25,7 @@ use syntax::parse::parser::Parser;
 use rustc::plugin::Registry;
 
 struct Peg{
+  name: Ident,
   rules: Vec<Rule>
 }
 
@@ -58,7 +59,32 @@ impl<'a> PegParser<'a>
 
   fn parse_grammar(&mut self) -> Peg
   {
-    Peg{rules: self.parse_rules()}
+    let grammar_name = self.parse_grammar_decl();
+    let rules = self.parse_rules(); 
+    Peg{name: grammar_name, rules: rules}
+  }
+
+  fn parse_grammar_decl(&mut self) -> Ident
+  {
+    if !self.eat_grammar_keyword() {
+      let token_str = self.rp.this_token_to_str();
+      self.rp.fatal(
+        format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), found instead `{}`",
+          token_str).as_slice())
+    }
+    let grammar_name = self.rp.parse_ident();
+    self.rp.expect(&token::SEMI);
+    grammar_name
+  }
+
+  fn eat_grammar_keyword(&mut self) -> bool
+  {
+    let is_grammar_kw = match self.rp.token {
+      token::IDENT(sid, false) => "grammar" == id_to_string(sid).as_slice(),
+      _ => false
+    };
+    if is_grammar_kw { self.rp.bump() }
+    is_grammar_kw
   }
 
   fn parse_rules(&mut self) -> Vec<Rule>
@@ -119,11 +145,13 @@ fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
 
 fn transform(cx: &mut ExtCtxt, peg: &Peg) -> Box<MacResult>
 {
+  let grammar_name = peg.name;
   let rule = &peg.rules.as_slice()[0];
   let rule_name = rule.name;
   let rule_def = transform_rule_def(cx, &rule.def);
-  MacItem::new((quote_item!(cx, 
-    pub mod grammar{
+  MacItem::new((quote_item!(cx,
+    pub mod $grammar_name
+    {
       pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
       {
         match $rule_name(input, 0) {
