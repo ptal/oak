@@ -34,7 +34,8 @@ struct Rule{
 }
 
 enum Expression{
-  LiteralStrExpr(String) // "match me"
+  LiteralStrExpr(String), // "match me"
+  AnySingleCharExpr // .
 }
 
 struct ParseError{
@@ -85,6 +86,9 @@ impl<'a> PegParser<'a>
       token::LIT_STR(id) => {
         LiteralStrExpr(id_to_string(id))
       },
+      token::DOT => {
+        AnySingleCharExpr
+      },
       _ => { self.rp.unexpected_last(&token); }
     }
   }
@@ -120,10 +124,17 @@ fn transform(cx: &mut ExtCtxt, peg: &Peg) -> Box<MacResult>
   let rule_def = transform_rule_def(cx, &rule.def);
   MacItem::new((quote_item!(cx, 
     pub mod grammar{
-      pub fn parse(input: &str) -> Result<(), String>
+      pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
       {
         match $rule_name(input, 0) {
-          Ok(_) => Ok(()),
+          Ok(pos) => {
+            assert!(pos <= input.len())
+            if pos == input.len() {
+              Ok(None) 
+            } else {
+              Ok(Some(input.slice_from(pos)))
+            }
+          },
           Err(msg) => Err(msg)
         }
       }
@@ -148,6 +159,11 @@ fn transform_rule_def(cx: &mut ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
         } else {
           Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
         }
+      )
+    },
+    &AnySingleCharExpr => {
+      quote_expr!(cx,
+        Ok(pos + 1)
       )
     }
   }

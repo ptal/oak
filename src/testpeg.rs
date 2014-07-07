@@ -18,14 +18,15 @@
 extern crate peg;
 
 peg!(
-  ENTAIL = "|="
+  ENTAIL = .
 )
 
 fn main() 
 {
   let input = "|=";
   match grammar::parse(input) {
-    Ok(()) => println!("{} matched!", input),
+    Ok(None) => println!("{} full matched!", input),
+    Ok(Some(remain)) => println!("{} partially matched, it remains `{}`", input, remain),
     Err(msg) => println!("Error: {}", msg)
   }
 }
