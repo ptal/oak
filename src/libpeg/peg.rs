@@ -115,6 +115,11 @@ impl<'a> PegParser<'a>
       token::DOT => {
         AnySingleCharExpr
       },
+      token::LPAREN => {
+        let res = self.parse_rule_def();
+        self.rp.expect(&token::RPAREN);
+        res
+      },
       _ => { self.rp.unexpected_last(&token); }
     }
   }

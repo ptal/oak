@@ -19,14 +19,14 @@ extern crate peg;
 
 peg!(
   grammar ntcc;
-  ENTAIL = .
+  ENTAIL = ("|=")
 )
 
 fn main() 
 {
   let input = "|=";
   match ntcc::parse(input) {
-    Ok(None) => println!("{} full matched!", input),
+    Ok(None) => println!("{} fully matched!", input),
     Ok(Some(remain)) => println!("{} partially matched, it remains `{}`", input, remain),
     Err(msg) => println!("Error: {}", msg)
   }
