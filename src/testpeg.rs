@@ -19,7 +19,9 @@ extern crate peg;
 
 peg!(
   grammar ntcc;
-  ENTAIL = ("|=")
+  ENTAIL = test
+  test = .
+  another_test = "blah"
 )
 
 fn main() 

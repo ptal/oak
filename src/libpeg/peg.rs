@@ -18,6 +18,7 @@ use syntax::ast::{Ident};
 use syntax::codemap;
 use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, MacItem, DummyResult};
 use syntax::ext::build::AstBuilder;
+use syntax::ext::quote::rt::ToTokens;
 use syntax::parse;
 use syntax::parse::{token, ParseSess};
 use syntax::parse::token::Token;
@@ -36,7 +37,8 @@ struct Rule{
 
 enum Expression{
   LiteralStrExpr(String), // "match me"
-  AnySingleCharExpr // .
+  AnySingleCharExpr, // .
+  NonTerminalSymbol(Ident) // another_rule
 }
 
 struct ParseError{
@@ -53,7 +55,8 @@ impl<'a> PegParser<'a>
 {
   fn new(sess: &'a ParseSess,
          cfg: ast::CrateConfig,
-         tts: Vec<ast::TokenTree>) -> PegParser<'a> {
+         tts: Vec<ast::TokenTree>) -> PegParser<'a> 
+  {
     PegParser{rp: parse::new_parser_from_tts(sess, cfg, tts)}
   }
 
@@ -89,7 +92,12 @@ impl<'a> PegParser<'a>
 
   fn parse_rules(&mut self) -> Vec<Rule>
   {
-    vec![self.parse_rule()]
+    let mut rules = vec![];
+    while(self.rp.token != token::EOF)
+    {
+      rules.push(self.parse_rule());
+    }
+    rules
   }
 
   fn parse_rule(&mut self) -> Rule
@@ -97,7 +105,10 @@ impl<'a> PegParser<'a>
     let name = self.parse_rule_decl();
     self.rp.expect(&token::EQ);
     let body = self.parse_rule_def();
-    Rule{name: name, def: body}
+    match body {
+      Some(body) => Rule{name: name, def: body},
+      None => self.rp.fatal(format!("The rule {} must have a definition.", id_to_string(name)).as_slice())
+    }
   }
 
   fn parse_rule_decl(&mut self) -> Ident
@@ -105,23 +116,42 @@ impl<'a> PegParser<'a>
     self.rp.parse_ident()
   }
 
-  fn parse_rule_def(&mut self) -> Expression
+  fn parse_rule_def(&mut self) -> Option<Expression>
   {
-    let token = self.rp.bump_and_get();
-    match token{
+    let token = self.rp.token.clone();
+    match token {
       token::LIT_STR(id) => {
-        LiteralStrExpr(id_to_string(id))
+        self.rp.bump();
+        Some(LiteralStrExpr(id_to_string(id)))
       },
       token::DOT => {
-        AnySingleCharExpr
+        self.rp.bump();
+        Some(AnySingleCharExpr)
       },
       token::LPAREN => {
+        self.rp.bump();
         let res = self.parse_rule_def();
+        match res {
+          None => self.rp.fatal("Only expression can be surrounded by parenthesis"),
+          _ => () 
+        };
         self.rp.expect(&token::RPAREN);
         res
       },
+      token::IDENT(id, _) => {
+        if(self.is_rule_decl()) { None }
+        else {
+          self.rp.bump();
+          Some(NonTerminalSymbol(id))
+        }
+      }
       _ => { self.rp.unexpected_last(&token); }
     }
+  }
+
+  fn is_rule_decl(&mut self) -> bool
+  {
+    self.rp.look_ahead(1, |t| match t { &token::EQ => true, _ => false})
   }
 }
 
@@ -145,42 +175,74 @@ fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
   let mut parser = PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
   
-  transform(cx, &peg)
+  compile_peg(cx, &peg)
 }
 
-fn transform(cx: &mut ExtCtxt, peg: &Peg) -> Box<MacResult>
+struct ToTokensVec(Vec<ast::P<ast::Item>>);
+
+impl ToTokens for ToTokensVec
+{
+  fn to_tokens(&self, cx: &ExtCtxt) -> Vec<ast::TokenTree> {
+    let mut tts = Vec::new();
+    let ToTokensVec(ref v) = *self;
+    for e in v.iter() {
+      tts = tts.append(e.to_tokens(cx).as_slice());
+    }
+    tts
+  }
+}
+
+fn compile_peg(cx: &ExtCtxt, peg: &Peg) -> Box<MacResult>
 {
   let grammar_name = peg.name;
-  let rule = &peg.rules.as_slice()[0];
-  let rule_name = rule.name;
-  let rule_def = transform_rule_def(cx, &rule.def);
-  MacItem::new((quote_item!(cx,
-    pub mod $grammar_name
-    {
-      pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
-      {
-        match $rule_name(input, 0) {
-          Ok(pos) => {
-            assert!(pos <= input.len())
-            if pos == input.len() {
-              Ok(None) 
-            } else {
-              Ok(Some(input.slice_from(pos)))
-            }
-          },
-          Err(msg) => Err(msg)
-        }
-      }
 
+  let parse_fn = compile_entry_point(cx, &peg.rules.as_slice()[0].name);
+
+  let mut rule_items = Vec::new();
+
+  for rule in peg.rules.iter()
+  {
+    let rule_name = rule.name;
+    let rule_def = compile_rule_def(cx, &rule.def);
+    rule_items.push(quote_item!(cx,
       fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
       {
         $rule_def
       }
+    ).unwrap())
+  }
+
+  let items = ToTokensVec(rule_items);
+
+  MacItem::new(quote_item!(cx,
+    pub mod $grammar_name
+    {
+      $parse_fn
+      $items
     }
-  )).unwrap())
+  ).unwrap())
 }
 
-fn transform_rule_def(cx: &mut ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
+fn compile_entry_point(cx: &ExtCtxt, start_rule: &Ident) -> ast::P<ast::Item>
+{
+  (quote_item!(cx,
+    pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
+    {
+      match $start_rule(input, 0) {
+        Ok(pos) => {
+          assert!(pos <= input.len())
+          if pos == input.len() {
+            Ok(None) 
+          } else {
+            Ok(Some(input.slice_from(pos)))
+          }
+        },
+        Err(msg) => Err(msg)
+      }
+    })).unwrap()
+}
+
+fn compile_rule_def(cx: &ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
 {
   match expr {
     &LiteralStrExpr(ref lit_str) => {
@@ -197,6 +259,11 @@ fn transform_rule_def(cx: &mut ExtCtxt, expr: &Expression) -> ast::P<ast::Expr>
     &AnySingleCharExpr => {
       quote_expr!(cx,
         Ok(pos + 1)
+      )
+    },
+    &NonTerminalSymbol(ref id) => {
+      quote_expr!(cx,
+        $id(input, pos)
       )
     }
   }
