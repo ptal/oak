@@ -16,6 +16,7 @@ use std::string::String;
 use syntax::ast;
 use syntax::ast::{Ident};
 use syntax::codemap;
+use syntax::codemap::{Spanned, Span, mk_sp, spanned, respan};
 use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, MacItem, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::ext::quote::rt::ToTokens;
@@ -32,19 +33,20 @@ struct Peg{
 
 struct Rule{
   name: Ident,
-  def: Box<Expression>
+  def: Box<Expression>,
 }
 
-enum Expression{
+enum Expression_{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
   NonTerminalSymbol(Ident), // another_rule
   Sequence(Vec<Box<Expression>>)
 }
 
+type Expression = Spanned<Expression_>;
 
 struct ParseError{
-  span: codemap::Span,
+  span: Span,
   msg: String
 }
 
@@ -122,6 +124,7 @@ impl<'a> PegParser<'a>
 
   fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression>
   {
+    let lo = self.rp.span.lo;
     let mut seq = Vec::new();
     loop{
       match self.parse_rule_atom(rule_name){
@@ -129,10 +132,18 @@ impl<'a> PegParser<'a>
         None => break
       }
     }
+    let hi = self.rp.last_span.hi;
     if seq.len() == 0 {
-      self.rp.fatal(format!("The rule {} must have a definition body.", rule_name).as_slice());
+      self.rp.span_fatal(
+        mk_sp(lo, hi),
+        format!("In rule {}: must defined at least one parsing expression.", rule_name).as_slice());
     }
-    box Sequence(seq)
+    box spanned(lo, hi, Sequence(seq))
+  }
+
+  fn last_respan<T>(&self, t: T) -> Box<Spanned<T>>
+  {
+    box respan(self.rp.last_span, t)
   }
 
   fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -141,11 +152,11 @@ impl<'a> PegParser<'a>
     match token {
       token::LIT_STR(id) => {
         self.rp.bump();
-        Some(box StrLiteral(id_to_string(id)))
+        Some(self.last_respan(StrLiteral(id_to_string(id))))
       },
       token::DOT => {
         self.rp.bump();
-        Some(box AnySingleChar)
+        Some(self.last_respan(AnySingleChar))
       },
       token::LPAREN => {
         self.rp.bump();
@@ -154,10 +165,10 @@ impl<'a> PegParser<'a>
         Some(res)
       },
       token::IDENT(id, _) => {
-        if(self.is_rule_decl()) { None }
+        if(self.is_rule_lhs()) { None }
         else {
           self.rp.bump();
-          Some(box NonTerminalSymbol(id))
+          Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
       token::EOF => { None },
@@ -165,7 +176,7 @@ impl<'a> PegParser<'a>
     }
   }
 
-  fn is_rule_decl(&mut self) -> bool
+  fn is_rule_lhs(&mut self) -> bool
   {
     self.rp.look_ahead(1, |t| match t { &token::EQ => true, _ => false})
   }
@@ -181,7 +192,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
   reg.register_macro("peg", expand)
 }
 
-fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+fn expand(cx: &mut ExtCtxt, sp: Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
   parse(cx, tts)
 }
 
@@ -262,17 +273,17 @@ fn compile_entry_point(cx: &ExtCtxt, start_rule: &Ident) -> ast::P<ast::Item>
 
 fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
 {
-  match expr {
-    & box StrLiteral(ref lit_str) => {
+  match &expr.node {
+    &StrLiteral(ref lit_str) => {
       compile_str_literal(cx, lit_str)
     },
-    & box AnySingleChar => {
+    &AnySingleChar => {
       compile_any_single_char(cx)
     },
-    & box NonTerminalSymbol(ref id) => {
+    &NonTerminalSymbol(ref id) => {
       compile_non_terminal_symbol(cx, id)
     },
-    & box Sequence(ref seq) => {
+    &Sequence(ref seq) => {
       compile_sequence(cx, seq.as_slice())
     }
   }
