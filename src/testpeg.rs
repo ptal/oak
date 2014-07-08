@@ -22,9 +22,9 @@ peg!(
 
   test = STORE ENTAIL
 
-  ENTAIL = "|="
-  STORE = "store" spacing
-  spacing = .
+  ENTAIL = "|=" undecl
+  STORE = "store" spacing not_declared
+  spacing = . another_not_declared
 )
 
 fn main() 

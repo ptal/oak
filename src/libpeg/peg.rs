@@ -97,7 +97,7 @@ impl<'a> PegParser<'a>
   fn parse_rules(&mut self) -> Vec<Rule>
   {
     let mut rules = vec![];
-    while(self.rp.token != token::EOF)
+    while self.rp.token != token::EOF
     {
       rules.push(self.parse_rule());
     }
@@ -165,7 +165,7 @@ impl<'a> PegParser<'a>
         Some(res)
       },
       token::IDENT(id, _) => {
-        if(self.is_rule_lhs()) { None }
+        if self.is_rule_lhs() { None }
         else {
           self.rp.bump();
           Some(self.last_respan(NonTerminalSymbol(id)))
@@ -197,11 +197,10 @@ fn expand(cx: &mut ExtCtxt, sp: Span, tts: &[ast::TokenTree]) -> Box<MacResult> 
 }
 
 fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
-  use syntax::print::pprust;
-
   let mut parser = PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
   
+  check_peg(cx, &peg);
   compile_peg(cx, &peg)
 }
 
@@ -221,16 +220,61 @@ impl<T: ToTokens> ToTokens for ToTokensVec<T>
   }
 }
 
+fn span_err(cx: &ExtCtxt, sp: Span, m: &str) {
+  cx.parse_sess.span_diagnostic.span_err(sp, m);
+}
+
+fn check_peg(cx: &ExtCtxt, peg: &Peg)
+{
+  for rule in peg.rules.iter() {
+    check_rule_rhs(cx, peg, &rule.def);
+  }
+}
+
+fn check_rule_rhs(cx: &ExtCtxt, peg: &Peg, expr: &Box<Expression>)
+{
+  match &expr.node {
+    &NonTerminalSymbol(id) => {
+      check_non_terminal_symbol(cx, peg, id, expr.span)
+    }
+    &Sequence(ref seq) => {
+      check_sequence(cx, peg, seq.as_slice())
+    }
+    _ => ()
+  }
+}
+
+fn check_non_terminal_symbol(cx: &ExtCtxt, peg: &Peg, id: Ident, sp: Span)
+{
+  check_if_rule_is_declared(cx, peg, id, sp)
+}
+
+fn check_if_rule_is_declared(cx: &ExtCtxt, peg: &Peg, id: Ident, sp: Span)
+{
+  for rule in peg.rules.iter() {
+    if rule.name == id {
+      return;
+    }
+  }
+  span_err(cx, sp, 
+    format!("You try to call the rule `{}` which is not declared.", id_to_string(id)).as_slice());
+}
+
+fn check_sequence<'a>(cx: &ExtCtxt, peg: &Peg, seq: &'a [Box<Expression>])
+{
+  assert!(seq.len() > 0);
+  for expr in seq.iter() {
+    check_rule_rhs(cx, peg, expr);
+  }
+}
+
 fn compile_peg(cx: &ExtCtxt, peg: &Peg) -> Box<MacResult>
 {
   let grammar_name = peg.name;
-
-  let parse_fn = compile_entry_point(cx, &peg.rules.as_slice()[0].name);
-
+  let parse_fn = compile_entry_point(cx, peg.rules.as_slice()[0].name);
   let mut rule_items = Vec::new();
 
-  for rule in peg.rules.iter()
-  {
+  for rule in peg.rules.iter() {
     let rule_name = rule.name;
     let rule_def = compile_rule_rhs(cx, &rule.def);
     rule_items.push(quote_item!(cx,
@@ -252,7 +296,7 @@ fn compile_peg(cx: &ExtCtxt, peg: &Peg) -> Box<MacResult>
   ).unwrap())
 }
 
-fn compile_entry_point(cx: &ExtCtxt, start_rule: &Ident) -> ast::P<ast::Item>
+fn compile_entry_point(cx: &ExtCtxt, start_rule: Ident) -> ast::P<ast::Item>
 {
   (quote_item!(cx,
     pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
@@ -280,7 +324,7 @@ fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
     &AnySingleChar => {
       compile_any_single_char(cx)
     },
-    &NonTerminalSymbol(ref id) => {
+    &NonTerminalSymbol(id) => {
       compile_non_terminal_symbol(cx, id)
     },
     &Sequence(ref seq) => {
@@ -289,7 +333,7 @@ fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
   }
 }
 
-fn compile_non_terminal_symbol(cx: &ExtCtxt, id: &Ident) -> ast::P<ast::Expr>
+fn compile_non_terminal_symbol(cx: &ExtCtxt, id: Ident) -> ast::P<ast::Expr>
 {
   quote_expr!(cx,
     $id(input, pos)
