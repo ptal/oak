@@ -21,15 +21,16 @@ peg!(
   grammar ntcc;
 
   test = STORE ENTAIL
+       / ENTAIL STORE
 
-  ENTAIL = "|=" undecl
-  STORE = "store" spacing not_declared
-  spacing = . another_not_declared
+  ENTAIL = "|="
+  STORE = "store"
+  // spacing = " "
 )
 
 fn main() 
 {
-  let input = "store |=";
+  let input = "|=store";
   match ntcc::parse(input) {
     Ok(None) => println!("{} fully matched!", input),
     Ok(Some(remain)) => println!("{} partially matched, it remains `{}`", input, remain),

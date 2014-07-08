@@ -40,7 +40,8 @@ enum Expression_{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
   NonTerminalSymbol(Ident), // another_rule
-  Sequence(Vec<Box<Expression>>)
+  Sequence(Vec<Box<Expression>>),
+  Choice(Vec<Box<Expression>>)
 }
 
 type Expression = Spanned<Expression_>;
@@ -119,7 +120,23 @@ impl<'a> PegParser<'a>
 
   fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression>
   {
-    self.parse_rule_seq(rule_name)
+    self.parse_rule_choice(rule_name)
+  }
+
+  fn parse_rule_choice(&mut self, rule_name: &str) -> Box<Expression>
+  {
+    let lo = self.rp.span.lo;
+    let mut choices = Vec::new();
+    loop{
+      choices.push(self.parse_rule_seq(rule_name));
+      let token = self.rp.token.clone();
+      match token {
+        token::BINOP(token::SLASH) => self.rp.bump(),
+        _ => break
+      }
+    }
+    let hi = self.rp.last_span.hi;
+    box spanned(lo, hi, Choice(choices))
   }
 
   fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression>
@@ -171,8 +188,7 @@ impl<'a> PegParser<'a>
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
-      token::EOF => { None },
-      _ => { self.rp.unexpected_last(&token); }
+      _ => { None }
     }
   }
 
@@ -238,7 +254,10 @@ fn check_rule_rhs(cx: &ExtCtxt, peg: &Peg, expr: &Box<Expression>)
       check_non_terminal_symbol(cx, peg, id, expr.span)
     }
     &Sequence(ref seq) => {
-      check_sequence(cx, peg, seq.as_slice())
+      check_expr_slice(cx, peg, seq.as_slice())
+    }
+    &Choice(ref choices) => {
+      check_expr_slice(cx, peg, choices.as_slice())
     }
     _ => ()
   }
@@ -260,7 +279,7 @@ fn check_if_rule_is_declared(cx: &ExtCtxt, peg: &Peg, id: Ident, sp: Span)
     format!("You try to call the rule `{}` which is not declared.", id_to_string(id)).as_slice());
 }
 
-fn check_sequence<'a>(cx: &ExtCtxt, peg: &Peg, seq: &'a [Box<Expression>])
+fn check_expr_slice<'a>(cx: &ExtCtxt, peg: &Peg, seq: &'a [Box<Expression>])
 {
   assert!(seq.len() > 0);
   for expr in seq.iter() {
@@ -329,6 +348,9 @@ fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
     },
     &Sequence(ref seq) => {
       compile_sequence(cx, seq.as_slice())
+    },
+    &Choice(ref choices) => {
+      compile_choice(cx, choices.as_slice())
     }
   }
 }
@@ -366,14 +388,20 @@ fn compile_str_literal(cx: &ExtCtxt, lit_str: &String) -> ast::P<ast::Expr>
   )
 }
 
-fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+fn map_foldr_expr<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>], 
+  f: |ast::P<ast::Expr>, ast::P<ast::Expr>| -> ast::P<ast::Expr>) -> ast::P<ast::Expr>
 {
   assert!(seq.len() > 0);
-  let head = compile_rule_rhs(cx, seq.head().unwrap());
-  if seq.len() == 1 {
-    head
-  } else {
-    let tail = compile_sequence(cx, seq.tail());
+  seq.iter()
+     .map(|e| { compile_rule_rhs(cx, e) })
+     .rev()
+     .reduce(f)
+     .unwrap()
+}
+
+fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+{
+  map_foldr_expr(cx, seq, |tail, head| {
     quote_expr!(cx,
       match $head {
         Ok(pos) => {
@@ -382,6 +410,19 @@ fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast:
         x => x
       }
     )
-  }
+  })
 }
 
+fn compile_choice<'a>(cx: &ExtCtxt, choices: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+{
+  map_foldr_expr(cx, choices, |tail, head| {
+    quote_expr!(cx,
+      match $head {
+        Err(msg) => {
+          $tail
+        }
+        x => x
+      }
+    )
+  })
+}
