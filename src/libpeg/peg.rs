@@ -41,7 +41,8 @@ enum Expression_{
   AnySingleChar, // .
   NonTerminalSymbol(Ident), // another_rule
   Sequence(Vec<Box<Expression>>),
-  Choice(Vec<Box<Expression>>)
+  Choice(Vec<Box<Expression>>),
+  ZeroOrMore(Box<Expression>)
 }
 
 type Expression = Spanned<Expression_>;
@@ -144,7 +145,7 @@ impl<'a> PegParser<'a>
     let lo = self.rp.span.lo;
     let mut seq = Vec::new();
     loop{
-      match self.parse_rule_atom(rule_name){
+      match self.parse_rule_suffixed(rule_name){
         Some(expr) => seq.push(expr),
         None => break
       }
@@ -156,6 +157,24 @@ impl<'a> PegParser<'a>
         format!("In rule {}: must defined at least one parsing expression.", rule_name).as_slice());
     }
     box spanned(lo, hi, Sequence(seq))
+  }
+
+  fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
+  {
+    let lo = self.rp.span.lo;
+    let expr = match self.parse_rule_atom(rule_name){
+      Some(expr) => expr,
+      None => return None
+    };
+    let hi = self.rp.span.hi;
+    let token = self.rp.token.clone();
+    match token {
+      token::BINOP(token::STAR) => {
+        self.rp.bump();
+        Some(box spanned(lo, hi, ZeroOrMore(expr)))
+      }
+      _ => Some(expr)
+    }
   }
 
   fn last_respan<T>(&self, t: T) -> Box<Spanned<T>>
@@ -351,6 +370,9 @@ fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
     },
     &Choice(ref choices) => {
       compile_choice(cx, choices.as_slice())
+    },
+    &ZeroOrMore(ref e) => {
+      compile_zero_or_more(cx, e)
     }
   }
 }
@@ -427,4 +449,10 @@ fn compile_choice<'a>(cx: &ExtCtxt, choices: &'a [Box<Expression>]) -> ast::P<as
       }
     )
   })
+}
+
+fn compile_zero_or_more(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
+{
+  let expr = compile_rule_rhs(cx, expr);
+  quote_expr!(cx, $expr)
 }
