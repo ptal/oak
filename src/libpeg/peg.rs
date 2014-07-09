@@ -392,11 +392,13 @@ fn map_foldr_expr<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>],
   f: |ast::P<ast::Expr>, ast::P<ast::Expr>| -> ast::P<ast::Expr>) -> ast::P<ast::Expr>
 {
   assert!(seq.len() > 0);
-  seq.iter()
-     .map(|e| { compile_rule_rhs(cx, e) })
-     .rev()
-     .reduce(f)
-     .unwrap()
+  let mut seq_it = seq
+    .iter()
+    .map(|e| { compile_rule_rhs(cx, e) })
+    .rev();
+
+  let head = seq_it.next().unwrap();
+  seq_it.fold(head, f)
 }
 
 fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
