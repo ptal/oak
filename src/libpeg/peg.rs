@@ -427,7 +427,7 @@ impl<'a> PegCompiler<'a>
       } else if input.slice_from(pos).starts_with($lit_str_slice) {
         Ok(pos + $s_len)
       } else {
-        Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
+        Err(format!("Expected `{}` but got `{}`", $lit_str_slice, input.slice_from(pos)))
       }
     )
   }
@@ -475,10 +475,46 @@ impl<'a> PegCompiler<'a>
     })
   }
 
+  fn gen_uid(&mut self) -> uint
+  {
+    self.unique_id += 1;
+    self.unique_id - 1
+  }
+
+  fn current_rule_name(&self) -> String
+  {
+    id_to_string(self.grammar.rules.as_slice()[self.current_rule_idx].name)
+  }
+
+  fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
+  {
+    token::gensym_ident(format!(
+      "{}_{}_{}", prefix, 
+        self.current_rule_name(), 
+        self.gen_uid()).as_slice())
+  }
+
   fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
     let expr = self.compile_rule_rhs(expr);
-    // let fun_name = token::gensym_ident()
-    quote_expr!(self.cx, $expr)
+    let fun_name = self.gensym("star");
+    let cx = self.cx;
+    self.top_level_items.push(quote_item!(cx,
+      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      {
+        let mut npos = pos;
+        loop {
+          let pos = npos;
+          match $expr {
+            Ok(pos) => {
+              npos = pos;
+            },
+            _ => break
+          }
+        }
+        Ok(npos)
+      }
+    ).unwrap());
+    quote_expr!(self.cx, $fun_name(input, pos))
   }
 }

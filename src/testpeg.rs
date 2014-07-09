@@ -20,6 +20,8 @@ extern crate peg;
 peg!(
   grammar ntcc;
 
+  start = spacing test
+
   test = STORE ENTAIL
        / ENTAIL STORE
 
@@ -30,10 +32,10 @@ peg!(
 
 fn main() 
 {
-  let input = "|=  store";
+  let input = "         |=  stor e   ";
   match ntcc::parse(input) {
-    Ok(None) => println!("{} fully matched!", input),
-    Ok(Some(remain)) => println!("{} partially matched, it remains `{}`", input, remain),
+    Ok(None) => println!("`{}` fully matched!", input),
+    Ok(Some(remain)) => println!("`{}` partially matched, it remains `{}`", input, remain),
     Err(msg) => println!("Error: {}", msg)
   }
 }
