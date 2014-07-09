@@ -236,15 +236,15 @@ fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Box<MacResult> {
   let peg = parser.parse_grammar();
   
   check_peg(cx, &peg);
-  compile_peg(cx, &peg)
+  PegCompiler::compile(cx, &peg)
 }
 
-struct ToTokensVec<T>
+struct ToTokensVec<'a, T>
 {
-  v: Vec<T>
+  v: &'a Vec<T>
 }
 
-impl<T: ToTokens> ToTokens for ToTokensVec<T>
+impl<'a, T: ToTokens> ToTokens for ToTokensVec<'a, T>
 {
   fn to_tokens(&self, cx: &ExtCtxt) -> Vec<ast::TokenTree> {
     let mut tts = Vec::new();
@@ -306,153 +306,179 @@ fn check_expr_slice<'a>(cx: &ExtCtxt, peg: &Peg, seq: &'a [Box<Expression>])
   }
 }
 
-fn compile_peg(cx: &ExtCtxt, peg: &Peg) -> Box<MacResult>
+struct PegCompiler<'a>
 {
-  let grammar_name = peg.name;
-  let parse_fn = compile_entry_point(cx, peg.rules.as_slice()[0].name);
-  let mut rule_items = Vec::new();
+  top_level_items: Vec<ast::P<ast::Item>>,
+  cx: &'a ExtCtxt<'a>,
+  unique_id: uint,
+  grammar: &'a Peg,
+  current_rule_idx: uint
+}
 
-  for rule in peg.rules.iter() {
-    let rule_name = rule.name;
-    let rule_def = compile_rule_rhs(cx, &rule.def);
-    rule_items.push(quote_item!(cx,
-      fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
+impl<'a> PegCompiler<'a>
+{
+  fn compile(cx: &'a ExtCtxt, grammar: &'a Peg) -> Box<MacResult>
+  {
+    let mut compiler = PegCompiler{
+      top_level_items: Vec::new(),
+      cx: cx,
+      unique_id: 0,
+      grammar: grammar,
+      current_rule_idx: 0
+    };
+    compiler.compile_peg()
+  }
+
+  fn compile_peg(&mut self) -> Box<MacResult>
+  {
+    let grammar_name = self.grammar.name;
+    let parse_fn = self.compile_entry_point(self.grammar.rules.as_slice()[0].name);
+
+    for rule in self.grammar.rules.iter() {
+      let rule_name = rule.name;
+      let rule_def = self.compile_rule_rhs(&rule.def);
+      self.top_level_items.push(quote_item!(self.cx,
+        fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
+        {
+          $rule_def
+        }
+      ).unwrap())
+    }
+
+    let items = ToTokensVec{v: &self.top_level_items};
+
+    MacItem::new(quote_item!(self.cx,
+      pub mod $grammar_name
       {
-        $rule_def
+        $parse_fn
+        $items
       }
     ).unwrap())
   }
 
-  let items = ToTokensVec{v: rule_items};
+  fn compile_entry_point(&mut self, start_rule: Ident) -> ast::P<ast::Item>
+  {
+    (quote_item!(self.cx,
+      pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
+      {
+        match $start_rule(input, 0) {
+          Ok(pos) => {
+            assert!(pos <= input.len())
+            if pos == input.len() {
+              Ok(None) 
+            } else {
+              Ok(Some(input.slice_from(pos)))
+            }
+          },
+          Err(msg) => Err(msg)
+        }
+      })).unwrap()
+  }
 
-  MacItem::new(quote_item!(cx,
-    pub mod $grammar_name
-    {
-      $parse_fn
-      $items
-    }
-  ).unwrap())
-}
-
-fn compile_entry_point(cx: &ExtCtxt, start_rule: Ident) -> ast::P<ast::Item>
-{
-  (quote_item!(cx,
-    pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
-    {
-      match $start_rule(input, 0) {
-        Ok(pos) => {
-          assert!(pos <= input.len())
-          if pos == input.len() {
-            Ok(None) 
-          } else {
-            Ok(Some(input.slice_from(pos)))
-          }
-        },
-        Err(msg) => Err(msg)
+  fn compile_rule_rhs(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    match &expr.node {
+      &StrLiteral(ref lit_str) => {
+        self.compile_str_literal(lit_str)
+      },
+      &AnySingleChar => {
+        self.compile_any_single_char()
+      },
+      &NonTerminalSymbol(id) => {
+        self.compile_non_terminal_symbol(id)
+      },
+      &Sequence(ref seq) => {
+        self.compile_sequence(seq.as_slice())
+      },
+      &Choice(ref choices) => {
+        self.compile_choice(choices.as_slice())
+      },
+      &ZeroOrMore(ref e) => {
+        self.compile_zero_or_more(e)
       }
-    })).unwrap()
-}
-
-fn compile_rule_rhs(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
-{
-  match &expr.node {
-    &StrLiteral(ref lit_str) => {
-      compile_str_literal(cx, lit_str)
-    },
-    &AnySingleChar => {
-      compile_any_single_char(cx)
-    },
-    &NonTerminalSymbol(id) => {
-      compile_non_terminal_symbol(cx, id)
-    },
-    &Sequence(ref seq) => {
-      compile_sequence(cx, seq.as_slice())
-    },
-    &Choice(ref choices) => {
-      compile_choice(cx, choices.as_slice())
-    },
-    &ZeroOrMore(ref e) => {
-      compile_zero_or_more(cx, e)
     }
   }
-}
 
-fn compile_non_terminal_symbol(cx: &ExtCtxt, id: Ident) -> ast::P<ast::Expr>
-{
-  quote_expr!(cx,
-    $id(input, pos)
-  )
-}
+  fn compile_non_terminal_symbol(&mut self, id: Ident) -> ast::P<ast::Expr>
+  {
+    quote_expr!(self.cx,
+      $id(input, pos)
+    )
+  }
 
-fn compile_any_single_char(cx: &ExtCtxt) -> ast::P<ast::Expr>
-{
-  quote_expr!(cx,
-    if input.len() - pos > 0 {
-      Ok(pos + 1)
-    } else {
-      Err(format!("End of input when matching `.`"))
-    }
-  )
-}
-
-fn compile_str_literal(cx: &ExtCtxt, lit_str: &String) -> ast::P<ast::Expr>
-{
-  let s_len = lit_str.len();
-  let lit_str_slice = lit_str.as_slice();
-  quote_expr!(cx,
-    if input.len() - pos == 0 {
-      Err(format!("End of input when matching the literal `{}`", $lit_str_slice))
-    } else if input.slice_from(pos).starts_with($lit_str_slice) {
-      Ok(pos + $s_len)
-    } else {
-      Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
-    }
-  )
-}
-
-fn map_foldr_expr<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>], 
-  f: |ast::P<ast::Expr>, ast::P<ast::Expr>| -> ast::P<ast::Expr>) -> ast::P<ast::Expr>
-{
-  assert!(seq.len() > 0);
-  let mut seq_it = seq
-    .iter()
-    .map(|e| { compile_rule_rhs(cx, e) })
-    .rev();
-
-  let head = seq_it.next().unwrap();
-  seq_it.fold(head, f)
-}
-
-fn compile_sequence<'a>(cx: &ExtCtxt, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
-{
-  map_foldr_expr(cx, seq, |tail, head| {
-    quote_expr!(cx,
-      match $head {
-        Ok(pos) => {
-          $tail
-        }
-        x => x
+  fn compile_any_single_char(&mut self) -> ast::P<ast::Expr>
+  {
+    quote_expr!(self.cx,
+      if input.len() - pos > 0 {
+        Ok(pos + 1)
+      } else {
+        Err(format!("End of input when matching `.`"))
       }
     )
-  })
-}
+  }
 
-fn compile_choice<'a>(cx: &ExtCtxt, choices: &'a [Box<Expression>]) -> ast::P<ast::Expr>
-{
-  map_foldr_expr(cx, choices, |tail, head| {
-    quote_expr!(cx,
-      match $head {
-        Err(msg) => {
-          $tail
-        }
-        x => x
+  fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
+  {
+    let s_len = lit_str.len();
+    let lit_str_slice = lit_str.as_slice();
+    quote_expr!(self.cx,
+      if input.len() - pos == 0 {
+        Err(format!("End of input when matching the literal `{}`", $lit_str_slice))
+      } else if input.slice_from(pos).starts_with($lit_str_slice) {
+        Ok(pos + $s_len)
+      } else {
+        Err(format!("Expected {} but got `{}`", $lit_str_slice, input.slice_from(pos)))
       }
     )
-  })
-}
+  }
 
-fn compile_zero_or_more(cx: &ExtCtxt, expr: &Box<Expression>) -> ast::P<ast::Expr>
-{
-  let expr = compile_rule_rhs(cx, expr);
-  quote_expr!(cx, $expr)
+  fn map_foldr_expr<'a>(&mut self, seq: &'a [Box<Expression>], 
+    f: |ast::P<ast::Expr>, ast::P<ast::Expr>| -> ast::P<ast::Expr>) -> ast::P<ast::Expr>
+  {
+    assert!(seq.len() > 0);
+    let mut seq_it = seq
+      .iter()
+      .map(|e| { self.compile_rule_rhs(e) })
+      .rev();
+
+    let head = seq_it.next().unwrap();
+    seq_it.fold(head, f)
+  }
+
+  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+  {
+    let cx = self.cx;
+    self.map_foldr_expr(seq, |tail, head| {
+      quote_expr!(cx,
+        match $head {
+          Ok(pos) => {
+            $tail
+          }
+          x => x
+        }
+      )
+    })
+  }
+
+  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+  {
+    let cx = self.cx;
+    self.map_foldr_expr(choices, |tail, head| {
+      quote_expr!(cx,
+        match $head {
+          Err(msg) => {
+            $tail
+          }
+          x => x
+        }
+      )
+    })
+  }
+
+  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let expr = self.compile_rule_rhs(expr);
+    // let fun_name = token::gensym_ident()
+    quote_expr!(self.cx, $expr)
+  }
 }
