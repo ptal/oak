@@ -44,11 +44,12 @@ enum Expression_{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
   NonTerminalSymbol(Ident), // another_rule
-  Sequence(Vec<Box<Expression>>),
-  Choice(Vec<Box<Expression>>),
-  ZeroOrMore(Box<Expression>),
-  OneOrMore(Box<Expression>),
-  Optional(Box<Expression>)
+  Sequence(Vec<Box<Expression>>), // a_rule next_rule
+  Choice(Vec<Box<Expression>>), // try_this / or_try_this_one
+  ZeroOrMore(Box<Expression>), // space*
+  OneOrMore(Box<Expression>), // space+
+  Optional(Box<Expression>), // space? - `?` replaced by `$`
+  NotPredicate(Box<Expression>)
 }
 
 type Expression = Spanned<Expression_>;
@@ -167,7 +168,7 @@ impl<'a> PegParser<'a>
     let lo = self.rp.span.lo;
     let mut seq = Vec::new();
     loop{
-      match self.parse_rule_suffixed(rule_name){
+      match self.parse_rule_prefixed(rule_name){
         Some(expr) => seq.push(expr),
         None => break
       }
@@ -179,6 +180,31 @@ impl<'a> PegParser<'a>
         format!("In rule {}: must defined at least one parsing expression.", rule_name).as_slice());
     }
     box spanned(lo, hi, Sequence(seq))
+  }
+
+  fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
+  {
+    let lo = self.rp.span.lo;
+    let token = self.rp.token.clone();
+    match token {
+      token::NOT => {
+        self.rp.bump();
+        let expr = match self.parse_rule_suffixed(rule_name){
+          Some(expr) => expr,
+          None => {
+            let span = self.rp.span;
+            self.rp.span_fatal(
+              span,
+              format!("In rule {}: A not predicate (`!expr`) is not followed by a valid expression. Do not forget it must be in front of the expression.",
+                rule_name).as_slice()
+            );
+          }
+        };
+        let hi = self.rp.span.hi;
+        Some(box spanned(lo, hi, NotPredicate(expr)))
+      }
+      _ => self.parse_rule_suffixed(rule_name)
+    }
   }
 
   fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -492,6 +518,9 @@ impl<'a> PegCompiler<'a>
       },
       &Optional(ref e) => {
         self.compile_optional(e)
+      },
+      &NotPredicate(ref e) => {
+        self.compile_not_predicate(e)
       }
     }
   }
@@ -648,5 +677,15 @@ impl<'a> PegCompiler<'a>
         _ => Ok(pos)
       }
     )
+  }
+
+  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let expr = self.compile_rule_rhs(expr);
+    quote_expr!(self.cx,
+      match $expr {
+        Ok(_) => Err(format!("An `!expr` failed.")),
+        _ => Ok(pos)
+    })
   }
 }
