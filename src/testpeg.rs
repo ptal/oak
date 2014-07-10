@@ -17,26 +17,69 @@
 #[phase(plugin)]
 extern crate peg;
 
-peg!(
-  grammar ntcc;
+#[cfg(test)]
+mod tests{
 
-  start = spacing test
+  peg!(
+    grammar ntcc;
 
-  #[start]
-  test = STORE ENTAIL
-       / ENTAIL STORE
+    #[start]
+    start = spacing test
 
-  ENTAIL = "|" !spacing "=" &spacing spacing
-  STORE = ("store" spacing)+
-  spacing = " "+
-)
+    test = STORE ENTAIL
+         / ENTAIL STORE
 
-fn main() 
-{
-  let input = "store store |= ";
-  match ntcc::parse(input) {
-    Ok(None) => println!("`{}` fully matched!", input),
-    Ok(Some(remain)) => println!("`{}` partially matched, it remains `{}`", input, remain),
-    Err(msg) => println!("Error: {}", msg)
+    ENTAIL = "|" !spacing "=" &spacing spacing
+    STORE = ("store" spacing)+
+    spacing = " "+
+  )
+
+  enum ExpectedResult {
+    Match,
+    PartialMatch,
+    Error
   }
+
+  fn expected_to_string(expected: ExpectedResult) -> &'static str
+  {
+    match expected {
+      Match => "fully match",
+      PartialMatch => "partially match",
+      Error => "fail"
+    }
+  }
+
+  fn parse_res_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
+  {
+    match res {
+      &Ok(None) => String::from_str("fully matched"),
+      &Ok(Some(ref rest)) => 
+        format!("partially matched (it remains `{}`)", rest),
+      &Err(ref msg) =>
+        format!("failed with the error \"{}\"", msg)
+    }
+  }
+
+  fn test_ntcc(expected: ExpectedResult, input: &str)
+  {
+    match (expected, ntcc::parse(input)) {
+        (Match, Ok(None))
+      | (PartialMatch, Ok(Some(_)))
+      | (Error, Err(_)) => (),
+      (expected, res) => {
+        fail!(format!("`{}` was expected to {} but {}.",
+          input, expected_to_string(expected),
+          parse_res_to_string(&res)));
+      }
+    }
+  }
+
+  #[test]
+  fn test1() { test_ntcc(Match, " store store |= "); }
 }
+
+
+// Need a main for Cargo to compile this...
+// We can't test directly in the lib.rs because of the procedural macro.
+#[allow(dead_code)]
+fn main() {}
