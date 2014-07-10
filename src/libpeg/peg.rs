@@ -15,23 +15,20 @@
 use std::string::String;
 use syntax::ast;
 use syntax::ast::{Ident, Attribute};
-use syntax::codemap;
 use syntax::codemap::{Spanned, Span, mk_sp, spanned, respan};
-use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, MacItem, DummyResult};
-use syntax::ext::build::AstBuilder;
+use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
 use syntax::ext::quote::rt::ToTokens;
 use syntax::parse;
 use syntax::parse::{token, ParseSess};
 use syntax::parse::attr::ParserAttr;
-use syntax::parse::token::Token;
 use syntax::parse::parser::Parser;
-use syntax::print::pprust;
+// use syntax::print::pprust;
 use rustc::plugin::Registry;
 
 struct Peg{
   name: Ident,
   rules: Vec<Rule>,
-  attributes: Vec<ast::Attribute>
+  _attributes: Vec<ast::Attribute>
 }
 
 struct Rule{
@@ -55,11 +52,6 @@ enum Expression_{
 
 type Expression = Spanned<Expression_>;
 
-struct ParseError{
-  span: Span,
-  msg: String
-}
-
 struct PegParser<'a>
 {
   rp: Parser<'a> // rust parser
@@ -78,7 +70,7 @@ impl<'a> PegParser<'a>
   {
     let grammar_name = self.parse_grammar_decl();
     let (rules, attrs) = self.parse_rules(); 
-    Peg{name: grammar_name, rules: rules, attributes: attrs}
+    Peg{name: grammar_name, rules: rules, _attributes: attrs}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident
@@ -294,7 +286,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
   reg.register_macro("peg", expand)
 }
 
-fn expand(cx: &mut ExtCtxt, sp: Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+fn expand(cx: &mut ExtCtxt, _sp: Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
   parse(cx, tts)
 }
 
@@ -469,7 +461,7 @@ impl<'a> PegCompiler<'a>
       }
     ).unwrap();
 
-    self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_str(grammar).as_slice());
+    // self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_str(grammar).as_slice());
 
     MacItem::new(grammar)
   }
@@ -683,7 +675,6 @@ impl<'a> PegCompiler<'a>
 
   fn compile_optional(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let cx = self.cx;
     let expr = self.compile_rule_rhs(expr);
     quote_expr!(self.cx,
       match $expr {
