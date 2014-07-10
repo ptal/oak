@@ -42,7 +42,8 @@ enum Expression_{
   NonTerminalSymbol(Ident), // another_rule
   Sequence(Vec<Box<Expression>>),
   Choice(Vec<Box<Expression>>),
-  ZeroOrMore(Box<Expression>)
+  ZeroOrMore(Box<Expression>),
+  OneOrMore(Box<Expression>)
 }
 
 type Expression = Spanned<Expression_>;
@@ -172,7 +173,11 @@ impl<'a> PegParser<'a>
       token::BINOP(token::STAR) => {
         self.rp.bump();
         Some(box spanned(lo, hi, ZeroOrMore(expr)))
-      }
+      },
+      token::BINOP(token::PLUS) => {
+        self.rp.bump();
+        Some(box spanned(lo, hi, OneOrMore(expr)))
+      },
       _ => Some(expr)
     }
   }
@@ -395,6 +400,9 @@ impl<'a> PegCompiler<'a>
       },
       &ZeroOrMore(ref e) => {
         self.compile_zero_or_more(e)
+      },
+      &OneOrMore(ref e) => {
+        self.compile_one_or_more(e)
       }
     }
   }
@@ -494,9 +502,8 @@ impl<'a> PegCompiler<'a>
         self.gen_uid()).as_slice())
   }
 
-  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_star(&mut self, expr: &ast::P<ast::Expr>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
     let fun_name = self.gensym("star");
     let cx = self.cx;
     self.top_level_items.push(quote_item!(cx,
@@ -513,6 +520,30 @@ impl<'a> PegCompiler<'a>
           }
         }
         Ok(npos)
+      }
+    ).unwrap());
+    quote_expr!(self.cx, $fun_name(input, pos))
+  }
+
+  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let expr = self.compile_rule_rhs(expr);
+    self.compile_star(&expr)
+  }
+
+  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let expr = self.compile_rule_rhs(expr);
+    let star_fn = self.compile_star(&expr);
+    let fun_name = self.gensym("plus");
+    let cx = self.cx;
+    self.top_level_items.push(quote_item!(cx,
+      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      {
+        match $expr {
+          Ok(pos) => $star_fn,
+          x => x
+        }
       }
     ).unwrap());
     quote_expr!(self.cx, $fun_name(input, pos))
