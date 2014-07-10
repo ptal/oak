@@ -24,6 +24,7 @@ use syntax::parse;
 use syntax::parse::{token, ParseSess};
 use syntax::parse::token::Token;
 use syntax::parse::parser::Parser;
+use syntax::print::pprust;
 use rustc::plugin::Registry;
 
 struct Peg{
@@ -43,7 +44,8 @@ enum Expression_{
   Sequence(Vec<Box<Expression>>),
   Choice(Vec<Box<Expression>>),
   ZeroOrMore(Box<Expression>),
-  OneOrMore(Box<Expression>)
+  OneOrMore(Box<Expression>),
+  Optional(Box<Expression>)
 }
 
 type Expression = Spanned<Expression_>;
@@ -178,6 +180,10 @@ impl<'a> PegParser<'a>
         self.rp.bump();
         Some(box spanned(lo, hi, OneOrMore(expr)))
       },
+      token::DOLLAR => {
+        self.rp.bump();
+        Some(box spanned(lo, hi, Optional(expr)))
+      }
       _ => Some(expr)
     }
   }
@@ -347,18 +353,21 @@ impl<'a> PegCompiler<'a>
         {
           $rule_def
         }
-      ).unwrap())
+      ).unwrap());
+      self.current_rule_idx += 1;
     }
 
     let items = ToTokensVec{v: &self.top_level_items};
 
-    MacItem::new(quote_item!(self.cx,
+    let grammar = quote_item!(self.cx,
       pub mod $grammar_name
       {
         $parse_fn
         $items
       }
-    ).unwrap())
+    ).unwrap();
+    
+    MacItem::new(grammar)
   }
 
   fn compile_entry_point(&mut self, start_rule: Ident) -> ast::P<ast::Item>
@@ -403,6 +412,9 @@ impl<'a> PegCompiler<'a>
       },
       &OneOrMore(ref e) => {
         self.compile_one_or_more(e)
+      },
+      &Optional(ref e) => {
+        self.compile_optional(e)
       }
     }
   }
@@ -547,5 +559,17 @@ impl<'a> PegCompiler<'a>
       }
     ).unwrap());
     quote_expr!(self.cx, $fun_name(input, pos))
+  }
+
+  fn compile_optional(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let cx = self.cx;
+    let expr = self.compile_rule_rhs(expr);
+    quote_expr!(self.cx,
+      match $expr {
+        Ok(pos) => Ok(pos),
+        _ => Ok(pos)
+      }
+    )
   }
 }
