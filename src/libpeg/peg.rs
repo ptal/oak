@@ -49,7 +49,8 @@ enum Expression_{
   ZeroOrMore(Box<Expression>), // space*
   OneOrMore(Box<Expression>), // space+
   Optional(Box<Expression>), // space? - `?` replaced by `$`
-  NotPredicate(Box<Expression>)
+  NotPredicate(Box<Expression>), // !space
+  AndPredicate(Box<Expression>) // &space space
 }
 
 type Expression = Spanned<Expression_>;
@@ -175,7 +176,7 @@ impl<'a> PegParser<'a>
     }
     let hi = self.rp.last_span.hi;
     if seq.len() == 0 {
-      self.rp.span_fatal(
+      self.rp.span_err(
         mk_sp(lo, hi),
         format!("In rule {}: must defined at least one parsing expression.", rule_name).as_slice());
     }
@@ -184,27 +185,37 @@ impl<'a> PegParser<'a>
 
   fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
   {
-    let lo = self.rp.span.lo;
     let token = self.rp.token.clone();
     match token {
       token::NOT => {
-        self.rp.bump();
-        let expr = match self.parse_rule_suffixed(rule_name){
-          Some(expr) => expr,
-          None => {
-            let span = self.rp.span;
-            self.rp.span_fatal(
-              span,
-              format!("In rule {}: A not predicate (`!expr`) is not followed by a valid expression. Do not forget it must be in front of the expression.",
-                rule_name).as_slice()
-            );
-          }
-        };
-        let hi = self.rp.span.hi;
-        Some(box spanned(lo, hi, NotPredicate(expr)))
+        self.parse_prefix(rule_name, |e| NotPredicate(e))
+      }
+      token::BINOP(token::AND) => {
+        self.parse_prefix(rule_name, |e| AndPredicate(e))
       }
       _ => self.parse_rule_suffixed(rule_name)
     }
+  }
+
+  fn parse_prefix(&mut self, rule_name: &str, 
+    make_prefix: |Box<Expression>| -> Expression_) -> Option<Box<Expression>>
+  {
+    let lo = self.rp.span.lo;
+    self.rp.bump();
+    let expr = match self.parse_rule_suffixed(rule_name) {
+      Some(expr) => expr,
+      None => {
+        let span = self.rp.span;
+        self.rp.span_err(
+          span,
+          format!("In rule {}: A not predicate (`!expr`) is not followed by a valid expression. Do not forget it must be in front of the expression.",
+            rule_name).as_slice()
+        );
+        return None
+      }
+    };
+    let hi = self.rp.span.hi;
+    Some(box spanned(lo, hi, make_prefix(expr)))
   }
 
   fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -521,6 +532,9 @@ impl<'a> PegCompiler<'a>
       },
       &NotPredicate(ref e) => {
         self.compile_not_predicate(e)
+      },
+      &AndPredicate(ref e) => {
+        self.compile_and_predicate(e)
       }
     }
   }
@@ -686,6 +700,16 @@ impl<'a> PegCompiler<'a>
       match $expr {
         Ok(_) => Err(format!("An `!expr` failed.")),
         _ => Ok(pos)
+    })
+  }
+
+  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  {
+    let expr = self.compile_rule_rhs(expr);
+    quote_expr!(self.cx,
+      match $expr {
+        Ok(_) => Ok(pos),
+        x => x
     })
   }
 }

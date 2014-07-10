@@ -26,7 +26,7 @@ peg!(
   test = STORE ENTAIL
        / ENTAIL STORE
 
-  ENTAIL = "|" !spacing "=" spacing
+  ENTAIL = "|" !spacing "=" &spacing spacing
   STORE = ("store" spacing)+
   spacing = " "+
 )
