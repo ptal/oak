@@ -14,7 +14,7 @@
 
 use std::string::String;
 use syntax::ast;
-use syntax::ast::{Ident};
+use syntax::ast::{Ident, Attribute};
 use syntax::codemap;
 use syntax::codemap::{Spanned, Span, mk_sp, spanned, respan};
 use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, MacItem, DummyResult};
@@ -22,6 +22,7 @@ use syntax::ext::build::AstBuilder;
 use syntax::ext::quote::rt::ToTokens;
 use syntax::parse;
 use syntax::parse::{token, ParseSess};
+use syntax::parse::attr::ParserAttr;
 use syntax::parse::token::Token;
 use syntax::parse::parser::Parser;
 use syntax::print::pprust;
@@ -29,12 +30,14 @@ use rustc::plugin::Registry;
 
 struct Peg{
   name: Ident,
-  rules: Vec<Rule>
+  rules: Vec<Rule>,
+  attributes: Vec<ast::Attribute>
 }
 
 struct Rule{
   name: Ident,
-  def: Box<Expression>,
+  attributes: Vec<ast::Attribute>,
+  def: Box<Expression>
 }
 
 enum Expression_{
@@ -72,8 +75,8 @@ impl<'a> PegParser<'a>
   fn parse_grammar(&mut self) -> Peg
   {
     let grammar_name = self.parse_grammar_decl();
-    let rules = self.parse_rules(); 
-    Peg{name: grammar_name, rules: rules}
+    let (rules, attrs) = self.parse_rules(); 
+    Peg{name: grammar_name, rules: rules, attributes: attrs}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident
@@ -99,22 +102,38 @@ impl<'a> PegParser<'a>
     is_grammar_kw
   }
 
-  fn parse_rules(&mut self) -> Vec<Rule>
+  fn parse_rules(&mut self) -> (Vec<Rule>, Vec<Attribute>)
   {
     let mut rules = vec![];
+    let mut attrs = vec![];
     while self.rp.token != token::EOF
     {
-      rules.push(self.parse_rule());
+      let (rule, mod_attrs) = self.parse_rule();
+      rules.push(rule);
+      attrs.push_all(mod_attrs.as_slice());
     }
-    rules
+    (rules, attrs)
   }
 
-  fn parse_rule(&mut self) -> Rule
+  fn parse_rule(&mut self) -> (Rule, Vec<Attribute>)
   {
+    let (inner_attrs, outer_attrs) = self.parse_attributes();
     let name = self.parse_rule_decl();
     self.rp.expect(&token::EQ);
     let body = self.parse_rule_rhs(id_to_string(name).as_slice());
-    Rule{name: name, def: body}
+    (Rule{name: name, attributes: outer_attrs, def: body},
+     inner_attrs)
+  }
+
+  // Outer attributes are attached to the next item.
+  // Inner attributes are attached to the englobing item.
+  fn parse_attributes(&mut self) -> (Vec<ast::Attribute>, Vec<ast::Attribute>)
+  {
+    let (inners, mut outers) = self.rp.parse_inner_attrs_and_next();
+    if !outers.is_empty() {
+      outers.push_all(self.rp.parse_outer_attributes().as_slice());
+    }
+    (inners, outers)
   }
 
   fn parse_rule_decl(&mut self) -> Ident
@@ -270,10 +289,52 @@ fn span_err(cx: &ExtCtxt, sp: Span, m: &str) {
   cx.parse_sess.span_diagnostic.span_err(sp, m);
 }
 
+fn start_attribute<'a>(rule_attrs: &'a Vec<Attribute>) -> Option<&'a Attribute>
+{
+  for attr in rule_attrs.iter() {
+    match attr.node.value.node {
+      ast::MetaWord(ref w) if w.get() == "start" =>
+        return Some(attr),
+      _ => ()
+    }
+  }
+  None
+}
+
+fn check_start_attribute<'a>(cx: &ExtCtxt, starting_rule: &Option<&'a Rule>, rule: &'a Rule) -> bool
+{
+  let start_attr = start_attribute(&rule.attributes);
+  match start_attr {
+    Some(ref attr) => {
+      match starting_rule {
+        &None => true,
+        &Some(starting_rule) => {
+          span_err(cx, attr.span, format!(
+            "Multiple `start` attributes are forbidden. Rules `{}` and `{}` conflict.",
+            id_to_string(starting_rule.name),
+            id_to_string(rule.name)).as_slice());
+          false
+        }
+      }
+    },
+    _ => false
+  }
+}
+
 fn check_peg(cx: &ExtCtxt, peg: &Peg)
 {
+  let mut starting_rule = None;
   for rule in peg.rules.iter() {
     check_rule_rhs(cx, peg, &rule.def);
+    if check_start_attribute(cx, &starting_rule, rule) {
+      starting_rule = Some(rule);
+    }
+  }
+  match starting_rule {
+    None =>
+      cx.parse_sess.span_diagnostic.handler.warn(
+        "No rule has been specified as the starting point (attribute `#[start]`). The first rule will be automatically considered as such."),
+    _ => ()
   }
 }
 
@@ -323,7 +384,8 @@ struct PegCompiler<'a>
   cx: &'a ExtCtxt<'a>,
   unique_id: uint,
   grammar: &'a Peg,
-  current_rule_idx: uint
+  current_rule_idx: uint,
+  starting_rule: uint
 }
 
 impl<'a> PegCompiler<'a>
@@ -335,7 +397,8 @@ impl<'a> PegCompiler<'a>
       cx: cx,
       unique_id: 0,
       grammar: grammar,
-      current_rule_idx: 0
+      current_rule_idx: 0,
+      starting_rule: 0
     };
     compiler.compile_peg()
   }
@@ -343,9 +406,9 @@ impl<'a> PegCompiler<'a>
   fn compile_peg(&mut self) -> Box<MacResult>
   {
     let grammar_name = self.grammar.name;
-    let parse_fn = self.compile_entry_point(self.grammar.rules.as_slice()[0].name);
 
     for rule in self.grammar.rules.iter() {
+      self.compile_rule_attributes(&rule.attributes);
       let rule_name = rule.name;
       let rule_def = self.compile_rule_rhs(&rule.def);
       self.top_level_items.push(quote_item!(self.cx,
@@ -357,6 +420,8 @@ impl<'a> PegCompiler<'a>
       self.current_rule_idx += 1;
     }
 
+    let parse_fn = self.compile_entry_point();
+
     let items = ToTokensVec{v: &self.top_level_items};
 
     let grammar = quote_item!(self.cx,
@@ -366,12 +431,24 @@ impl<'a> PegCompiler<'a>
         $items
       }
     ).unwrap();
-    
+
+    self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_str(grammar).as_slice());
+
     MacItem::new(grammar)
   }
 
-  fn compile_entry_point(&mut self, start_rule: Ident) -> ast::P<ast::Item>
+  fn compile_rule_attributes(&mut self, attrs: &Vec<Attribute>)
   {
+    match start_attribute(attrs) {
+      Some(_) => self.starting_rule = self.current_rule_idx,
+      _ => ()
+    }
+  }
+
+  fn compile_entry_point(&mut self) -> ast::P<ast::Item>
+  {
+    let start_idx = self.starting_rule;
+    let start_rule = self.grammar.rules.as_slice()[start_idx].name;
     (quote_item!(self.cx,
       pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
       {

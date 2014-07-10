@@ -22,17 +22,18 @@ peg!(
 
   start = spacing test
 
+  #[start]
   test = STORE ENTAIL
        / ENTAIL STORE
 
-  ENTAIL = "|="$ spacing
+  ENTAIL = "|=" spacing
   STORE = ("store" spacing)+
   spacing = " "*
 )
 
 fn main() 
 {
-  let input = " store store";
+  let input = "store store |= ";
   match ntcc::parse(input) {
     Ok(None) => println!("`{}` fully matched!", input),
     Ok(Some(remain)) => println!("`{}` partially matched, it remains `{}`", input, remain),
