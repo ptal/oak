@@ -13,8 +13,9 @@
 // limitations under the License.
 
 use std::string::String;
+use std::str::Chars;
 use syntax::ast;
-use syntax::ast::{Ident, Attribute};
+use syntax::ast::{Ident, Attribute, Name};
 use syntax::codemap::{Spanned, Span, mk_sp, spanned, respan};
 use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
 use syntax::ext::quote::rt::ToTokens;
@@ -22,7 +23,7 @@ use syntax::parse;
 use syntax::parse::{token, ParseSess};
 use syntax::parse::attr::ParserAttr;
 use syntax::parse::parser::Parser;
-// use syntax::print::pprust;
+use syntax::print::pprust;
 use rustc::plugin::Registry;
 
 struct Peg{
@@ -47,7 +48,18 @@ enum Expression_{
   OneOrMore(Box<Expression>), // space+
   Optional(Box<Expression>), // space? - `?` replaced by `$`
   NotPredicate(Box<Expression>), // !space
-  AndPredicate(Box<Expression>) // &space space
+  AndPredicate(Box<Expression>), // &space space
+  CharacterClass(CharacterClassExpr)
+}
+
+struct CharacterClassExpr {
+  intervals: Vec<CharacterInterval>
+}
+
+#[deriving(Clone)]
+struct CharacterInterval {
+  lo: char,
+  hi: char
 }
 
 type Expression = Spanned<Expression_>;
@@ -76,10 +88,10 @@ impl<'a> PegParser<'a>
   fn parse_grammar_decl(&mut self) -> Ident
   {
     if !self.eat_grammar_keyword() {
-      let token_str = self.rp.this_token_to_str();
+      let token_string = self.rp.this_token_to_string();
       self.rp.fatal(
         format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), found instead `{}`",
-          token_str).as_slice())
+          token_string).as_slice())
     }
     let grammar_name = self.rp.parse_ident();
     self.rp.expect(&token::SEMI);
@@ -231,7 +243,7 @@ impl<'a> PegParser<'a>
       token::DOLLAR => {
         self.rp.bump();
         Some(box spanned(lo, hi, Optional(expr)))
-      }
+      },
       _ => Some(expr)
     }
   }
@@ -245,9 +257,9 @@ impl<'a> PegParser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      token::LIT_STR(id) => {
+      token::LIT_STR(name) => {
         self.rp.bump();
-        Some(self.last_respan(StrLiteral(id_to_string(id))))
+        Some(self.last_respan(StrLiteral(name_to_string(name))))
       },
       token::DOT => {
         self.rp.bump();
@@ -266,7 +278,104 @@ impl<'a> PegParser<'a>
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
+      token::LBRACKET => {
+        self.rp.bump();
+        let res = self.parse_char_class(rule_name);
+        match self.rp.token {
+          token::RBRACKET => {
+            self.rp.bump();
+            res
+          },
+          _ => {
+            let span = self.rp.span;
+            self.rp.span_fatal(
+              span,
+              format!("In rule {}: A character class must always be terminated by `]` and can only contain a string literal (such as in `[\"a-z\"]`",
+                rule_name).as_slice()
+            );
+          }
+        }
+      },
       _ => { None }
+    }
+  }
+
+  fn parse_char_class(&mut self, rule_name: &str) -> Option<Box<Expression>>
+  {
+    let token = self.rp.token.clone();
+    match token {
+      token::LIT_STR(name) => {
+        self.rp.bump();
+        self.parse_set_of_char_range(name_to_string(name), rule_name)
+      },
+      _ => {
+        let span = self.rp.span;
+        self.rp.span_fatal(
+          span,
+          format!("In rule {}: An expected character occurred in this character class. `[` must only be followed by a string literal (such as in `[\"a-z\"]`",
+            rule_name).as_slice()
+        );
+      }
+    }
+  }
+
+  fn parse_set_of_char_range(&mut self, ranges: String, rule_name: &str) -> Option<Box<Expression>>
+  {
+    let ranges = ranges.as_slice();
+    let mut ranges = ranges.chars();
+    let mut intervals = vec![];
+    match ranges.peekable().peek() {
+      Some(&sep) if sep == '-' => {
+        intervals.push(CharacterInterval{lo: '-', hi: '-'});
+        ranges.next();
+      }
+      _ => ()
+    }
+    loop {
+      match self.parse_char_range(&mut ranges, rule_name) {
+        Some(char_set) => intervals.push_all(char_set.as_slice()),
+        None => break
+      }
+    }
+    Some(box respan(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
+  }
+
+  fn parse_char_range<'a>(&mut self, ranges: &mut Chars<'a>, rule_name: &str) -> Option<Vec<CharacterInterval>>
+  {
+    let mut res = vec![];
+    let separator_err = format!(
+      "In rule {}: Unexpected separator `-`. Put it in the start or the end if you want to accept it as a character in the set. Otherwise, you should only use it for character intervals as in `[\"a-z\"]`.",
+      rule_name);
+    let span = self.rp.span;
+    let lo = ranges.next();
+    let mut peekable = ranges.peekable();
+    let next = peekable.peek();
+    match (lo, next) {
+      (Some('-'), Some(_)) => {
+        self.rp.span_err(span, separator_err.as_slice());
+        None
+      },
+      (Some(lo), Some(&sep)) if sep == '-' => {
+        ranges.next();
+        match ranges.next() {
+          Some('-') => { self.rp.span_err(span, separator_err.as_slice()); None }
+          Some(hi) => { 
+            res.push(CharacterInterval{lo: lo, hi: hi}); 
+            Some(res) 
+          }
+          None => {
+            res.push(CharacterInterval{lo:lo, hi:lo});
+            res.push(CharacterInterval{lo:'-', hi: '-'});
+            Some(res)
+          }
+        }
+        
+      },
+      (Some(lo), _) => {
+        res.push(CharacterInterval{lo: lo, hi: lo}); // If lo == '-', it ends the class, allowed.
+        Some(res)
+      }
+      (None, _) => None
     }
   }
 
@@ -279,6 +388,11 @@ impl<'a> PegParser<'a>
 fn id_to_string(id: Ident) -> String
 {
   String::from_str(token::get_ident(id).get())
+}
+
+fn name_to_string(name: Name) -> String
+{
+  String::from_str(token::get_name(name).get())
 }
 
 #[plugin_registrar]
@@ -461,7 +575,7 @@ impl<'a> PegCompiler<'a>
       }
     ).unwrap();
 
-    // self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_str(grammar).as_slice());
+    self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_string(grammar).as_slice());
 
     MacItem::new(grammar)
   }
@@ -527,6 +641,9 @@ impl<'a> PegCompiler<'a>
       },
       &AndPredicate(ref e) => {
         self.compile_and_predicate(e)
+      },
+      &CharacterClass(ref e) => {
+        self.compile_character_class(e)
       }
     }
   }
@@ -542,7 +659,7 @@ impl<'a> PegCompiler<'a>
   {
     quote_expr!(self.cx,
       if input.len() - pos > 0 {
-        Ok(pos + 1)
+        Ok(input.char_range_at(pos).next)
       } else {
         Err(format!("End of input when matching `.`"))
       }
@@ -551,15 +668,15 @@ impl<'a> PegCompiler<'a>
 
   fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
   {
+    let lit_str = lit_str.as_slice();
     let s_len = lit_str.len();
-    let lit_str_slice = lit_str.as_slice();
     quote_expr!(self.cx,
       if input.len() - pos == 0 {
-        Err(format!("End of input when matching the literal `{}`", $lit_str_slice))
-      } else if input.slice_from(pos).starts_with($lit_str_slice) {
+        Err(format!("End of input when matching the literal `{}`", $lit_str))
+      } else if input.slice_from(pos).starts_with($lit_str) {
         Ok(pos + $s_len)
       } else {
-        Err(format!("Expected `{}` but got `{}`", $lit_str_slice, input.slice_from(pos)))
+        Err(format!("Expected `{}` but got `{}`", $lit_str, input.slice_from(pos)))
       }
     )
   }
@@ -634,7 +751,7 @@ impl<'a> PegCompiler<'a>
       fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
       {
         let mut npos = pos;
-        loop {
+        while npos < input.len() {
           let pos = npos;
           match $expr {
             Ok(pos) => {
@@ -702,5 +819,32 @@ impl<'a> PegCompiler<'a>
         Ok(_) => Ok(pos),
         x => x
     })
+  }
+
+  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> ast::P<ast::Expr>
+  {
+    let fun_name = self.gensym("class_char");
+    let cx = self.cx;
+    assert!(expr.intervals.len() > 0);
+
+    let mut seq_it = expr.intervals.iter();
+
+    let CharacterInterval{lo:lo, hi:hi} = *seq_it.next().unwrap();
+    let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)), |accu, &CharacterInterval{lo:lo, hi:hi}| {
+      quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
+    });
+
+    self.top_level_items.push(quote_item!(cx,
+      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      {
+        let current = input.char_range_at(pos).ch;
+        if $cond {
+          Ok(input.char_range_at(pos).next)
+        } else {
+          Err(format!("It doesn't match the character class."))
+        }
+      }
+    ).unwrap());
+    quote_expr!(self.cx, $fun_name(input, pos))
   }
 }

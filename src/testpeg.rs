@@ -25,6 +25,7 @@ mod tests{
 
     #[start]
     start = spacing test
+          / ident
 
     test = STORE ENTAIL
          / ENTAIL STORE
@@ -32,6 +33,9 @@ mod tests{
     ENTAIL = "|" !spacing "=" &spacing spacing
     STORE = ("store" spacing)+
     spacing = " "+
+
+    ident = (!["-a-z"]) ["a-zaA-Z-"]*
+    ident2 = ["a-zA-Z\u1999-\u2008"]*
   )
 
   enum ExpectedResult {
@@ -74,8 +78,12 @@ mod tests{
     }
   }
 
-  #[test]
-  fn test1() { test_ntcc(Match, " store store |= "); }
+  #[test] fn test1() { test_ntcc(Match, " store store |= "); }
+  #[test] fn test2() { test_ntcc(Match, "Fold"); }
+  #[test] fn test3() { test_ntcc(Error, "fold"); }
+  #[test] fn test4() { test_ntcc(PartialMatch, "Fold me"); }
+  #[test] fn test5() { test_ntcc(Match, "Fold-me"); }
+  #[test] fn test6() { test_ntcc(Error, "-fold"); }
 }
 
 
