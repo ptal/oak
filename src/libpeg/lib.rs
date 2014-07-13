@@ -12,16 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![crate_id = "peg#0.1.0"]
 #![crate_name = "peg"]
 #![experimental]
 #![comment = "Parsing Expression Grammar Library"]
 #![license = "Apache v2"]
 #![crate_type = "dylib"]
 
-#![feature(plugin_registrar, quote)]
+#![feature(plugin_registrar, quote, globs)]
 
 extern crate rustc;
 extern crate syntax;
 
-pub mod peg;
+use syntax::ext::base::{ExtCtxt, MacResult};
+use syntax::codemap::Span;
+use syntax::ast::TokenTree;
+use rustc::plugin::Registry;
+
+pub mod utility;
+pub mod ast;
+pub mod semantic_analyser;
+pub mod compiler;
+
+#[plugin_registrar]
+pub fn plugin_registrar(reg: &mut Registry) 
+{
+  reg.register_macro("peg", expand)
+}
+
+fn expand(cx: &mut ExtCtxt, _sp: Span, tts: &[TokenTree]) -> Box<MacResult> 
+{
+  parse(cx, tts)
+}
+
+fn parse(cx: &mut ExtCtxt, tts: &[TokenTree]) -> Box<MacResult>
+{
+  let mut parser = ast::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
+  let peg = parser.parse_grammar();
+  semantic_analyser::check_peg(cx, &peg);
+  compiler::PegCompiler::compile(cx, &peg)
+}
+
