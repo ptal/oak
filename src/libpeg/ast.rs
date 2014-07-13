@@ -102,7 +102,8 @@ impl<'a> PegParser<'a>
     if !self.eat_grammar_keyword() {
       let token_string = self.rp.this_token_to_string();
       self.rp.fatal(
-        format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), found instead `{}`",
+        format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), \
+                but found `{}`",
           token_string).as_slice())
     }
     let grammar_name = self.rp.parse_ident();
@@ -194,7 +195,8 @@ impl<'a> PegParser<'a>
     if seq.len() == 0 {
       self.rp.span_err(
         mk_sp(lo, hi),
-        format!("In rule {}: must defined at least one parsing expression.", rule_name).as_slice());
+        format!("In rule {}: must defined at least one parsing expression.",
+          rule_name).as_slice());
     }
     box spanned(lo, hi, Sequence(seq))
   }
@@ -224,7 +226,8 @@ impl<'a> PegParser<'a>
         let span = self.rp.span;
         self.rp.span_err(
           span,
-          format!("In rule {}: A not predicate (`!expr`) is not followed by a valid expression. Do not forget it must be in front of the expression.",
+          format!("In rule {}: A not predicate (`!expr`) is not followed by a \
+            valid expression. Do not forget it must be in front of the expression.",
             rule_name).as_slice()
         );
         return None
@@ -302,7 +305,8 @@ impl<'a> PegParser<'a>
             let span = self.rp.span;
             self.rp.span_fatal(
               span,
-              format!("In rule {}: A character class must always be terminated by `]` and can only contain a string literal (such as in `[\"a-z\"]`",
+              format!("In rule {}: A character class must always be terminated by `]` \
+                and can only contain a string literal (such as in `[\"a-z\"]`",
                 rule_name).as_slice()
             );
           }
@@ -324,7 +328,8 @@ impl<'a> PegParser<'a>
         let span = self.rp.span;
         self.rp.span_fatal(
           span,
-          format!("In rule {}: An expected character occurred in this character class. `[` must only be followed by a string literal (such as in `[\"a-z\"]`",
+          format!("In rule {}: An expected character occurred in this character class. \
+            `[` must only be followed by a string literal (such as in `[\"a-z\"]`",
             rule_name).as_slice()
         );
       }
@@ -356,7 +361,9 @@ impl<'a> PegParser<'a>
   {
     let mut res = vec![];
     let separator_err = format!(
-      "In rule {}: Unexpected separator `-`. Put it in the start or the end if you want to accept it as a character in the set. Otherwise, you should only use it for character intervals as in `[\"a-z\"]`.",
+      "In rule {}: Unexpected separator `-`. Put it in the start or the end if you want \
+      to accept it as a character in the set. Otherwise, you should only use it for \
+      character intervals as in `[\"a-z\"]`.",
       rule_name);
     let span = self.rp.span;
     let lo = ranges.next();

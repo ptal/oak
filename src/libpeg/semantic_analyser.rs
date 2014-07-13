@@ -30,7 +30,8 @@ pub fn check_peg(cx: &ExtCtxt, peg: &Peg)
   match starting_rule {
     None =>
       cx.parse_sess.span_diagnostic.handler.warn(
-        "No rule has been specified as the starting point (attribute `#[start]`). The first rule will be automatically considered as such."),
+        "No rule has been specified as the starting point (attribute `#[start]`). \
+        The first rule will be automatically considered as such."),
     _ => ()
   }
 }
@@ -49,7 +50,8 @@ fn check_start_attribute<'a>(cx: &ExtCtxt, starting_rule: &Option<&'a Rule>, rul
         &None => true,
         &Some(starting_rule) => {
           span_err(cx, attr.span, format!(
-            "Multiple `start` attributes are forbidden. Rules `{}` and `{}` conflict.",
+            "Multiple `start` attributes are forbidden. \
+            Rules `{}` and `{}` conflict.",
             id_to_string(starting_rule.name),
             id_to_string(rule.name)).as_slice());
           false
@@ -89,7 +91,8 @@ fn check_if_rule_is_declared(cx: &ExtCtxt, peg: &Peg, id: Ident, sp: Span)
     }
   }
   span_err(cx, sp, 
-    format!("You try to call the rule `{}` which is not declared.", id_to_string(id)).as_slice());
+    format!("You try to call the rule `{}` which is not declared.", 
+      id_to_string(id)).as_slice());
 }
 
 fn check_expr_slice<'a>(cx: &ExtCtxt, peg: &Peg, seq: &'a [Box<Expression>])
