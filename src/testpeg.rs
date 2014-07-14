@@ -26,18 +26,51 @@ mod tests{
     #![print_generated]
 
     #[start]
-    start = spacing test
-          / ident
+    start = spacing expression
 
-    test = STORE ENTAIL
-         / ENTAIL STORE
+    expression = sum
+               / skip_kw
 
-    ENTAIL = "|" !spacing "=" &spacing spacing
-    STORE = ("store" spacing)+
-    spacing = " "+
+    sum
+      = pick_kw sum_body
 
-    ident = (!["-a-z"]) ["a-zaA-Z-"]*
-    ident2 = ["a-zA-Z\u1999-\u2008"]*
+    sum_body
+      = or when sum_body$
+
+    when
+      = when_kw entails arrow_right expression
+
+    entails
+      = store_kw entail constraint
+
+    constraint
+      = constraint_operand comparison constraint_operand
+
+    constraint_operand
+      = integer
+      / var_ident
+
+    comparison = le / neq / lt / ge / gt / eq
+
+    spacing = [" \n\t"]*
+
+    integer = ["0-9"]+ spacing
+    var_ident = !["0-9"] ["a-zA-Z0-9"]+ spacing
+
+    pick_kw = "pick" spacing
+    when_kw = "when" spacing
+    store_kw = "store" spacing
+    skip_kw = "skip" spacing
+    
+    or = "|" spacing
+    entail = "|=" spacing
+    lt = "<" spacing
+    le = "<=" spacing
+    gt = ">" spacing
+    ge = ">=" spacing
+    eq = "==" spacing
+    neq = "<>" spacing
+    arrow_right = "->" spacing
   )
 
   enum ExpectedResult {
@@ -80,14 +113,39 @@ mod tests{
     }
   }
 
-  #[test] fn test1() { test_ntcc(Match, " store store |= "); }
-  #[test] fn test2() { test_ntcc(Match, "Fold"); }
-  #[test] fn test3() { test_ntcc(Error, "fold"); }
-  #[test] fn test4() { test_ntcc(PartialMatch, "Fold me"); }
-  #[test] fn test5() { test_ntcc(Match, "Fold-me"); }
-  #[test] fn test6() { test_ntcc(Error, "-fold"); }
-}
+  #[test] fn test1() 
+  { 
+    test_ntcc(Match, 
+      "pick \
+       | when store |= 8 > 9 -> skip \
+       | when store |= x <= y -> skip");
+  }
 
+  #[test] fn test2()
+  {
+    test_ntcc(PartialMatch, 
+      "pick \
+       | when store |= 8 > 9 -> skip \
+         when store |= x <= y -> skip");
+  }
+  
+  #[test] fn test3()
+  {
+    test_ntcc(Match, 
+      "pick \
+       | when store |= 8 > 9 -> \
+           pick \
+           | when store |= x <= y -> skip");
+  }
+
+  #[test] fn test4()
+  {
+    test_ntcc(Error, 
+      "pick \
+         when store |= 8 > 9 -> skip");
+  }  
+
+}
 
 // Need a main for Cargo to compile this...
 // We can't test directly in the lib.rs because of the procedural macro.

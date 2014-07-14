@@ -90,6 +90,7 @@ impl<'a> PegCompiler<'a>
       {
         #![allow(dead_code)]
         #![allow(non_snake_case_functions)]
+        #![allow(unnecessary_parens)]
 
         $peg_lib
         $parse_fn
