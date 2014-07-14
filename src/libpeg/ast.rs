@@ -322,7 +322,8 @@ impl<'a> PegParser<'a>
     match token {
       token::LIT_STR(name) => {
         self.rp.bump();
-        self.parse_set_of_char_range(name_to_string(name), rule_name)
+        let cooked_lit = parse::str_lit(name_to_string(name).as_slice());
+        self.parse_set_of_char_range(&cooked_lit, rule_name)
       },
       _ => {
         let span = self.rp.span;
@@ -336,7 +337,7 @@ impl<'a> PegParser<'a>
     }
   }
 
-  fn parse_set_of_char_range(&mut self, ranges: String, rule_name: &str) -> Option<Box<Expression>>
+  fn parse_set_of_char_range(&mut self, ranges: &String, rule_name: &str) -> Option<Box<Expression>>
   {
     let ranges = ranges.as_slice();
     let mut ranges = ranges.chars();

@@ -65,6 +65,8 @@ impl<'a> PegCompiler<'a>
   {
     let grammar_name = self.grammar.name;
 
+    let peg_lib = self.compile_peg_library();
+
     for rule in self.grammar.rules.iter() {
       self.compile_rule_attributes(&rule.attributes);
       let rule_name = rule.name;
@@ -79,12 +81,14 @@ impl<'a> PegCompiler<'a>
     }
 
     let parse_fn = self.compile_entry_point();
+    self.compile_peg_library();
 
     let items = ToTokensVec{v: &self.top_level_items};
 
     let grammar = quote_item!(self.cx,
       pub mod $grammar_name
       {
+        $peg_lib
         $parse_fn
         $items
       }
@@ -101,6 +105,57 @@ impl<'a> PegCompiler<'a>
       Some(_) => self.starting_rule = self.current_rule_idx,
       _ => ()
     }
+  }
+
+  fn compile_function(&mut self, fun_name: &Ident, body: &ast::P<ast::Expr>) -> ast::P<ast::Item>
+  {
+    (quote_item!(self.cx,
+      pub fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      {
+        $body
+      }
+    )).unwrap()
+  }
+
+  fn compile_lib_any_single_char(&mut self) -> ast::P<ast::Item>
+  {
+    let cx = self.cx;
+    let fun_name = token::gensym_ident("any_single_char");
+    self.compile_function(&fun_name, &quote_expr!(cx,
+      if input.len() - pos > 0 {
+        Ok(input.char_range_at(pos).next)
+      } else {
+        Err(format!("End of input when matching `.`"))
+      }
+    ))
+  }
+
+  fn compile_lib_match_literal(&mut self) -> ast::P<ast::Item>
+  {
+    (quote_item!(self.cx,
+      pub fn match_literal<'a, 'b>(input: &'a str, pos: uint, lit: &'a str, lit_len: uint)
+        -> Result<uint, String>
+      {
+        if input.len() - pos == 0 {
+          Err(format!("End of input when matching the literal `{}`", lit))
+        } else if input.slice_from(pos).starts_with(lit) {
+          Ok(pos + lit_len)
+        } else {
+          Err(format!("Expected `{}` but got `{}`", lit, input.slice_from(pos)))
+        }
+      })).unwrap()
+  }
+
+  fn compile_peg_library(&mut self) -> ast::P<ast::Item>
+  {
+    let any_single_char = self.compile_lib_any_single_char();
+    let match_literal = self.compile_lib_match_literal();
+    (quote_item!(self.cx,
+      pub mod peg {
+        $any_single_char
+        $match_literal
+      }
+    )).unwrap()
   }
 
   fn compile_entry_point(&mut self) -> ast::P<ast::Item>
@@ -172,27 +227,15 @@ impl<'a> PegCompiler<'a>
 
   fn compile_any_single_char(&mut self) -> ast::P<ast::Expr>
   {
-    quote_expr!(self.cx,
-      if input.len() - pos > 0 {
-        Ok(input.char_range_at(pos).next)
-      } else {
-        Err(format!("End of input when matching `.`"))
-      }
-    )
+    quote_expr!(self.cx, peg::any_single_char(input, pos))
   }
 
   fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
   {
     let lit_str = lit_str.as_slice();
-    let s_len = lit_str.len();
+    let lit_len = lit_str.len();
     quote_expr!(self.cx,
-      if input.len() - pos == 0 {
-        Err(format!("End of input when matching the literal `{}`", $lit_str))
-      } else if input.slice_from(pos).starts_with($lit_str) {
-        Ok(pos + $s_len)
-      } else {
-        Err(format!("Expected `{}` but got `{}`", $lit_str, input.slice_from(pos)))
-      }
+      peg::match_literal(input, pos, $lit_str, $lit_len)
     )
   }
 
