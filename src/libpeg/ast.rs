@@ -29,7 +29,7 @@ pub use syntax::codemap::Spanned;
 pub struct Peg{
   pub name: Ident,
   pub rules: Vec<Rule>,
-  pub _attributes: Vec<Attribute>
+  pub attributes: Vec<Attribute>
 }
 
 pub struct Rule{
@@ -66,14 +66,15 @@ pub type Expression = Spanned<Expression_>;
 
 pub struct PegParser<'a>
 {
-  rp: Parser<'a> // rust parser
+  rp: Parser<'a>, // rust parser
+  inner_attrs: Vec<Attribute>
 }
 
-pub fn start_attribute<'a>(rule_attrs: &'a Vec<Attribute>) -> Option<&'a Attribute>
+pub fn get_attribute<'a>(rule_attrs: &'a Vec<Attribute>, attr_name: &str) -> Option<&'a Attribute>
 {
   for attr in rule_attrs.iter() {
     match attr.node.value.node {
-      ast::MetaWord(ref w) if w.get() == "start" =>
+      ast::MetaWord(ref w) if w.get() == attr_name =>
         return Some(attr),
       _ => ()
     }
@@ -87,21 +88,30 @@ impl<'a> PegParser<'a>
          cfg: ast::CrateConfig,
          tts: Vec<ast::TokenTree>) -> PegParser<'a> 
   {
-    PegParser{rp: parse::new_parser_from_tts(sess, cfg, tts)}
+    PegParser{
+      rp: parse::new_parser_from_tts(sess, cfg, tts),
+      inner_attrs: Vec::new()}
   }
 
   pub fn parse_grammar(&mut self) -> Peg
   {
     let grammar_name = self.parse_grammar_decl();
-    let (rules, attrs) = self.parse_rules(); 
-    Peg{name: grammar_name, rules: rules, _attributes: attrs}
+    let rules = self.parse_rules(); 
+    Peg{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_owned()}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident
   {
+    let outer_attrs = self.parse_attributes();
+    if !outer_attrs.is_empty() {
+      self.rp.span_err(outer_attrs.iter().next().unwrap().span,
+        format!("Attributes of the grammar will be ignored. \
+          Use #![attr] for global attributes.").as_slice());
+    }
     if !self.eat_grammar_keyword() {
       let token_string = self.rp.this_token_to_string();
-      self.rp.fatal(
+      let span = self.rp.span;
+      self.rp.span_fatal(span,
         format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), \
                 but found `{}`",
           token_string).as_slice())
@@ -121,38 +131,36 @@ impl<'a> PegParser<'a>
     is_grammar_kw
   }
 
-  fn parse_rules(&mut self) -> (Vec<Rule>, Vec<Attribute>)
+  fn parse_rules(&mut self) -> Vec<Rule>
   {
     let mut rules = vec![];
-    let mut attrs = vec![];
     while self.rp.token != token::EOF
     {
-      let (rule, mod_attrs) = self.parse_rule();
+      let rule = self.parse_rule();
       rules.push(rule);
-      attrs.push_all(mod_attrs.as_slice());
     }
-    (rules, attrs)
+    rules
   }
 
-  fn parse_rule(&mut self) -> (Rule, Vec<Attribute>)
+  fn parse_rule(&mut self) -> Rule
   {
-    let (inner_attrs, outer_attrs) = self.parse_attributes();
+    let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
     self.rp.expect(&token::EQ);
     let body = self.parse_rule_rhs(id_to_string(name).as_slice());
-    (Rule{name: name, attributes: outer_attrs, def: body},
-     inner_attrs)
+    Rule{name: name, attributes: outer_attrs, def: body}
   }
 
   // Outer attributes are attached to the next item.
   // Inner attributes are attached to the englobing item.
-  fn parse_attributes(&mut self) -> (Vec<Attribute>, Vec<ast::Attribute>)
+  fn parse_attributes(&mut self) -> Vec<Attribute>
   {
     let (inners, mut outers) = self.rp.parse_inner_attrs_and_next();
+    self.inner_attrs.push_all(inners.as_slice());
     if !outers.is_empty() {
       outers.push_all(self.rp.parse_outer_attributes().as_slice());
     }
-    (inners, outers)
+    outers
   }
 
   fn parse_rule_decl(&mut self) -> Ident

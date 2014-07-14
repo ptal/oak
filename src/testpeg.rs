@@ -23,6 +23,8 @@ mod tests{
   peg!(
     grammar ntcc;
 
+    #![print_generated]
+
     #[start]
     start = spacing test
           / ident

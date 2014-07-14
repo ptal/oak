@@ -94,14 +94,18 @@ impl<'a> PegCompiler<'a>
       }
     ).unwrap();
 
-    self.cx.parse_sess.span_diagnostic.handler.note(pprust::item_to_string(grammar).as_slice());
+    match get_attribute(&self.grammar.attributes, "print_generated") {
+      Some(_) => self.cx.parse_sess.span_diagnostic.handler.note(
+        pprust::item_to_string(grammar).as_slice()),
+      None => ()
+    }
 
     MacItem::new(grammar)
   }
 
   fn compile_rule_attributes(&mut self, attrs: &Vec<Attribute>)
   {
-    match start_attribute(attrs) {
+    match get_attribute(attrs, "start") {
       Some(_) => self.starting_rule = self.current_rule_idx,
       _ => ()
     }

@@ -43,7 +43,7 @@ fn span_err(cx: &ExtCtxt, sp: Span, m: &str)
 
 fn check_start_attribute<'a>(cx: &ExtCtxt, starting_rule: &Option<&'a Rule>, rule: &'a Rule) -> bool
 {
-  let start_attr = start_attribute(&rule.attributes);
+  let start_attr = get_attribute(&rule.attributes, "start");
   match start_attr {
     Some(ref attr) => {
       match starting_rule {
