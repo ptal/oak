@@ -88,6 +88,9 @@ impl<'a> PegCompiler<'a>
     let grammar = quote_item!(self.cx,
       pub mod $grammar_name
       {
+        #![allow(dead_code)]
+        #![allow(non_snake_case_functions)]
+
         $peg_lib
         $parse_fn
         $items
@@ -277,7 +280,7 @@ impl<'a> PegCompiler<'a>
     self.map_foldr_expr(choices, |tail, head| {
       quote_expr!(cx,
         match $head {
-          Err(msg) => {
+          Err(_) => {
             $tail
           }
           x => x
