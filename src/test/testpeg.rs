@@ -53,71 +53,100 @@ fn parse_res_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
   }
 }
 
-fn skip_test(test_name: &str, reason: &String)
+struct Test
 {
-  fail!(format!("[Skip] {}: {}.", test_name, reason));
+  name: String,
+  parse: proc <'a>(input: &'a str) -> Result<Option<&'a str>, String>
 }
 
-fn test_input<'b>(parse: <'a>|input:&'a str| -> Result<Option<&'a str>, String>,
-  expectation: ExpectedResult, name: &str, input: &'b str)
+impl Test
 {
-  match (expectation, parse(input)) {
-    (Match, Ok(None))
-  | (PartialMatch, Ok(Some(_)))
-  | (Error, Err(_)) => (),
-    (expected, res) => {
-      fail!(format!("Grammar {}: `{}` was expected to {} but {}.",
-        name, input, expected_to_string(expected),
-        parse_res_to_string(&res)));
+  fn test_directory(&self, directory: Path, expectation: ExpectedResult)
+  {
+    match fs::readdir(&directory) {
+      Ok(dir_contents) => {
+        for filepath in dir_contents.iter() {
+          self.test_file(filepath, expectation);
+        }
+      }
+      Err(io_err) => skip_test(self.name,
+        &format!("Impossible to read the directory `{}`, the error is `{}`", 
+          directory.display(), io_err))
     }
   }
-}
 
-fn test_grammar_source_file(parse: <'a>|input:&'a str| -> Result<Option<&'a str>, String>,
-  expectation: ExpectedResult, name: &str, path: &Path)
-{
-  let mut file = File::open(path);
-  match file {
-    Err(io_err) => fail!(format!("[Failure] Could not open test `{}`, the error is `{}`",
-      path.display(), io_err)),
-    Ok(ref mut file) => {
-      let contents = file.read_to_end();
-      match contents {
-        Err(io_err) => fail!(format!("[Failure] Could not read test `{}`, the error is `{}`",
-          path.display(), io_err)),
-        Ok(contents) => {
-          let utf8_contents = std::str::from_utf8(contents.as_slice());
-          test_input(|input| parse(input), expectation, name, utf8_contents.unwrap());
+  fn test_file(&self, filepath: Path, expectation: ExpectedResult)
+  {
+    let mut file = File::open(filepath);
+    match file {
+      Err(io_err) => fail!(format!("[Failure] Could not open test `{}`, the error is `{}`",
+        filepath.display(), io_err)),
+      Ok(ref mut file) => {
+        let contents = file.read_to_end();
+        match contents {
+          Err(io_err) => fail!(format!("[Failure] Could not read test `{}`, the error is `{}`",
+            filepath.display(), io_err)),
+          Ok(contents) => {
+            let utf8_contents = std::str::from_utf8(contents.as_slice());
+            self.test_input(utf8_contents.unwrap(), expectation);
+          }
         }
       }
     }
   }
-}
 
-fn test_grammar_source_files(parse: <'a>|input:&'a str| -> Result<Option<&'a str>, String>,
-  expectation: ExpectedResult, name: &str, path: Path)
-{
-  match fs::readdir(&path) {
-    Ok(files_to_test) => {
-      for file in files_to_test.iter() {
-        test_grammar_source_file(|input| parse(input), expectation, name, file);
+  fn test_input(&self, input: &str, expectation: ExpectedResult)
+  {
+    match (expectation, parse(input)) {
+      (Match, Ok(None))
+    | (PartialMatch, Ok(Some(_)))
+    | (Error, Err(_)) => (),
+      (expected, res) => {
+        fail!(format!("Grammar {}: `{}` was expected to {} but {}.",
+          self.name, input, expected_to_string(expectation),
+          parse_res_to_string(&res)));
       }
     }
-    Err(io_err) => skip_test(name,
-      &format!("Impossible to read the directory `{}`, the error is `{}`", 
-        path.display(), io_err))
+  }
+
+  fn skip_test(test_name: &str, reason: &String)
+  {
+    fail!(format!("[Skip] {}: {}.", test_name, reason));
   }
 }
 
-fn test_grammar(parse: <'a>|input:&'a str| -> Result<Option<&'a str>, String>,
-  name: &str, path: Path)
+struct TestEngine
 {
-  let mut path = path;
-  path.push(name);
-  for &(expectation, test_dir) in [(Error, "run-fail"), (Match, "run-pass")].iter() {
-    let mut path = path.clone();
-    path.push(test_dir);
-    test_grammar_source_files(|input| parse(input), expectation, name, path);
+  test_path : Path,
+  tests : Vec<Test>,
+  current_test_idx: uint
+}
+
+impl TestEngine
+{
+  fn new(test_path: Path) -> TestEngine
+  {
+    if !test_path.is_dir() {
+      fail!(format!("`{}` is not a valid grammar directory.", test_path.display()));
+    }
+    TestEngine{
+      test_path: test_path,
+      tests : Vec::new(),
+      current_test_idx : 0
+    }
+  }
+
+  fn register(&mut self, name: &str, 
+    parse: proc <'a>(input: &'a str) -> Result<Option<&'a str>, String>)
+  {
+    self.tests.push(Test{name: String::from_str(name), parse: parse});
+  }
+
+  fn run(&self)
+  {
+    let ref test = self.tests.as_slice()[0];
+    test.test_directory("run-fail", Error);
+    test.test_directory("run-pass", Match);
   }
 }
 
@@ -131,10 +160,9 @@ fn main()
   if !data_path.is_dir() {
     fail!(format!("`{}` is not a valid data directory.", data_path.display()));
   }
-  let mut grammar_path = data_path.clone();
-  grammar_path.push("grammar");
-  if !grammar_path.is_dir() {
-    fail!(format!("`{}` is not a valid grammar directory.", grammar_path.display()));
-  }
-  test_grammar(|input| ntcc::ntcc::parse(input), "ntcc", grammar_path);
+  let mut test_path = data_path.clone();
+  test_path.push("test");
+  let mut test_engine = TestEngine::new(test_path);
+  test_engine.register("ntcc", ntcc::ntcc::parse);
+  test_engine.run();
 }
