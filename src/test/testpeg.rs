@@ -16,14 +16,16 @@
 #![experimental]
 #![crate_type = "bin"]
 
-#![feature(phase)]
+#![feature(phase,globs)]
 
-#[phase(plugin)]
+#[phase(plugin,link)]
 extern crate peg;
 
 use std::os;
 use std::io::File;
 use std::io::fs;
+
+use peg::Parser;
 
 pub mod ntcc;
 
@@ -33,7 +35,7 @@ enum ExpectedResult {
   Error
 }
 
-fn expected_to_string(expected: ExpectedResult) -> &'static str
+fn expectation_to_string(expected: ExpectedResult) -> &'static str
 {
   match expected {
     Match => "fully match",
@@ -42,7 +44,7 @@ fn expected_to_string(expected: ExpectedResult) -> &'static str
   }
 }
 
-fn parse_res_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
+fn parsing_result_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
 {
   match res {
     &Ok(None) => String::from_str("fully matched"),
@@ -53,10 +55,15 @@ fn parse_res_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
   }
 }
 
+fn skip_test(test_name: &String, reason: &String)
+{
+  fail!(format!("[Skip] {}: {}.", test_name, reason));
+}
+
 struct Test
 {
   name: String,
-  parse: proc <'a>(input: &'a str) -> Result<Option<&'a str>, String>
+  parser: Box<Parser>
 }
 
 impl Test
@@ -64,18 +71,20 @@ impl Test
   fn test_directory(&self, directory: Path, expectation: ExpectedResult)
   {
     match fs::readdir(&directory) {
-      Ok(dir_contents) => {
-        for filepath in dir_contents.iter() {
-          self.test_file(filepath, expectation);
+      Ok(dir_entries) => {
+        for entry in dir_entries.iter() {
+          if entry.is_file() {
+            self.test_file(entry, expectation);
+          }
         }
       }
-      Err(io_err) => skip_test(self.name,
+      Err(io_err) => skip_test(&self.name,
         &format!("Impossible to read the directory `{}`, the error is `{}`", 
           directory.display(), io_err))
     }
   }
 
-  fn test_file(&self, filepath: Path, expectation: ExpectedResult)
+  fn test_file(&self, filepath: &Path, expectation: ExpectedResult)
   {
     let mut file = File::open(filepath);
     match file {
@@ -97,21 +106,16 @@ impl Test
 
   fn test_input(&self, input: &str, expectation: ExpectedResult)
   {
-    match (expectation, parse(input)) {
+    match (expectation, self.parser.parse(input)) {
       (Match, Ok(None))
     | (PartialMatch, Ok(Some(_)))
     | (Error, Err(_)) => (),
-      (expected, res) => {
+      (_, res) => {
         fail!(format!("Grammar {}: `{}` was expected to {} but {}.",
-          self.name, input, expected_to_string(expectation),
-          parse_res_to_string(&res)));
+          self.name, input, expectation_to_string(expectation),
+          parsing_result_to_string(&res)));
       }
     }
-  }
-
-  fn skip_test(test_name: &str, reason: &String)
-  {
-    fail!(format!("[Skip] {}: {}.", test_name, reason));
   }
 }
 
@@ -136,17 +140,18 @@ impl TestEngine
     }
   }
 
-  fn register(&mut self, name: &str, 
-    parse: proc <'a>(input: &'a str) -> Result<Option<&'a str>, String>)
+  fn register(&mut self, name: &str, parser: Box<Parser>)
   {
-    self.tests.push(Test{name: String::from_str(name), parse: parse});
+    self.tests.push(Test{name: String::from_str(name), parser: parser});
   }
 
   fn run(&self)
   {
-    let ref test = self.tests.as_slice()[0];
-    test.test_directory("run-fail", Error);
-    test.test_directory("run-pass", Match);
+    for test in self.tests.iter() {
+      let path = self.test_path.join(Path::new(test.name.clone()));
+      test.test_directory(path.join(Path::new("run-pass")), Match);
+      test.test_directory(path.join(Path::new("run-fail")), Error);
+    }
   }
 }
 
@@ -163,6 +168,6 @@ fn main()
   let mut test_path = data_path.clone();
   test_path.push("test");
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", ntcc::ntcc::parse);
+  test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
   test_engine.run();
 }
