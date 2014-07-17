@@ -41,7 +41,10 @@ enum ExpectedResult {
 struct TestDisplay
 {
   terminal: Box<Terminal<WriterWrapper>>,
-  code_snippet_len: uint
+  code_snippet_len: uint,
+  num_success: uint,
+  num_failure: uint,
+  num_system_failure: uint
 }
 
 impl TestDisplay
@@ -50,8 +53,17 @@ impl TestDisplay
   {
     TestDisplay{
       terminal: term::stdout().unwrap(),
-      code_snippet_len: code_snippet_len
+      code_snippet_len: code_snippet_len,
+      num_success: 0,
+      num_failure: 0,
+      num_system_failure: 0
     }
+  }
+
+  pub fn title(&mut self, msg: &str)
+  {
+    self.write_header(term::color::CYAN, msg);
+    self.write_msg("\n\n");
   }
 
   pub fn info(&mut self, msg: &String)
@@ -70,9 +82,19 @@ impl TestDisplay
       &format!("{}", path.display()));
   }
 
+  pub fn stats(&mut self)
+  {
+    let system_failure_plural = if self.num_system_failure > 1 { "s" } else { "" };
+    let msg = format!("{} passed, {} failed, {} system failure{}.",
+        self.num_success, self.num_failure, self.num_system_failure,
+        system_failure_plural);
+    self.write_line(term::color::BLUE, "\n\n[ stats ] ", &msg);
+  }
+
   pub fn failure<'a>(&mut self, path: &Path, expectation: ExpectedResult, 
     result: &Result<Option<&'a str>, String>)
   {
+    self.num_failure += 1;
     let test_name = self.filestem(path);
     self.write_line(term::color::RED, "[ failed ] ", &test_name);
     self.path(path);
@@ -106,6 +128,7 @@ impl TestDisplay
 
   pub fn success(&mut self, path: &Path)
   {
+    self.num_success += 1;
     let test_name = self.filestem(path);
     self.write_line(term::color::GREEN, "[ passed ] ", &test_name);
   }
@@ -117,18 +140,19 @@ impl TestDisplay
 
   pub fn warn(&mut self, msg: &String)
   {
-    self.write_line(term::color::MAGENTA, "  [ warning ] ", msg);
+    self.write_line(term::color::YELLOW, "  [ warning ] ", msg);
   }
 
   pub fn fs_error(&mut self, msg: &str, path: &Path, io_err: &io::IoError)
   {
-    self.system_error(&format!("{}", msg));
+    self.system_failure(&format!("{}", msg));
     self.path(path);
     self.error(&format!("{}", io_err));
   }
 
-  pub fn system_error(&mut self, msg: &String)
+  pub fn system_failure(&mut self, msg: &String)
   {
+    self.num_system_failure += 1;
     self.write_line(term::color::RED, "[ system error ] ", msg);
   }
 
@@ -250,10 +274,10 @@ impl TestEngine
 
   fn run(&mut self)
   {
-    self.display.info(&format!("Start PEG library tests suite."));
+    self.display.title("    PEG library tests suite");
     for grammar in self.grammars.iter() {
       let grammar_path = self.test_path.join(Path::new(grammar.name.clone()));
-      self.display.info(&format!("Start tests of grammar `{}`", grammar.name));
+      self.display.info(&format!("Start tests of the grammar `{}`", grammar.name));
       self.display.path(&grammar_path);
       let mut test = Test{
         info: grammar,
@@ -264,6 +288,7 @@ impl TestEngine
       test.test_directory(&format!("Run and Fail tests of `{}`", grammar.name),
         &grammar_path.join(Path::new("run-fail")), Error);
     }
+    self.display.stats();
   }
 }
 
