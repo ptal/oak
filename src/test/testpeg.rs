@@ -20,100 +20,203 @@
 
 #[phase(plugin,link)]
 extern crate peg;
+extern crate term;
 
 use std::os;
 use std::io::File;
 use std::io::fs;
+use std::io;
 
 use peg::Parser;
+
+use term::*;
 
 pub mod ntcc;
 
 enum ExpectedResult {
   Match,
-  PartialMatch,
   Error
 }
 
-fn expectation_to_string(expected: ExpectedResult) -> &'static str
+struct TestDisplay
 {
-  match expected {
-    Match => "fully match",
-    PartialMatch => "partially match",
-    Error => "fail"
+  terminal: Box<Terminal<WriterWrapper>>,
+  code_snippet_len: uint
+}
+
+impl TestDisplay
+{
+  pub fn new(code_snippet_len: uint) -> TestDisplay
+  {
+    TestDisplay{
+      terminal: term::stdout().unwrap(),
+      code_snippet_len: code_snippet_len
+    }
+  }
+
+  pub fn info(&mut self, msg: &String)
+  {
+    self.write_line(term::color::CYAN, "\n[ info ] ", msg);
+  }
+
+  pub fn error(&mut self, msg: &String)
+  {
+    self.write_line(term::color::RED, "  [ error ] ", msg);
+  }
+
+  pub fn path(&mut self, path: &Path)
+  {
+    self.write_line(term::color::CYAN, "  [ path ] ", 
+      &format!("{}", path.display()));
+  }
+
+  pub fn failure<'a>(&mut self, path: &Path, expectation: ExpectedResult, 
+    result: &Result<Option<&'a str>, String>)
+  {
+    let test_name = self.filestem(path);
+    self.write_line(term::color::RED, "[ failed ] ", &test_name);
+    self.path(path);
+    self.expected(expectation);
+    self.wrong_result(result);
+  }
+
+  fn expected(&mut self, expectation: ExpectedResult)
+  {
+    let msg = match expectation {
+      Match => "Fully match",
+      Error => "Error"
+    };
+    self.write_line(term::color::CYAN, "  [ expected ] ", &format!("{}", msg))
+  }
+
+  fn wrong_result<'a>(&mut self, result: &Result<Option<&'a str>, String>)
+  {
+    let msg = match result {
+      &Ok(Some(input)) => format!("Partial match, stopped at `{}`.", self.code_snippet(input)),
+      &Ok(None) => format!("Fully matched."),
+      &Err(ref msg) => msg.clone()
+    };
+    self.error(&msg)
+  }
+
+  fn code_snippet<'a>(&self, code: &'a str) -> &'a str
+  {
+    code.slice_to(std::cmp::min(code.len()-1, self.code_snippet_len))
+  }
+
+  pub fn success(&mut self, path: &Path)
+  {
+    let test_name = self.filestem(path);
+    self.write_line(term::color::GREEN, "[ passed ] ", &test_name);
+  }
+
+  fn filestem(&self, path: &Path) -> String
+  {
+    format!("{}", path.filestem_str().unwrap())
+  }
+
+  pub fn warn(&mut self, msg: &String)
+  {
+    self.write_line(term::color::MAGENTA, "  [ warning ] ", msg);
+  }
+
+  pub fn fs_error(&mut self, msg: &str, path: &Path, io_err: &io::IoError)
+  {
+    self.system_error(&format!("{}", msg));
+    self.path(path);
+    self.error(&format!("{}", io_err));
+  }
+
+  pub fn system_error(&mut self, msg: &String)
+  {
+    self.write_line(term::color::RED, "[ system error ] ", msg);
+  }
+
+  fn write_line(&mut self, color: color::Color, header: &str, msg: &String)
+  {
+    self.write_header(color, header);
+    self.write_msg(msg.as_slice());
+    self.write_msg("\n");
+  }
+
+  fn write_header(&mut self, color: color::Color, header: &str)
+  {
+    self.terminal.fg(color).unwrap();
+    self.write_msg(header);
+    self.terminal.reset().unwrap();
+  }
+
+  fn write_msg(&mut self, msg: &str)
+  {
+    (write!(self.terminal, "{}", msg)).unwrap();
   }
 }
 
-fn parsing_result_to_string<'a>(res: &Result<Option<&'a str>, String>) -> String
-{
-  match res {
-    &Ok(None) => String::from_str("fully matched"),
-    &Ok(Some(ref rest)) => 
-      format!("partially matched (it remains `{}`)", rest),
-    &Err(ref msg) =>
-      format!("failed with the error \"{}\"", msg)
-  }
-}
-
-fn skip_test(test_name: &String, reason: &String)
-{
-  fail!(format!("[Skip] {}: {}.", test_name, reason));
-}
-
-struct Test
+struct GrammarInfo
 {
   name: String,
   parser: Box<Parser>
 }
 
-impl Test
+struct Test<'a>
 {
-  fn test_directory(&self, directory: Path, expectation: ExpectedResult)
+  info: &'a GrammarInfo,
+  display: &'a mut TestDisplay,
+}
+
+impl<'a> Test<'a>
+{
+  fn test_directory(&mut self, start_msg: &String, directory: &Path, expectation: ExpectedResult)
   {
-    match fs::readdir(&directory) {
+    self.display.info(start_msg);
+
+    match fs::readdir(directory) {
       Ok(dir_entries) => {
         for entry in dir_entries.iter() {
           if entry.is_file() {
             self.test_file(entry, expectation);
+          } else {
+            self.display.warn(&format!("Entry ignored because it's not a file."));
+            self.display.path(entry);
           }
         }
       }
-      Err(io_err) => skip_test(&self.name,
-        &format!("Impossible to read the directory `{}`, the error is `{}`", 
-          directory.display(), io_err))
+      Err(ref io_err) => {
+        self.display.fs_error("Can't read directory.", directory, io_err);
+      }
     }
   }
 
-  fn test_file(&self, filepath: &Path, expectation: ExpectedResult)
+  fn test_file(&mut self, filepath: &Path, expectation: ExpectedResult)
   {
     let mut file = File::open(filepath);
     match file {
-      Err(io_err) => fail!(format!("[Failure] Could not open test `{}`, the error is `{}`",
-        filepath.display(), io_err)),
       Ok(ref mut file) => {
         let contents = file.read_to_end();
         match contents {
-          Err(io_err) => fail!(format!("[Failure] Could not read test `{}`, the error is `{}`",
-            filepath.display(), io_err)),
           Ok(contents) => {
             let utf8_contents = std::str::from_utf8(contents.as_slice());
-            self.test_input(utf8_contents.unwrap(), expectation);
+            self.test_input(utf8_contents.unwrap(), expectation, filepath);
+          },
+          Err(ref io_err) => {
+            self.display.fs_error("Can't read file.", filepath, io_err);
           }
         }
+      },
+      Err(ref io_err) => {
+        self.display.fs_error("Can't open file.", filepath, io_err);
       }
     }
   }
 
-  fn test_input(&self, input: &str, expectation: ExpectedResult)
+  fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
   {
-    match (expectation, self.parser.parse(input)) {
+    match (expectation, self.info.parser.parse(input)) {
       (Match, Ok(None))
-    | (PartialMatch, Ok(Some(_)))
-    | (Error, Err(_)) => (),
-      (_, res) => {
-        fail!(format!("Grammar {}: `{}` was expected to {} but {}.",
-          self.name, input, expectation_to_string(expectation),
-          parsing_result_to_string(&res)));
+    | (Error, Ok(Some(_)))
+    | (Error, Err(_)) => self.display.success(test_path),
+      (_, ref res) => {
+        self.display.failure(test_path, expectation, res);
       }
     }
   }
@@ -122,8 +225,8 @@ impl Test
 struct TestEngine
 {
   test_path : Path,
-  tests : Vec<Test>,
-  current_test_idx: uint
+  grammars : Vec<GrammarInfo>,
+  display : TestDisplay
 }
 
 impl TestEngine
@@ -134,23 +237,32 @@ impl TestEngine
       fail!(format!("`{}` is not a valid grammar directory.", test_path.display()));
     }
     TestEngine{
-      test_path: test_path,
-      tests : Vec::new(),
-      current_test_idx : 0
+      test_path: test_path.clone(),
+      grammars : Vec::new(),
+      display : TestDisplay::new(20)
     }
   }
 
   fn register(&mut self, name: &str, parser: Box<Parser>)
   {
-    self.tests.push(Test{name: String::from_str(name), parser: parser});
+    self.grammars.push(GrammarInfo{name: String::from_str(name), parser: parser});
   }
 
-  fn run(&self)
+  fn run(&mut self)
   {
-    for test in self.tests.iter() {
-      let path = self.test_path.join(Path::new(test.name.clone()));
-      test.test_directory(path.join(Path::new("run-pass")), Match);
-      test.test_directory(path.join(Path::new("run-fail")), Error);
+    self.display.info(&format!("Start PEG library tests suite."));
+    for grammar in self.grammars.iter() {
+      let grammar_path = self.test_path.join(Path::new(grammar.name.clone()));
+      self.display.info(&format!("Start tests of grammar `{}`", grammar.name));
+      self.display.path(&grammar_path);
+      let mut test = Test{
+        info: grammar,
+        display: &mut self.display
+      };
+      test.test_directory(&format!("Run and Pass tests of `{}`", grammar.name), 
+        &grammar_path.join(Path::new("run-pass")), Match);
+      test.test_directory(&format!("Run and Fail tests of `{}`", grammar.name),
+        &grammar_path.join(Path::new("run-fail")), Error);
     }
   }
 }
