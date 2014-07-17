@@ -17,8 +17,10 @@ use syntax::print::pprust;
 use syntax::ast;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
+use syntax::codemap::DUMMY_SP;
 use ast::*;
 use utility::*;
+use std::gc::GC;
 
 struct ToTokensVec<'a, T>
 {
@@ -80,8 +82,7 @@ impl<'a> PegCompiler<'a>
       self.current_rule_idx += 1;
     }
 
-    let parse_fn = self.compile_entry_point();
-    self.compile_peg_library();
+    let parser_impl = self.compile_entry_point();
 
     let items = ToTokensVec{v: &self.top_level_items};
 
@@ -93,16 +94,52 @@ impl<'a> PegCompiler<'a>
         #![allow(unnecessary_parens)]
 
         $peg_lib
-        $parse_fn
-        $items
+        
+        pub struct Parser;
+
+        impl Parser
+        {
+          pub fn new() -> Parser
+          {
+            Parser
+          }
+          $items
+        }
+
+        $parser_impl
       }
     ).unwrap();
+    
+    let peg_crate = ast::ViewItem {
+      node: ast::ViewItemExternCrate(token::str_to_ident("peg"), None, ast::DUMMY_NODE_ID),
+      attrs: vec![],
+      vis: ast::Inherited,
+      span: DUMMY_SP
+    };
+
+    let grammar = match &grammar.node {
+      &ast::ItemMod(ref module) => {
+        box(GC) ast::Item {
+          ident: grammar.ident,
+          attrs: grammar.attrs.clone(),
+          id: ast::DUMMY_NODE_ID,
+          node: ast::ItemMod(ast::Mod{
+            inner: DUMMY_SP,
+            view_items: module.view_items.clone().append_one(peg_crate),
+            items: module.items.clone()
+          }),
+          vis: ast::Public,
+          span: DUMMY_SP
+        }
+      },
+      _ => fail!("Bug")
+    };
 
     match get_attribute(&self.grammar.attributes, "print_generated") {
       Some(_) => self.cx.parse_sess.span_diagnostic.handler.note(
         pprust::item_to_string(grammar).as_slice()),
       None => ()
-    }
+    };
 
     MacItem::new(grammar)
   }
@@ -159,7 +196,7 @@ impl<'a> PegCompiler<'a>
     let any_single_char = self.compile_lib_any_single_char();
     let match_literal = self.compile_lib_match_literal();
     (quote_item!(self.cx,
-      pub mod peg {
+      pub mod peglib {
         $any_single_char
         $match_literal
       }
@@ -171,18 +208,21 @@ impl<'a> PegCompiler<'a>
     let start_idx = self.starting_rule;
     let start_rule = self.grammar.rules.as_slice()[start_idx].name;
     (quote_item!(self.cx,
-      pub fn parse<'a>(input: &'a str) -> Result<Option<&'a str>, String>
+      impl peg::Parser for Parser
       {
-        match $start_rule(input, 0) {
-          Ok(pos) => {
-            assert!(pos <= input.len())
-            if pos == input.len() {
-              Ok(None) 
-            } else {
-              Ok(Some(input.slice_from(pos)))
-            }
-          },
-          Err(msg) => Err(msg)
+        fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
+        {
+          match Parser::$start_rule(input, 0) {
+            Ok(pos) => {
+              assert!(pos <= input.len())
+              if pos == input.len() {
+                Ok(None) 
+              } else {
+                Ok(Some(input.slice_from(pos)))
+              }
+            },
+            Err(msg) => Err(msg)
+          }
         }
       })).unwrap()
   }
@@ -229,13 +269,13 @@ impl<'a> PegCompiler<'a>
   fn compile_non_terminal_symbol(&mut self, id: Ident) -> ast::P<ast::Expr>
   {
     quote_expr!(self.cx,
-      $id(input, pos)
+      Parser::$id(input, pos)
     )
   }
 
   fn compile_any_single_char(&mut self) -> ast::P<ast::Expr>
   {
-    quote_expr!(self.cx, peg::any_single_char(input, pos))
+    quote_expr!(self.cx, peglib::any_single_char(input, pos))
   }
 
   fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
@@ -243,7 +283,7 @@ impl<'a> PegCompiler<'a>
     let lit_str = lit_str.as_slice();
     let lit_len = lit_str.len();
     quote_expr!(self.cx,
-      peg::match_literal(input, pos, $lit_str, $lit_len)
+      peglib::match_literal(input, pos, $lit_str, $lit_len)
     )
   }
 
@@ -329,7 +369,7 @@ impl<'a> PegCompiler<'a>
         Ok(npos)
       }
     ).unwrap());
-    quote_expr!(self.cx, $fun_name(input, pos))
+    quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
   fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
@@ -353,7 +393,7 @@ impl<'a> PegCompiler<'a>
         }
       }
     ).unwrap());
-    quote_expr!(self.cx, $fun_name(input, pos))
+    quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
   fn compile_optional(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
@@ -411,6 +451,6 @@ impl<'a> PegCompiler<'a>
         }
       }
     ).unwrap());
-    quote_expr!(self.cx, $fun_name(input, pos))
+    quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 }

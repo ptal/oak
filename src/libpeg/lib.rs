@@ -33,6 +33,11 @@ pub mod ast;
 pub mod semantic_analyser;
 pub mod compiler;
 
+pub trait Parser
+{
+  fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;
+}
+
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) 
 {
