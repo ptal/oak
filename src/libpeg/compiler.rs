@@ -67,8 +67,6 @@ impl<'a> PegCompiler<'a>
   {
     let grammar_name = self.grammar.name;
 
-    let peg_lib = self.compile_peg_library();
-
     for rule in self.grammar.rules.iter() {
       self.compile_rule_attributes(&rule.attributes);
       let rule_name = rule.name;
@@ -93,8 +91,6 @@ impl<'a> PegCompiler<'a>
         #![allow(non_snake_case_functions)]
         #![allow(unnecessary_parens)]
 
-        $peg_lib
-        
         pub struct Parser;
 
         impl Parser
@@ -152,57 +148,6 @@ impl<'a> PegCompiler<'a>
     }
   }
 
-  fn compile_function(&mut self, fun_name: &Ident, body: &ast::P<ast::Expr>) -> ast::P<ast::Item>
-  {
-    (quote_item!(self.cx,
-      pub fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
-      {
-        $body
-      }
-    )).unwrap()
-  }
-
-  fn compile_lib_any_single_char(&mut self) -> ast::P<ast::Item>
-  {
-    let cx = self.cx;
-    let fun_name = token::gensym_ident("any_single_char");
-    self.compile_function(&fun_name, &quote_expr!(cx,
-      if input.len() - pos > 0 {
-        Ok(input.char_range_at(pos).next)
-      } else {
-        Err(format!("End of input when matching `.`"))
-      }
-    ))
-  }
-
-  fn compile_lib_match_literal(&mut self) -> ast::P<ast::Item>
-  {
-    (quote_item!(self.cx,
-      pub fn match_literal<'a, 'b>(input: &'a str, pos: uint, lit: &'a str, lit_len: uint)
-        -> Result<uint, String>
-      {
-        if input.len() - pos == 0 {
-          Err(format!("End of input when matching the literal `{}`", lit))
-        } else if input.slice_from(pos).starts_with(lit) {
-          Ok(pos + lit_len)
-        } else {
-          Err(format!("Expected `{}` but got `{}`", lit, input.slice_from(pos)))
-        }
-      })).unwrap()
-  }
-
-  fn compile_peg_library(&mut self) -> ast::P<ast::Item>
-  {
-    let any_single_char = self.compile_lib_any_single_char();
-    let match_literal = self.compile_lib_match_literal();
-    (quote_item!(self.cx,
-      pub mod peglib {
-        $any_single_char
-        $match_literal
-      }
-    )).unwrap()
-  }
-
   fn compile_entry_point(&mut self) -> ast::P<ast::Item>
   {
     let start_idx = self.starting_rule;
@@ -212,17 +157,8 @@ impl<'a> PegCompiler<'a>
       {
         fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
         {
-          match Parser::$start_rule(input, 0) {
-            Ok(pos) => {
-              assert!(pos <= input.len())
-              if pos == input.len() {
-                Ok(None) 
-              } else {
-                Ok(Some(input.slice_from(pos)))
-              }
-            },
-            Err(msg) => Err(msg)
-          }
+          peg::runtime::make_result(input,
+            &Parser::$start_rule(input, 0))
         }
       })).unwrap()
   }
@@ -275,7 +211,7 @@ impl<'a> PegCompiler<'a>
 
   fn compile_any_single_char(&mut self) -> ast::P<ast::Expr>
   {
-    quote_expr!(self.cx, peglib::any_single_char(input, pos))
+    quote_expr!(self.cx, peg::runtime::any_single_char(input, pos))
   }
 
   fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
@@ -283,7 +219,7 @@ impl<'a> PegCompiler<'a>
     let lit_str = lit_str.as_slice();
     let lit_len = lit_str.len();
     quote_expr!(self.cx,
-      peglib::match_literal(input, pos, $lit_str, $lit_len)
+      peg::runtime::match_literal(input, pos, $lit_str, $lit_len)
     )
   }
 
@@ -354,7 +290,7 @@ impl<'a> PegCompiler<'a>
     let fun_name = self.gensym("star");
     let cx = self.cx;
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
       {
         let mut npos = pos;
         while npos < input.len() {
@@ -385,7 +321,7 @@ impl<'a> PegCompiler<'a>
     let fun_name = self.gensym("plus");
     let cx = self.cx;
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
       {
         match $expr {
           Ok(pos) => $star_fn,
@@ -441,7 +377,7 @@ impl<'a> PegCompiler<'a>
     });
 
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name<'a>(input: &'a str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
       {
         let current = input.char_range_at(pos).ch;
         if $cond {

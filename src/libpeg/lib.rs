@@ -28,15 +28,14 @@ use syntax::codemap::Span;
 use syntax::ast::TokenTree;
 use rustc::plugin::Registry;
 
-pub mod utility;
-pub mod ast;
-pub mod semantic_analyser;
-pub mod compiler;
+pub use runtime::Parser;
 
-pub trait Parser
-{
-  fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;
-}
+mod utility;
+mod ast;
+mod semantic_analyser;
+mod compiler;
+
+pub mod runtime;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) 

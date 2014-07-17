@@ -18,7 +18,7 @@
 
 #![feature(phase,globs)]
 
-#[phase(plugin,link)]
+#[phase(plugin, link)]
 extern crate peg;
 extern crate term;
 
