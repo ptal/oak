@@ -1,0 +1,3 @@
+next par
+|| next par || skip || store <- x > 9 end
+|| skip

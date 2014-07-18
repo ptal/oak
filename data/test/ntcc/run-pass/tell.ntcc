@@ -1,0 +1,4 @@
+let x = 0..10 in
+par
+|| store <- x > 5
+|| store <- x == 8

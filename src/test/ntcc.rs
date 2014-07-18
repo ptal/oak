@@ -22,6 +22,9 @@ peg!(
 
   expression = sum
              / par
+             / tell
+             / next
+             / async
              / let_in
              / skip_kw
 
@@ -37,8 +40,17 @@ peg!(
   par_body 
     = oror expression
 
+  tell
+    = store_kw left_arrow constraint
+
+  next
+    = next_kw expression
+
+  async
+    = async_kw expression
+
   when
-    = when_kw entails arrow_right expression
+    = when_kw entails right_arrow expression
 
   entails
     = store_kw entail constraint
@@ -82,6 +94,8 @@ peg!(
   max_kw = "max" spacing
   end_kw = "end" spacing
   par_kw = "par" spacing
+  next_kw = "next" spacing
+  async_kw = "async" spacing
   
   or = "|" spacing
   oror = "||" spacing
@@ -92,7 +106,8 @@ peg!(
   ge = ">=" spacing
   eq = "==" spacing
   neq = "<>" spacing
-  arrow_right = "->" spacing
+  right_arrow = "->" spacing
+  left_arrow = "<-" spacing
   dotdot = ".." spacing
   eq_bind = "=" spacing
 )
