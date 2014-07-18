@@ -1,0 +1,2 @@
+pick
+| when store |= 8.0 > 9.0 -> skip

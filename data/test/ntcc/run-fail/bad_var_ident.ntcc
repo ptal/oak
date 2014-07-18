@@ -1,0 +1,2 @@
+pick
+| when store |= 0a > 0 -> skip

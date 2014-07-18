@@ -1,0 +1,5 @@
+let x = 0..10 in
+let y = min x..16 in
+pick
+| when store |= 8 > 9 -> skip
+| when store |= x <= y -> skip

@@ -1,0 +1,5 @@
+pick
+| when store |= a0 > a_0 -> skip
+| when store |= _0 > 0 -> skip
+| when store |= var > var2 -> skip
+| when store |= myvar__ > __my_var -> skip

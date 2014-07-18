@@ -1,0 +1,6 @@
+let x = 0..10 in
+let y = min x .. max x in
+let z = dom y in
+let x = 0..min x in
+let y = max y .. 399 in
+skip

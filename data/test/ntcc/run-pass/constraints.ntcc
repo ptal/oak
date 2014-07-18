@@ -1,0 +1,7 @@
+pick
+| when store |= x > y -> skip
+| when store |= x <= y -> skip
+| when store |= x < y -> skip
+| when store |= x >= y -> skip
+| when store |= x <> y -> skip
+| when store |= x == y -> skip
