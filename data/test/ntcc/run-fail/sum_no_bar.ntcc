@@ -1,2 +1,0 @@
-pick
-  when store |= 8 > 9 -> skip

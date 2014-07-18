@@ -1,6 +1,3 @@
 par
-|| par
-  || skip
-  || skip
-  end
+|| par skip || skip end
 || skip

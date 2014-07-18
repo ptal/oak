@@ -3,7 +3,7 @@ pick
   pick
   | when store |= x <= y ->
     pick
-    | when store |= x > y -> skip
+      when store |= x > y -> skip
     | when store |= x < y -> skip
     end
   | when store |= 0 > 0 -> skip

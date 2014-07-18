@@ -1,0 +1,7 @@
+rep async next par
+|| async 
+    rep pick 
+    | when store |= x > 9 -> skip
+    end
+|| async skip
+|| skip

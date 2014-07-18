@@ -20,22 +20,25 @@ peg!(
   #[start]
   start = spacing expression
 
-  expression = sum
-             / par
-             / tell
-             / next
-             / async
-             / let_in
-             / skip_kw
+  expression 
+    = sum
+    / par
+    / tell
+    / next
+    / async
+    / rep
+    / unless
+    / let_in
+    / skip_kw
 
   sum
-    = pick_kw sum_body+ end_kw$
+    = pick_kw or$ when sum_body* end_kw$
 
   sum_body
     = or when
 
   par
-    = par_kw par_body+ end_kw$
+    = par_kw oror$ expression par_body* end_kw$
 
   par_body 
     = oror expression
@@ -49,11 +52,20 @@ peg!(
   async
     = async_kw expression
 
+  rep
+    = rep_kw expression
+
+  unless
+    = unless_kw entailed_by next
+
   when
     = when_kw entails right_arrow expression
 
   entails
     = store_kw entail constraint
+
+  entailed_by
+    = constraint entail store_kw
 
   constraint
     = constraint_operand comparison constraint_operand
@@ -70,15 +82,17 @@ peg!(
 
   var_decl = var_ident eq_bind var_range
 
-  var_range = range
-            / dom_kw var_ident
+  var_range 
+    = range
+    / dom_kw var_ident
 
   // max x .. 10 / min x .. max y / 0..10
   range = range_bound dotdot range_bound
 
-  range_bound = integer
-              / min_kw var_ident
-              / max_kw var_ident
+  range_bound 
+    = integer
+    / min_kw var_ident
+    / max_kw var_ident
 
   integer = ["0-9"]+ spacing
   var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing
@@ -96,6 +110,8 @@ peg!(
   par_kw = "par" spacing
   next_kw = "next" spacing
   async_kw = "async" spacing
+  rep_kw = "rep" spacing
+  unless_kw = "unless" spacing
   
   or = "|" spacing
   oror = "||" spacing
