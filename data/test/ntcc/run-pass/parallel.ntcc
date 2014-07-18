@@ -1,0 +1,7 @@
+pick
+| when store |= 8 > 9 ->
+  par
+  || pick 
+     | when store |= x <= y -> skip
+  || skip
+| when store |= id > oups -> skip

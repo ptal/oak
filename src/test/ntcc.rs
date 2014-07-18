@@ -21,14 +21,21 @@ peg!(
   start = spacing expression
 
   expression = sum
+             / par
              / let_in
              / skip_kw
 
   sum
-    = pick_kw sum_body
+    = pick_kw sum_body+ end_kw$
 
   sum_body
-    = or when sum_body$
+    = or when
+
+  par
+    = par_kw par_body+ end_kw$
+
+  par_body 
+    = oror expression
 
   when
     = when_kw entails arrow_right expression
@@ -73,8 +80,11 @@ peg!(
   dom_kw = "dom" spacing
   min_kw = "min" spacing
   max_kw = "max" spacing
+  end_kw = "end" spacing
+  par_kw = "par" spacing
   
   or = "|" spacing
+  oror = "||" spacing
   entail = "|=" spacing
   lt = "<" spacing
   le = "<=" spacing
