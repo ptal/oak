@@ -99,7 +99,7 @@ impl<'a> PegParser<'a>
   {
     let grammar_name = self.parse_grammar_decl();
     let rules = self.parse_rules(); 
-    Peg{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_owned()}
+    Peg{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_vec()}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident

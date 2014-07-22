@@ -86,7 +86,6 @@ impl<'a> PegCompiler<'a>
       pub mod $grammar_name
       {
         #![allow(dead_code)]
-        #![allow(non_snake_case_functions)]
         #![allow(unnecessary_parens)]
 
         pub struct Parser;
@@ -131,7 +130,7 @@ impl<'a> PegCompiler<'a>
 
     if self.grammar.print_generated {
       self.cx.parse_sess.span_diagnostic.handler.note(
-        pprust::item_to_string(grammar).as_slice());
+        pprust::item_to_string(&*grammar).as_slice());
     }
 
     MacItem::new(grammar)
@@ -261,16 +260,23 @@ impl<'a> PegCompiler<'a>
     self.unique_id - 1
   }
 
-  fn current_rule_name(&self) -> String
+  fn current_rule(&'a self) -> &'a clean_ast::Rule
   {
-    id_to_string(self.grammar.rules.as_slice()[self.current_rule_idx].name)
+    &self.grammar.rules.as_slice()[self.current_rule_idx]
+  }
+
+  fn current_lc_rule_name(&self) -> String
+  {
+    let current_rule_ident = self.current_rule().name;
+    let rule_name = id_to_string(current_rule_ident);
+    string_to_lowercase(&rule_name)
   }
 
   fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
   {
     token::gensym_ident(format!(
       "{}_{}_{}", prefix, 
-        self.current_rule_name(), 
+        self.current_lc_rule_name(), 
         self.gen_uid()).as_slice())
   }
 
