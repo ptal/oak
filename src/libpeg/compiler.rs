@@ -20,6 +20,7 @@ use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
 use syntax::codemap::DUMMY_SP;
 use ast::*;
 use utility::*;
+use semantic_analyser::*;
 use std::gc::GC;
 
 struct ToTokensVec<'a, T>
@@ -43,22 +44,20 @@ pub struct PegCompiler<'a>
   top_level_items: Vec<ast::P<ast::Item>>,
   cx: &'a ExtCtxt<'a>,
   unique_id: uint,
-  grammar: &'a Peg,
-  current_rule_idx: uint,
-  starting_rule: uint
+  grammar: &'a clean_ast::Grammar,
+  current_rule_idx: uint
 }
 
 impl<'a> PegCompiler<'a>
 {
-  pub fn compile(cx: &'a ExtCtxt, grammar: &'a Peg) -> Box<MacResult>
+  pub fn compile(cx: &'a ExtCtxt, grammar: &'a clean_ast::Grammar) -> Box<MacResult>
   {
     let mut compiler = PegCompiler{
       top_level_items: Vec::new(),
       cx: cx,
       unique_id: 0,
       grammar: grammar,
-      current_rule_idx: 0,
-      starting_rule: 0
+      current_rule_idx: 0
     };
     compiler.compile_peg()
   }
@@ -68,9 +67,8 @@ impl<'a> PegCompiler<'a>
     let grammar_name = self.grammar.name;
 
     for rule in self.grammar.rules.iter() {
-      self.compile_rule_attributes(&rule.attributes);
       let rule_name = rule.name;
-      let rule_def = self.compile_rule_rhs(&rule.def);
+      let rule_def = self.compile_expression(&rule.def);
       self.top_level_items.push(quote_item!(self.cx,
         fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
         {
@@ -131,26 +129,17 @@ impl<'a> PegCompiler<'a>
       _ => fail!("Bug")
     };
 
-    match get_attribute(&self.grammar.attributes, "print_generated") {
-      Some(_) => self.cx.parse_sess.span_diagnostic.handler.note(
-        pprust::item_to_string(grammar).as_slice()),
-      None => ()
-    };
+    if self.grammar.print_generated {
+      self.cx.parse_sess.span_diagnostic.handler.note(
+        pprust::item_to_string(grammar).as_slice());
+    }
 
     MacItem::new(grammar)
   }
 
-  fn compile_rule_attributes(&mut self, attrs: &Vec<Attribute>)
-  {
-    match get_attribute(attrs, "start") {
-      Some(_) => self.starting_rule = self.current_rule_idx,
-      _ => ()
-    }
-  }
-
   fn compile_entry_point(&mut self) -> ast::P<ast::Item>
   {
-    let start_idx = self.starting_rule;
+    let start_idx = self.grammar.start_rule_idx;
     let start_rule = self.grammar.rules.as_slice()[start_idx].name;
     (quote_item!(self.cx,
       impl peg::Parser for Parser
@@ -163,7 +152,7 @@ impl<'a> PegCompiler<'a>
       })).unwrap()
   }
 
-  fn compile_rule_rhs(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_expression(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
@@ -229,7 +218,7 @@ impl<'a> PegCompiler<'a>
     assert!(seq.len() > 0);
     let mut seq_it = seq
       .iter()
-      .map(|e| { self.compile_rule_rhs(e) })
+      .map(|e| { self.compile_expression(e) })
       .rev();
 
     let head = seq_it.next().unwrap();
@@ -310,13 +299,13 @@ impl<'a> PegCompiler<'a>
 
   fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
+    let expr = self.compile_expression(expr);
     self.compile_star(&expr)
   }
 
   fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
+    let expr = self.compile_expression(expr);
     let star_fn = self.compile_star(&expr);
     let fun_name = self.gensym("plus");
     let cx = self.cx;
@@ -334,7 +323,7 @@ impl<'a> PegCompiler<'a>
 
   fn compile_optional(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
+    let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
       match $expr {
         Ok(pos) => Ok(pos),
@@ -345,7 +334,7 @@ impl<'a> PegCompiler<'a>
 
   fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
+    let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
       match $expr {
         Ok(_) => Err(format!("An `!expr` failed.")),
@@ -355,7 +344,7 @@ impl<'a> PegCompiler<'a>
 
   fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
   {
-    let expr = self.compile_rule_rhs(expr);
+    let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
       match $expr {
         Ok(_) => Ok(pos),

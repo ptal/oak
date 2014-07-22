@@ -23,7 +23,7 @@ use syntax::parse::parser::Parser;
 
 use utility::*;
 
-pub use syntax::ast::Attribute;
+pub use syntax::ast::{Attribute, SpannedIdent};
 pub use syntax::codemap::Spanned;
 
 pub struct Peg{
@@ -33,25 +33,27 @@ pub struct Peg{
 }
 
 pub struct Rule{
-  pub name: Ident,
+  pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
   pub def: Box<Expression>
 }
 
+#[deriving(Clone)]
 pub enum Expression_{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
-  NonTerminalSymbol(Ident), // another_rule
+  NonTerminalSymbol(Ident), // a_rule
   Sequence(Vec<Box<Expression>>), // a_rule next_rule
   Choice(Vec<Box<Expression>>), // try_this / or_try_this_one
   ZeroOrMore(Box<Expression>), // space*
   OneOrMore(Box<Expression>), // space+
   Optional(Box<Expression>), // space? - `?` replaced by `$`
   NotPredicate(Box<Expression>), // !space
-  AndPredicate(Box<Expression>), // &space space
+  AndPredicate(Box<Expression>), // &space
   CharacterClass(CharacterClassExpr)
 }
 
+#[deriving(Clone)]
 pub struct CharacterClassExpr {
   pub intervals: Vec<CharacterInterval>
 }
@@ -112,7 +114,7 @@ impl<'a> PegParser<'a>
       let token_string = self.rp.this_token_to_string();
       let span = self.rp.span;
       self.rp.span_fatal(span,
-        format!("expected the grammar declaration (of the form: `grammar <grammar-name>;`), \
+        format!("Expected the grammar declaration (of the form: `grammar <grammar-name>;`), \
                 but found `{}`",
           token_string).as_slice())
     }
@@ -147,7 +149,7 @@ impl<'a> PegParser<'a>
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
     self.rp.expect(&token::EQ);
-    let body = self.parse_rule_rhs(id_to_string(name).as_slice());
+    let body = self.parse_rule_rhs(id_to_string(name.node).as_slice());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
 
@@ -163,9 +165,10 @@ impl<'a> PegParser<'a>
     outers
   }
 
-  fn parse_rule_decl(&mut self) -> Ident
+  fn parse_rule_decl(&mut self) -> SpannedIdent
   {
-    self.rp.parse_ident()
+    let sp = self.rp.span;
+    respan(sp, self.rp.parse_ident())
   }
 
   fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression>

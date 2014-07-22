@@ -52,7 +52,8 @@ fn parse(cx: &mut ExtCtxt, tts: &[TokenTree]) -> Box<MacResult>
 {
   let mut parser = ast::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
-  semantic_analyser::check_peg(cx, &peg);
-  compiler::PegCompiler::compile(cx, &peg)
+  let ast = semantic_analyser::SemanticAnalyser::analyse(cx, &peg);
+  cx.parse_sess.span_diagnostic.handler.abort_if_errors();
+  compiler::PegCompiler::compile(cx, &ast.unwrap())
 }
 
