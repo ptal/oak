@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use rust::{ExtCtxt, Ident, Span};
 use front::ast::*;
-use identifier::*;
-use rust::{ExtCtxt, Span, Ident};
-
 use std::collections::hashmap::HashMap;
+
+mod lint;
+mod visitor;
 
 pub mod clean_ast
 {
@@ -70,7 +71,7 @@ impl<'a> SemanticAnalyser<'a>
       return None
     }
 
-    let mut unused_rule_analyser = UnusedRule::new(self.cx, &self.grammar.rules, 
+    let mut unused_rule_analyser = lint::unused_rule::UnusedRule::new(self.cx, self.grammar, 
       &ident_to_rule_idx);
     unused_rule_analyser.analyse(start_rule_idx);
 
@@ -298,54 +299,6 @@ impl<'a> ExprVisitor for UndeclaredRule<'a>
         format!("You try to call the rule `{}` which is not declared.",
           id_to_string(id)).as_slice());
       self.has_undeclared = true;
-    }
-  }
-}
-
-struct UnusedRule<'a>
-{
-  cx: &'a ExtCtxt<'a>,
-  ident_to_rule_idx: &'a HashMap<Ident, uint>,
-  rules: &'a Vec<Rule>,
-  is_used: Vec<bool>
-}
-
-impl<'a> UnusedRule<'a>
-{
-  fn new(cx: &'a ExtCtxt<'a>, rules: &'a Vec<Rule>,
-    ident_to_rule_idx: &'a HashMap<Ident, uint>) -> UnusedRule<'a>
-  {
-    UnusedRule {
-      cx: cx,
-      ident_to_rule_idx: ident_to_rule_idx,
-      rules: rules,
-      is_used: Vec::from_fn(rules.len(), |_| false)
-    }
-  }
-
-  fn analyse(&mut self, start_rule_idx: uint)
-  {
-    *self.is_used.get_mut(start_rule_idx) = true;
-    self.visit_expr(&self.rules[start_rule_idx].def);
-    for (idx, used) in self.is_used.iter().enumerate() {
-      if !used {
-        let sp = self.rules[idx].name.span;
-        self.cx.parse_sess.span_diagnostic.span_warn(sp, 
-          format!("The rule `{}` is not used.",
-            id_to_string(self.rules[idx].name.node)).as_slice());
-      }
-    }
-  }
-}
-
-impl<'a> ExprVisitor for UnusedRule<'a>
-{
-  fn visit_non_terminal_symbol(&mut self, _sp: Span, id: Ident)
-  {
-    let idx = *self.ident_to_rule_idx.find(&id).unwrap();
-    if !self.is_used[idx] {
-      *self.is_used.get_mut(idx) = true;
-      self.visit_expr(&self.rules[idx].def);
     }
   }
 }
