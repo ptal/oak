@@ -18,7 +18,7 @@ use syntax::ast;
 use syntax::parse::token;
 use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
 use syntax::codemap::DUMMY_SP;
-use ast::*;
+use front::ast::*;
 use utility::*;
 use semantic_analyser::*;
 use std::gc::GC;

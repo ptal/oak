@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ast::*;
+use front::ast::*;
 use utility::*;
 
 use syntax::ext::base::ExtCtxt;
@@ -22,7 +22,7 @@ use std::collections::hashmap::HashMap;
 pub mod clean_ast
 {
   use syntax::ast::Ident;
-  use ast::*;
+  use front::ast::*;
 
   pub struct Grammar{
     pub name: Ident,

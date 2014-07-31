@@ -28,10 +28,12 @@ use syntax::codemap::Span;
 use syntax::ast::TokenTree;
 use rustc::plugin::Registry;
 
+use front::parser;
+
 pub use runtime::Parser;
 
 mod utility;
-mod ast;
+mod front;
 mod semantic_analyser;
 mod compiler;
 
@@ -50,7 +52,7 @@ fn expand(cx: &mut ExtCtxt, _sp: Span, tts: &[TokenTree]) -> Box<MacResult>
 
 fn parse(cx: &mut ExtCtxt, tts: &[TokenTree]) -> Box<MacResult>
 {
-  let mut parser = ast::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
+  let mut parser = parser::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
   let ast = semantic_analyser::SemanticAnalyser::analyse(cx, &peg);
   cx.parse_sess.span_diagnostic.handler.abort_if_errors();
