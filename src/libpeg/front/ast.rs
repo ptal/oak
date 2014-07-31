@@ -16,7 +16,7 @@ use rust;
 pub use rust::{SpannedIdent, Spanned, Attribute};
 pub use identifier::*;
 
-pub struct Peg{
+pub struct Grammar{
   pub name: Ident,
   pub rules: Vec<Rule>,
   pub attributes: Vec<Attribute>

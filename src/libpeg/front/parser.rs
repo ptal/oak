@@ -18,28 +18,28 @@ use std::str::Chars;
 
 use front::ast::*;
 
-pub struct PegParser<'a>
+pub struct Parser<'a>
 {
   rp: rust::Parser<'a>,
   inner_attrs: Vec<rust::Attribute>
 }
 
-impl<'a> PegParser<'a>
+impl<'a> Parser<'a>
 {
   pub fn new(sess: &'a rust::ParseSess,
          cfg: rust::CrateConfig,
-         tts: Vec<rust::TokenTree>) -> PegParser<'a> 
+         tts: Vec<rust::TokenTree>) -> Parser<'a> 
   {
-    PegParser{
+    Parser{
       rp: rust::new_parser_from_tts(sess, cfg, tts),
       inner_attrs: Vec::new()}
   }
 
-  pub fn parse_grammar(&mut self) -> Peg
+  pub fn parse_grammar(&mut self) -> Grammar
   {
     let grammar_name = self.parse_grammar_decl();
     let rules = self.parse_rules(); 
-    Peg{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_vec()}
+    Grammar{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_vec()}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident

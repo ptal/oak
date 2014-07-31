@@ -48,7 +48,7 @@ fn expand(cx: &mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> B
 
 fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult>
 {
-  let mut parser = parser::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
+  let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
   let ast = middle::SemanticAnalyser::analyse(cx, &peg);
   cx.parse_sess.span_diagnostic.handler.abort_if_errors();

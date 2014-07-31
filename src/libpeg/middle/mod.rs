@@ -39,12 +39,12 @@ pub mod clean_ast
 pub struct SemanticAnalyser<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  grammar: &'a Peg
+  grammar: &'a Grammar
 }
 
 impl<'a> SemanticAnalyser<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt, grammar: &'a Peg) -> Option<clean_ast::Grammar>
+  pub fn analyse(cx: &'a ExtCtxt, grammar: &'a Grammar) -> Option<clean_ast::Grammar>
   {
     let analyser = SemanticAnalyser {
       cx: cx,
