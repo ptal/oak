@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use rust;
-use rust::{Ident, ExtCtxt};
+use rust::ExtCtxt;
+use identifier::*;
 use front::ast::*;
-use utility::*;
 use middle::*;
 use std::gc::GC;
 use std::collections::hashmap::HashMap;

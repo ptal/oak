@@ -33,7 +33,7 @@ mod front;
 mod middle;
 mod back;
 mod rust;
-mod utility;
+mod identifier;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) 
@@ -54,4 +54,3 @@ fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult
   cx.parse_sess.span_diagnostic.handler.abort_if_errors();
   back::PegCompiler::compile(cx, &ast.unwrap())
 }
-

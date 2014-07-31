@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use front::ast::*;
-use utility::*;
+use identifier::*;
 use rust::{ExtCtxt, Span, Ident};
 
 use std::collections::hashmap::HashMap;

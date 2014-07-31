@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use rust;
-pub use rust::{Ident, SpannedIdent, Spanned, Attribute};
-pub use utility::*;
+pub use rust::{SpannedIdent, Spanned, Attribute};
+pub use identifier::*;
 
 pub struct Peg{
   pub name: Ident,
