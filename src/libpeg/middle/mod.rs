@@ -14,6 +14,7 @@
 
 use rust::{ExtCtxt, Ident, Span};
 use front::ast::*;
+use middle::visitor::Visitor;
 use std::collections::hashmap::HashMap;
 
 mod lint;
@@ -67,7 +68,7 @@ impl<'a> SemanticAnalyser<'a>
       return None
     }
 
-    if UndeclaredRule::analyse(self.cx, &self.grammar.rules, &ident_to_rule_idx) {
+    if UndeclaredRule::analyse(self.cx, self.grammar, &ident_to_rule_idx) {
       return None
     }
 
@@ -174,98 +175,6 @@ impl<'a> SemanticAnalyser<'a>
   }
 }
 
-pub trait ExprVisitor
-{
-  fn visit_expr(&mut self, expr: &Box<Expression>)
-  {
-    let sp = expr.span;
-    match &expr.node {
-      &StrLiteral(ref lit) => {
-        self.visit_str_literal(sp, lit)
-      }
-      &AnySingleChar => {
-        self.visit_any_single_char(sp)
-      }
-      &NonTerminalSymbol(id) => {
-        self.visit_non_terminal_symbol(sp, id)
-      }
-      &Sequence(ref seq) => {
-        self.visit_sequence(sp, seq)
-      }
-      &Choice(ref choices) => {
-        self.visit_choice(sp, choices)
-      }
-      &ZeroOrMore(ref expr) => {
-        self.visit_zero_or_more(sp, expr)
-      }
-      &OneOrMore(ref expr) => {
-        self.visit_one_or_more(sp, expr)
-      }
-      &Optional(ref expr) => {
-        self.visit_optional(sp, expr)
-      }
-      &NotPredicate(ref expr) => {
-        self.visit_not_predicate(sp, expr)
-      }
-      &AndPredicate(ref expr) => {
-        self.visit_and_predicate(sp, expr)
-      }
-      &CharacterClass(ref charClass) => {
-        self.visit_character_class(sp, charClass)
-      }
-    }
-  }
-
-  fn visit_str_literal(&mut self, _sp: Span, _lit: &String) {}
-  fn visit_any_single_char(&mut self, _sp: Span) {}
-  fn visit_non_terminal_symbol(&mut self, _sp: Span, _id: Ident) {}
-
-  fn visit_sequence(&mut self, _sp: Span, expr: &Vec<Box<Expression>>)
-  {
-    self.visit_expr_slice(expr.as_slice())
-  }
-
-  fn visit_choice(&mut self, _sp: Span, expr: &Vec<Box<Expression>>)
-  {
-    self.visit_expr_slice(expr.as_slice())
-  }
-
-  fn visit_zero_or_more(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    self.visit_expr(expr)
-  }
-
-  fn visit_one_or_more(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    self.visit_expr(expr)
-  }
-
-  fn visit_optional(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    self.visit_expr(expr)
-  }
-
-  fn visit_not_predicate(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    self.visit_expr(expr)
-  }
-
-  fn visit_and_predicate(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    self.visit_expr(expr)
-  }
-
-  fn visit_character_class(&mut self, _sp: Span, _expr: &CharacterClassExpr) {}
-
-  fn visit_expr_slice<'a>(&mut self, seq: &'a [Box<Expression>])
-  {
-    assert!(seq.len() > 0);
-    for expr in seq.iter() {
-      self.visit_expr(expr);
-    }
-  }
-}
-
 struct UndeclaredRule<'a>
 {
   cx: &'a ExtCtxt<'a>,
@@ -275,7 +184,7 @@ struct UndeclaredRule<'a>
 
 impl<'a> UndeclaredRule<'a>
 {
-  fn analyse(cx: &'a ExtCtxt<'a>, rules: &Vec<Rule>,
+  fn analyse(cx: &'a ExtCtxt<'a>, grammar: &Grammar,
     ident_to_rule_idx: &'a HashMap<Ident, uint>) -> bool
   {
     let mut analyser = UndeclaredRule {
@@ -283,14 +192,12 @@ impl<'a> UndeclaredRule<'a>
       ident_to_rule_idx: ident_to_rule_idx,
       has_undeclared: false
     };
-    for rule in rules.iter() {
-      analyser.visit_expr(&rule.def);
-    }
+    analyser.visit_grammar(grammar);
     analyser.has_undeclared
   }
 }
 
-impl<'a> ExprVisitor for UndeclaredRule<'a>
+impl<'a> Visitor for UndeclaredRule<'a>
 {
   fn visit_non_terminal_symbol(&mut self, sp: Span, id: Ident)
   {
