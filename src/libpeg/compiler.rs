@@ -16,7 +16,7 @@ use rust;
 use rust::{Ident, ExtCtxt};
 use front::ast::*;
 use utility::*;
-use semantic_analyser::*;
+use middle::*;
 use std::gc::GC;
 use std::collections::hashmap::HashMap;
 

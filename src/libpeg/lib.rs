@@ -31,8 +31,8 @@ use front::parser;
 pub mod runtime;
 mod rust;
 mod front;
+mod middle;
 mod utility;
-mod semantic_analyser;
 mod compiler;
 
 #[plugin_registrar]
@@ -50,7 +50,7 @@ fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult
 {
   let mut parser = parser::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();
-  let ast = semantic_analyser::SemanticAnalyser::analyse(cx, &peg);
+  let ast = middle::SemanticAnalyser::analyse(cx, &peg);
   cx.parse_sess.span_diagnostic.handler.abort_if_errors();
   compiler::PegCompiler::compile(cx, &ast.unwrap())
 }
