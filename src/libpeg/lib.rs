@@ -23,21 +23,17 @@
 extern crate rustc;
 extern crate syntax;
 
-use syntax::ext::base::{ExtCtxt, MacResult};
-use syntax::codemap::Span;
-use syntax::ast::TokenTree;
 use rustc::plugin::Registry;
 
+pub use runtime::Parser;
 use front::parser;
 
-pub use runtime::Parser;
-
-mod utility;
+pub mod runtime;
+mod rust;
 mod front;
+mod utility;
 mod semantic_analyser;
 mod compiler;
-
-pub mod runtime;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) 
@@ -45,12 +41,12 @@ pub fn plugin_registrar(reg: &mut Registry)
   reg.register_macro("peg", expand)
 }
 
-fn expand(cx: &mut ExtCtxt, _sp: Span, tts: &[TokenTree]) -> Box<MacResult> 
+fn expand(cx: &mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult> 
 {
   parse(cx, tts)
 }
 
-fn parse(cx: &mut ExtCtxt, tts: &[TokenTree]) -> Box<MacResult>
+fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult>
 {
   let mut parser = parser::PegParser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let peg = parser.parse_grammar();

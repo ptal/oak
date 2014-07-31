@@ -14,14 +14,13 @@
 
 use front::ast::*;
 use utility::*;
+use rust::{ExtCtxt, Span, Ident};
 
-use syntax::ext::base::ExtCtxt;
-use syntax::codemap::Span;
 use std::collections::hashmap::HashMap;
 
 pub mod clean_ast
 {
-  use syntax::ast::Ident;
+  use rust::Ident;
   use front::ast::*;
 
   pub struct Grammar{

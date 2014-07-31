@@ -12,12 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use syntax::ext::quote::rt::ToTokens;
-use syntax::print::pprust;
-use syntax::ast;
-use syntax::parse::token;
-use syntax::ext::base::{ExtCtxt, MacResult, MacItem};
-use syntax::codemap::DUMMY_SP;
+use rust;
+use rust::{Ident, ExtCtxt};
 use front::ast::*;
 use utility::*;
 use semantic_analyser::*;
@@ -40,9 +36,9 @@ struct ToTokensVec<'a, T>
   v: &'a Vec<T>
 }
 
-impl<'a, T: ToTokens> ToTokens for ToTokensVec<'a, T>
+impl<'a, T: rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
 {
-  fn to_tokens(&self, cx: &ExtCtxt) -> Vec<ast::TokenTree> {
+  fn to_tokens(&self, cx: &ExtCtxt) -> Vec<rust::TokenTree> {
     let mut tts = Vec::new();
     for e in self.v.iter() {
       tts = tts.append(e.to_tokens(cx).as_slice());
@@ -53,7 +49,7 @@ impl<'a, T: ToTokens> ToTokens for ToTokensVec<'a, T>
 
 pub struct PegCompiler<'a>
 {
-  top_level_items: Vec<ast::P<ast::Item>>,
+  top_level_items: Vec<rust::P<rust::Item>>,
   cx: &'a ExtCtxt<'a>,
   unique_id: uint,
   grammar: &'a clean_ast::Grammar,
@@ -62,7 +58,7 @@ pub struct PegCompiler<'a>
 
 impl<'a> PegCompiler<'a>
 {
-  pub fn compile(cx: &'a ExtCtxt, grammar: &'a clean_ast::Grammar) -> Box<MacResult>
+  pub fn compile(cx: &'a ExtCtxt, grammar: &'a clean_ast::Grammar) -> Box<rust::MacResult>
   {
     let mut compiler = PegCompiler{
       top_level_items: Vec::new(),
@@ -74,7 +70,7 @@ impl<'a> PegCompiler<'a>
     compiler.compile_peg()
   }
 
-  fn compile_peg(&mut self) -> Box<MacResult>
+  fn compile_peg(&mut self) -> Box<rust::MacResult>
   {
     let grammar_name = self.grammar.name;
 
@@ -119,26 +115,26 @@ impl<'a> PegCompiler<'a>
       }
     ).unwrap();
     
-    let peg_crate = ast::ViewItem {
-      node: ast::ViewItemExternCrate(token::str_to_ident("peg"), None, ast::DUMMY_NODE_ID),
+    let peg_crate = rust::ViewItem {
+      node: rust::ViewItemExternCrate(rust::str_to_ident("peg"), None, rust::DUMMY_NODE_ID),
       attrs: vec![],
-      vis: ast::Inherited,
-      span: DUMMY_SP
+      vis: rust::Inherited,
+      span: rust::DUMMY_SP
     };
 
     let grammar = match &grammar.node {
-      &ast::ItemMod(ref module) => {
-        box(GC) ast::Item {
+      &rust::ItemMod(ref module) => {
+        box(GC) rust::Item {
           ident: grammar.ident,
           attrs: grammar.attrs.clone(),
-          id: ast::DUMMY_NODE_ID,
-          node: ast::ItemMod(ast::Mod{
-            inner: DUMMY_SP,
+          id: rust::DUMMY_NODE_ID,
+          node: rust::ItemMod(rust::Mod{
+            inner: rust::DUMMY_SP,
             view_items: module.view_items.clone().append_one(peg_crate),
             items: module.items.clone()
           }),
-          vis: ast::Public,
-          span: DUMMY_SP
+          vis: rust::Public,
+          span: rust::DUMMY_SP
         }
       },
       _ => fail!("Bug")
@@ -146,13 +142,13 @@ impl<'a> PegCompiler<'a>
 
     if self.grammar.print_generated {
       self.cx.parse_sess.span_diagnostic.handler.note(
-        pprust::item_to_string(&*grammar).as_slice());
+        rust::item_to_string(&*grammar).as_slice());
     }
 
-    MacItem::new(grammar)
+    rust::MacItem::new(grammar)
   }
 
-  fn compile_entry_point(&mut self) -> ast::P<ast::Item>
+  fn compile_entry_point(&mut self) -> rust::P<rust::Item>
   {
     let start_idx = self.grammar.start_rule_idx;
     let start_rule = self.grammar.rules.as_slice()[start_idx].name;
@@ -167,7 +163,7 @@ impl<'a> PegCompiler<'a>
       })).unwrap()
   }
 
-  fn compile_expression(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_expression(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
@@ -206,19 +202,19 @@ impl<'a> PegCompiler<'a>
     }
   }
 
-  fn compile_non_terminal_symbol(&mut self, id: Ident) -> ast::P<ast::Expr>
+  fn compile_non_terminal_symbol(&mut self, id: Ident) -> rust::P<rust::Expr>
   {
     quote_expr!(self.cx,
       Parser::$id(input, pos)
     )
   }
 
-  fn compile_any_single_char(&mut self) -> ast::P<ast::Expr>
+  fn compile_any_single_char(&mut self) -> rust::P<rust::Expr>
   {
     quote_expr!(self.cx, peg::runtime::any_single_char(input, pos))
   }
 
-  fn compile_str_literal(&mut self, lit_str: &String) -> ast::P<ast::Expr>
+  fn compile_str_literal(&mut self, lit_str: &String) -> rust::P<rust::Expr>
   {
     let lit_str = lit_str.as_slice();
     let lit_len = lit_str.len();
@@ -228,7 +224,7 @@ impl<'a> PegCompiler<'a>
   }
 
   fn map_foldr_expr<'a>(&mut self, seq: &'a [Box<Expression>], 
-    f: |ast::P<ast::Expr>, ast::P<ast::Expr>| -> ast::P<ast::Expr>) -> ast::P<ast::Expr>
+    f: |rust::P<rust::Expr>, rust::P<rust::Expr>| -> rust::P<rust::Expr>) -> rust::P<rust::Expr>
   {
     assert!(seq.len() > 0);
     let mut seq_it = seq
@@ -240,7 +236,7 @@ impl<'a> PegCompiler<'a>
     seq_it.fold(head, f)
   }
 
-  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> rust::P<rust::Expr>
   {
     let cx = self.cx;
     self.map_foldr_expr(seq, |tail, head| {
@@ -255,7 +251,7 @@ impl<'a> PegCompiler<'a>
     })
   }
 
-  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> ast::P<ast::Expr>
+  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> rust::P<rust::Expr>
   {
     let cx = self.cx;
     self.map_foldr_expr(choices, |tail, head| {
@@ -290,13 +286,13 @@ impl<'a> PegCompiler<'a>
 
   fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
   {
-    token::gensym_ident(format!(
+    rust::gensym_ident(format!(
       "{}_{}_{}", prefix, 
         self.current_lc_rule_name(), 
         self.gen_uid()).as_slice())
   }
 
-  fn compile_star(&mut self, expr: &ast::P<ast::Expr>) -> ast::P<ast::Expr>
+  fn compile_star(&mut self, expr: &rust::P<rust::Expr>) -> rust::P<rust::Expr>
   {
     let fun_name = self.gensym("star");
     let cx = self.cx;
@@ -319,13 +315,13 @@ impl<'a> PegCompiler<'a>
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
-  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     let expr = self.compile_expression(expr);
     self.compile_star(&expr)
   }
 
-  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     let expr = self.compile_expression(expr);
     let star_fn = self.compile_star(&expr);
@@ -343,7 +339,7 @@ impl<'a> PegCompiler<'a>
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
-  fn compile_optional(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_optional(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
@@ -354,7 +350,7 @@ impl<'a> PegCompiler<'a>
     )
   }
 
-  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
@@ -364,7 +360,7 @@ impl<'a> PegCompiler<'a>
     })
   }
 
-  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> ast::P<ast::Expr>
+  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
   {
     let expr = self.compile_expression(expr);
     quote_expr!(self.cx,
@@ -374,7 +370,7 @@ impl<'a> PegCompiler<'a>
     })
   }
 
-  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> ast::P<ast::Expr>
+  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> rust::P<rust::Expr>
   {
     let fun_name = self.gensym("class_char");
     let cx = self.cx;
@@ -401,7 +397,7 @@ impl<'a> PegCompiler<'a>
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
-  fn compile_ast(&mut self) -> ast::P<ast::Item>
+  fn compile_ast(&mut self) -> rust::P<rust::Item>
   {
     let mut rules_types = HashMap::new();
     for rule in self.grammar.rules.iter() {

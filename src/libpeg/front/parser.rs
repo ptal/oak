@@ -12,31 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use rust;
+use rust::{mk_sp, spanned, respan, ParserAttr};
 use std::str::Chars;
-use syntax::ast;
-use syntax::codemap::{mk_sp, spanned, respan};
-use syntax::parse;
-use syntax::parse::token;
-use syntax::parse::ParseSess;
-use syntax::parse::attr::ParserAttr;
-use syntax::parse::parser::Parser;
 
 use front::ast::*;
 
 pub struct PegParser<'a>
 {
-  rp: Parser<'a>, // rust parser
-  inner_attrs: Vec<Attribute>
+  rp: rust::Parser<'a>,
+  inner_attrs: Vec<rust::Attribute>
 }
 
 impl<'a> PegParser<'a>
 {
-  pub fn new(sess: &'a ParseSess,
-         cfg: ast::CrateConfig,
-         tts: Vec<ast::TokenTree>) -> PegParser<'a> 
+  pub fn new(sess: &'a rust::ParseSess,
+         cfg: rust::CrateConfig,
+         tts: Vec<rust::TokenTree>) -> PegParser<'a> 
   {
     PegParser{
-      rp: parse::new_parser_from_tts(sess, cfg, tts),
+      rp: rust::new_parser_from_tts(sess, cfg, tts),
       inner_attrs: Vec::new()}
   }
 
@@ -64,14 +59,14 @@ impl<'a> PegParser<'a>
           token_string).as_slice())
     }
     let grammar_name = self.rp.parse_ident();
-    self.rp.expect(&token::SEMI);
+    self.rp.expect(&rust::SEMI);
     grammar_name
   }
 
   fn eat_grammar_keyword(&mut self) -> bool
   {
     let is_grammar_kw = match self.rp.token {
-      token::IDENT(sid, false) => "grammar" == id_to_string(sid).as_slice(),
+      rust::IDENT(sid, false) => "grammar" == id_to_string(sid).as_slice(),
       _ => false
     };
     if is_grammar_kw { self.rp.bump() }
@@ -81,7 +76,7 @@ impl<'a> PegParser<'a>
   fn parse_rules(&mut self) -> Vec<Rule>
   {
     let mut rules = vec![];
-    while self.rp.token != token::EOF
+    while self.rp.token != rust::EOF
     {
       let rule = self.parse_rule();
       rules.push(rule);
@@ -93,14 +88,14 @@ impl<'a> PegParser<'a>
   {
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
-    self.rp.expect(&token::EQ);
+    self.rp.expect(&rust::EQ);
     let body = self.parse_rule_rhs(id_to_string(name.node).as_slice());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
 
   // Outer attributes are attached to the next item.
   // Inner attributes are attached to the englobing item.
-  fn parse_attributes(&mut self) -> Vec<Attribute>
+  fn parse_attributes(&mut self) -> Vec<rust::Attribute>
   {
     let (inners, mut outers) = self.rp.parse_inner_attrs_and_next();
     self.inner_attrs.push_all(inners.as_slice());
@@ -110,7 +105,7 @@ impl<'a> PegParser<'a>
     outers
   }
 
-  fn parse_rule_decl(&mut self) -> SpannedIdent
+  fn parse_rule_decl(&mut self) -> rust::SpannedIdent
   {
     let sp = self.rp.span;
     respan(sp, self.rp.parse_ident())
@@ -129,7 +124,7 @@ impl<'a> PegParser<'a>
       choices.push(self.parse_rule_seq(rule_name));
       let token = self.rp.token.clone();
       match token {
-        token::BINOP(token::SLASH) => self.rp.bump(),
+        rust::BINOP(rust::SLASH) => self.rp.bump(),
         _ => break
       }
     }
@@ -161,10 +156,10 @@ impl<'a> PegParser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      token::NOT => {
+      rust::NOT => {
         self.parse_prefix(rule_name, |e| NotPredicate(e))
       }
-      token::BINOP(token::AND) => {
+      rust::BINOP(rust::AND) => {
         self.parse_prefix(rule_name, |e| AndPredicate(e))
       }
       _ => self.parse_rule_suffixed(rule_name)
@@ -203,15 +198,15 @@ impl<'a> PegParser<'a>
     let hi = self.rp.span.hi;
     let token = self.rp.token.clone();
     match token {
-      token::BINOP(token::STAR) => {
+      rust::BINOP(rust::STAR) => {
         self.rp.bump();
         Some(box spanned(lo, hi, ZeroOrMore(expr)))
       },
-      token::BINOP(token::PLUS) => {
+      rust::BINOP(rust::PLUS) => {
         self.rp.bump();
         Some(box spanned(lo, hi, OneOrMore(expr)))
       },
-      token::DOLLAR => {
+      rust::DOLLAR => {
         self.rp.bump();
         Some(box spanned(lo, hi, Optional(expr)))
       },
@@ -228,32 +223,32 @@ impl<'a> PegParser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      token::LIT_STR(name) => {
+      rust::LIT_STR(name) => {
         self.rp.bump();
         Some(self.last_respan(StrLiteral(name_to_string(name))))
       },
-      token::DOT => {
+      rust::DOT => {
         self.rp.bump();
         Some(self.last_respan(AnySingleChar))
       },
-      token::LPAREN => {
+      rust::LPAREN => {
         self.rp.bump();
         let res = self.parse_rule_rhs(rule_name);
-        self.rp.expect(&token::RPAREN);
+        self.rp.expect(&rust::RPAREN);
         Some(res)
       },
-      token::IDENT(id, _) => {
+      rust::IDENT(id, _) => {
         if self.is_rule_lhs() { None }
         else {
           self.rp.bump();
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
-      token::LBRACKET => {
+      rust::LBRACKET => {
         self.rp.bump();
         let res = self.parse_char_class(rule_name);
         match self.rp.token {
-          token::RBRACKET => {
+          rust::RBRACKET => {
             self.rp.bump();
             res
           },
@@ -276,9 +271,9 @@ impl<'a> PegParser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      token::LIT_STR(name) => {
+      rust::LIT_STR(name) => {
         self.rp.bump();
-        let cooked_lit = parse::str_lit(name_to_string(name).as_slice());
+        let cooked_lit = rust::str_lit(name_to_string(name).as_slice());
         self.parse_set_of_char_range(&cooked_lit, rule_name)
       },
       _ => {
@@ -357,6 +352,6 @@ impl<'a> PegParser<'a>
 
   fn is_rule_lhs(&mut self) -> bool
   {
-    self.rp.look_ahead(1, |t| match t { &token::EQ => true, _ => false})
+    self.rp.look_ahead(1, |t| match t { &rust::EQ => true, _ => false})
   }
 }

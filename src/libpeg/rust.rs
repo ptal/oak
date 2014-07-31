@@ -12,29 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate unicode;
-
-use rust;
-pub use std::string::String;
-pub use rust::{Ident, Name};
-
-pub fn id_to_string(id: Ident) -> String
-{
-  String::from_str(rust::get_ident(id).get())
-}
-
-pub fn name_to_string(name: Name) -> String
-{
-  String::from_str(rust::get_name(name).get())
-}
-
-pub fn string_to_lowercase(s: &String) -> String
-{
-  let mut res = String::new();
-  for c in s.as_slice().chars()
-    .map(unicode::char::to_lowercase)
-  {
-    res.push_char(c);
-  }
-  res
-}
+pub use syntax::ast;
+pub use syntax::ast::*;
+pub use syntax::parse;
+pub use syntax::parse::*;
+pub use syntax::parse::token::*;
+pub use syntax::parse::attr::ParserAttr;
+pub use syntax::parse::parser::Parser;
+pub use syntax::codemap::*;
+pub use syntax::print::pprust;
+pub use syntax::print::pprust::*;
+pub use syntax::ext::quote::rt::ToTokens;
+pub use syntax::ext::base::*;

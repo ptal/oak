@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use syntax::ast;
-
+use rust;
+pub use rust::{Ident, SpannedIdent, Spanned, Attribute};
 pub use utility::*;
-pub use syntax::ast::{Attribute, SpannedIdent};
-pub use syntax::codemap::Spanned;
 
 pub struct Peg{
   pub name: Ident,
@@ -58,11 +56,12 @@ pub struct CharacterInterval {
 
 pub type Expression = Spanned<Expression_>;
 
-pub fn get_attribute<'a>(rule_attrs: &'a Vec<Attribute>, attr_name: &str) -> Option<&'a Attribute>
+pub fn get_attribute<'a>(rule_attrs: &'a Vec<Attribute>,
+ attr_name: &str) -> Option<&'a Attribute>
 {
   for attr in rule_attrs.iter() {
     match attr.node.value.node {
-      ast::MetaWord(ref w) if w.get() == attr_name =>
+      rust::MetaWord(ref w) if w.get() == attr_name =>
         return Some(attr),
       _ => ()
     }
