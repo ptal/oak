@@ -29,11 +29,11 @@ pub use runtime::Parser;
 use front::parser;
 
 pub mod runtime;
-mod rust;
 mod front;
 mod middle;
+mod back;
+mod rust;
 mod utility;
-mod compiler;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) 
@@ -52,6 +52,6 @@ fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult
   let peg = parser.parse_grammar();
   let ast = middle::SemanticAnalyser::analyse(cx, &peg);
   cx.parse_sess.span_diagnostic.handler.abort_if_errors();
-  compiler::PegCompiler::compile(cx, &ast.unwrap())
+  back::PegCompiler::compile(cx, &ast.unwrap())
 }
 
