@@ -72,26 +72,21 @@ impl<'a> PegCompiler<'a>
 
   fn compile_peg(&mut self) -> Box<rust::MacResult>
   {
+    let ast = 
+      if self.grammar.code_gen.ast {
+        Some(self.compile_ast())
+      } else {
+        None
+      };
+
+    let parser =
+      if self.grammar.code_gen.parser {
+        Some(self.compile_parser())
+      } else {
+        None
+      };
+
     let grammar_name = self.grammar.name;
-
-    let ast = self.compile_ast();
-
-    for rule in self.grammar.rules.iter() {
-      let rule_name = rule.name;
-      let rule_def = self.compile_expression(&rule.def);
-      self.top_level_items.push(quote_item!(self.cx,
-        fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
-        {
-          $rule_def
-        }
-      ).unwrap());
-      self.current_rule_idx += 1;
-    }
-
-    let parser_impl = self.compile_entry_point();
-
-    let items = ToTokensVec{v: &self.top_level_items};
-
     let grammar = quote_item!(self.cx,
       pub mod $grammar_name
       {
@@ -99,22 +94,10 @@ impl<'a> PegCompiler<'a>
         #![allow(unnecessary_parens)]
 
         $ast
-
-        pub struct Parser;
-
-        impl Parser
-        {
-          pub fn new() -> Parser
-          {
-            Parser
-          }
-          $items
-        }
-
-        $parser_impl
+        $parser
       }
     ).unwrap();
-    
+
     let peg_crate = rust::ViewItem {
       node: rust::ViewItemExternCrate(rust::str_to_ident("peg"), None, rust::DUMMY_NODE_ID),
       attrs: vec![],
@@ -146,6 +129,39 @@ impl<'a> PegCompiler<'a>
     }
 
     rust::MacItem::new(grammar)
+  }
+
+  fn compile_parser(&mut self) -> Vec<rust::P<rust::Item>>
+  {
+    for rule in self.grammar.rules.iter() {
+      let rule_name = rule.name;
+      let rule_def = self.compile_expression(&rule.def);
+      self.top_level_items.push(quote_item!(self.cx,
+        fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
+        {
+          $rule_def
+        }
+      ).unwrap());
+      self.current_rule_idx += 1;
+    }
+
+    let parser_impl = self.compile_entry_point();
+
+    let items = ToTokensVec{v: &self.top_level_items};
+
+    let mut parser = vec![];
+    parser.push(quote_item!(self.cx, pub struct Parser;).unwrap());
+    parser.push(quote_item!(self.cx, 
+        impl Parser
+        {
+          pub fn new() -> Parser
+          {
+            Parser
+          }
+          $items
+        }).unwrap());
+    parser.push(parser_impl);
+    parser
   }
 
   fn compile_entry_point(&mut self) -> rust::P<rust::Item>

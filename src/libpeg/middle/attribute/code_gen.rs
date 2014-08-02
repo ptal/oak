@@ -17,34 +17,33 @@ use rust::{ExtCtxt, InternedString, MetaList, MetaWord, Span};
 use middle::attribute::attribute::*;
 use std::collections::hashmap::HashMap;
 
-pub struct CodePrinter
+pub struct CodeGeneration
 {
-  pub info: bool,
   pub ast: bool,
   pub parser: bool
 }
 
-pub struct CodePrinterBuilder<'a>
+pub struct CodeGenerationBuilder<'a>
 {
-  print_lvl_to_attr: HashMap<InternedString, AttributeInfo<bool>>,
-  print: InternedString,
+  gen_lvl_to_attr: HashMap<InternedString, AttributeInfo<bool>>,
+  gen: InternedString,
   cx: &'a ExtCtxt<'a>
 }
 
-impl<'a> CodePrinterBuilder<'a>
+impl<'a> CodeGenerationBuilder<'a>
 {
-  pub fn new(cx: &'a ExtCtxt) -> CodePrinterBuilder<'a>
+  pub fn new(cx: &'a ExtCtxt) -> CodeGenerationBuilder<'a>
   {
-    let mut print_lvl_to_attr = HashMap::new();
-    let print_levels = vec!["parser", "ast", "code", "info", "all"];
-    for lvl in print_levels.iter() {
-      print_lvl_to_attr.insert(
+    let mut gen_lvl_to_attr = HashMap::new();
+    let gen_levels = vec!["parser", "ast"];
+    for lvl in gen_levels.iter() {
+      gen_lvl_to_attr.insert(
         InternedString::new(*lvl),
         bool_attribute(Default(false)));
     }
-    CodePrinterBuilder {
-      print_lvl_to_attr: print_lvl_to_attr,
-      print: InternedString::new("print"),
+    CodeGenerationBuilder {
+      gen_lvl_to_attr: gen_lvl_to_attr,
+      gen: InternedString::new("disable_code"),
       cx: cx
     }
   }
@@ -52,32 +51,31 @@ impl<'a> CodePrinterBuilder<'a>
   pub fn from_attr(&mut self, attr: &rust::Attribute) -> bool
   {
     let levels = match attr.node.value.node {
-      MetaList(ref head, ref tail) if *head == self.print => tail,
+      MetaList(ref head, ref tail) if *head == self.gen => tail,
       _ => return true
     };
 
     for level in levels.iter() {
       match level.node {
-        MetaWord(ref print_level) => self.insert_level(print_level, level.span),
+        MetaWord(ref gen_level) => self.insert_level(gen_level, level.span),
         _ => self.cx.parse_sess.span_diagnostic.span_err(level.span,
-               "unknown attribute in the print level list.")
+               "unknown attribute in the code-to-generate list.")
       }
     }
     false
   }
 
-  // check if the print_level is known and if it's not already used.
   fn insert_level(&mut self, level: &InternedString, span: Span)
   {
-    let mut print_attr = self.print_lvl_to_attr.find_mut(level);
-    match print_attr {
+    let mut gen_attr = self.gen_lvl_to_attr.find_mut(level);
+    match gen_attr {
       None => self.cx.parse_sess.span_diagnostic.span_err(span,
-        format!("Unknown print level `{}`. The different print levels are `parser`, \
-          `ast`, `info`, `code`, `all`. For example: `#![print(code)]`.",
+        format!("Unknown code-to-generate `{}`. The different code generation attributes are \
+          `parser`, `ast`. For example: `#![disable_code(parser)]`.",
           level.get()).as_slice()),
       Some(ref attr_info) if attr_info.has_value() => {
         self.cx.parse_sess.span_diagnostic.span_warn(span,
-          format!("The print level `{}` is already set.", level.get()).as_slice());
+          format!("The code-to-generate attribute `{}` is already set.", level.get()).as_slice());
         self.cx.parse_sess.span_diagnostic.span_note(attr_info.span,
           "Previous declaration here.");
       },
@@ -87,23 +85,17 @@ impl<'a> CodePrinterBuilder<'a>
     }
   }
 
-  pub fn build(&self) -> CodePrinter
+  pub fn build(&self) -> CodeGeneration
   {
-    let info = self.value_of("info");
-    let parser = self.value_of("parser");
-    let ast = self.value_of("ast");
-    let code = self.value_of("code");
-    let all = self.value_of("all");
-    CodePrinter {
-      info: info || all,
-      ast: ast || code || all,
-      parser: parser || code || all
+    CodeGeneration {
+      parser: !self.value_of("parser"),
+      ast: !self.value_of("ast")
     }
   }
 
   fn value_of(&self, level: &'static str) -> bool
   {
     let level = &InternedString::new(level);
-    self.print_lvl_to_attr.find(level).unwrap().value(self.cx).unwrap()
+    self.gen_lvl_to_attr.find(level).unwrap().value(self.cx).unwrap()
   }
 }

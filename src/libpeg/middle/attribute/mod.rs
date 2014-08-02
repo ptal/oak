@@ -13,6 +13,8 @@
 // limitations under the License.
 
 pub use middle::attribute::code_printer::{CodePrinterBuilder, CodePrinter};
+pub use middle::attribute::code_gen::{CodeGenerationBuilder, CodeGeneration};
 
 mod attribute;
 mod code_printer;
+mod code_gen;

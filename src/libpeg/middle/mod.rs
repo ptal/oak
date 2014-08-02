@@ -14,7 +14,7 @@
 
 use rust::{ExtCtxt, Ident, Span};
 use front::ast::*;
-use middle::attribute::CodePrinterBuilder;
+use middle::attribute::{CodePrinterBuilder, CodeGenerationBuilder};
 use middle::visitor::Visitor;
 use std::collections::hashmap::HashMap;
 
@@ -26,13 +26,14 @@ pub mod clean_ast
 {
   use rust::Ident;
   use front::ast::*;
-  use middle::attribute::CodePrinter;
+  use middle::attribute::{CodeGeneration, CodePrinter};
 
   pub struct Grammar{
     pub name: Ident,
     pub rules: Vec<Rule>,
     pub start_rule_idx: uint,
-    pub code_printer: CodePrinter
+    pub code_printer: CodePrinter,
+    pub code_gen: CodeGeneration
   }
 
   pub struct Rule{
@@ -92,14 +93,17 @@ impl<'a> SemanticAnalyser<'a>
       }
     }
     let mut code_printer_builder = CodePrinterBuilder::new(self.cx);
+    let mut code_gen_builder = CodeGenerationBuilder::new(self.cx);
     let _attr : Vec<&Attribute> = self.grammar.attributes.iter()
       .filter(|a| code_printer_builder.from_attr(*a))
+      .filter(|a| code_gen_builder.from_attr(*a))
       .collect();
     Some(clean_ast::Grammar{
       name: self.grammar.name,
       rules: rules,
       start_rule_idx: start_rule_idx,
-      code_printer: code_printer_builder.build()
+      code_printer: code_printer_builder.build(),
+      code_gen: code_gen_builder.build()
     })
   }
 
