@@ -15,7 +15,7 @@
 peg!(
   grammar ntcc;
 
-  #![print_generated]
+  #![print(code)]
 
   #[start]
   start = spacing expression

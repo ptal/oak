@@ -140,7 +140,7 @@ impl<'a> PegCompiler<'a>
       _ => fail!("Bug")
     };
 
-    if self.grammar.print_generated {
+    if self.grammar.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
         rust::item_to_string(&*grammar).as_slice());
     }
