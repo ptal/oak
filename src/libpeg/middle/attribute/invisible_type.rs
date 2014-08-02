@@ -28,7 +28,7 @@ impl<'a> InvisibleTypeBuilder<'a>
   pub fn new(cx: &'a ExtCtxt) -> InvisibleTypeBuilder<'a>
   {
     InvisibleTypeBuilder {
-      invisible_type_attr: AttributeInfo::new(Default(false)),
+      invisible_type_attr: AttributeInfo::new(false),
       invisible_type: InternedString::new("invisible_type"),
       cx: cx
     }
@@ -54,6 +54,6 @@ impl<'a> InvisibleTypeBuilder<'a>
 
   pub fn build(&self) -> bool
   {
-    self.invisible_type_attr.value_or_default(self.cx).unwrap()
+    self.invisible_type_attr.value_or_default()
   }
 }

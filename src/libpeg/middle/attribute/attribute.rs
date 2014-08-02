@@ -13,24 +13,18 @@
 // limitations under the License.
 
 use rust;
-use rust::{Span, ExtCtxt};
-
-pub enum DefaultOrRequired<T>
-{
-  Default(T),
-  Required(&'static str)
-}
+use rust::Span;
 
 pub struct AttributeInfo<A>
 {
   pub value: Option<A>,
   pub span: Span,
-  pub default: DefaultOrRequired<A>
+  pub default: A
 }
 
 impl<A: Clone> AttributeInfo<A>
 {
-  pub fn new(default: DefaultOrRequired<A>) -> AttributeInfo<A>
+  pub fn new(default: A) -> AttributeInfo<A>
   {
     AttributeInfo {
       value: None,
@@ -50,15 +44,11 @@ impl<A: Clone> AttributeInfo<A>
     self.span = span;
   }
 
-  pub fn value_or_default(&self, cx: &ExtCtxt) -> Option<A>
+  pub fn value_or_default(&self) -> A
   {
-    match (&self.value, &self.default) {
-      (&None, &Required(ref err)) => {
-        cx.parse_sess.span_diagnostic.handler.err(*err);
-        None
-      },
-      (&None, &Default(ref val)) => Some(val.clone()),
-      _ => self.value.clone()
+    match self.value {
+      None => self.default.clone(),
+      Some(ref value) => value.clone()
     }
   }
 }

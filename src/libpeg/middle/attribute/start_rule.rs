@@ -28,7 +28,7 @@ impl<'a> StartRuleBuilder<'a>
   pub fn new(cx: &'a ExtCtxt) -> StartRuleBuilder<'a>
   {
     StartRuleBuilder {
-      start_rule_attr: AttributeInfo::new(Default(0)),
+      start_rule_attr: AttributeInfo::new(0),
       start: InternedString::new("start"),
       cx: cx
     }
@@ -59,7 +59,6 @@ impl<'a> StartRuleBuilder<'a>
        "No rule has been specified as the starting point (attribute `#[start]`). \
         the first rule will be automatically considered as such.");
     }
-    let rule_no = self.start_rule_attr.value_or_default(self.cx).unwrap();
-    rule_no
+    self.start_rule_attr.value_or_default()
   }
 }

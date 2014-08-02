@@ -28,7 +28,7 @@ impl<'a> InlineTypeBuilder<'a>
   pub fn new(cx: &'a ExtCtxt) -> InlineTypeBuilder<'a>
   {
     InlineTypeBuilder {
-      inline_type_attr: AttributeInfo::new(Default(false)),
+      inline_type_attr: AttributeInfo::new(false),
       inline_type: InternedString::new("inline_type"),
       cx: cx
     }
@@ -54,6 +54,6 @@ impl<'a> InlineTypeBuilder<'a>
 
   pub fn build(&self) -> bool
   {
-    self.inline_type_attr.value_or_default(self.cx).unwrap()
+    self.inline_type_attr.value_or_default()
   }
 }
