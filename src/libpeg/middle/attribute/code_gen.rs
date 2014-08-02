@@ -39,7 +39,7 @@ impl<'a> CodeGenerationBuilder<'a>
     for lvl in gen_levels.iter() {
       gen_lvl_to_attr.insert(
         InternedString::new(*lvl),
-        bool_attribute(Default(false)));
+        AttributeInfo::new(Default(false)));
     }
     CodeGenerationBuilder {
       gen_lvl_to_attr: gen_lvl_to_attr,
@@ -96,6 +96,6 @@ impl<'a> CodeGenerationBuilder<'a>
   fn value_of(&self, level: &'static str) -> bool
   {
     let level = &InternedString::new(level);
-    self.gen_lvl_to_attr.find(level).unwrap().value(self.cx).unwrap()
+    self.gen_lvl_to_attr.find(level).unwrap().value_or_default(self.cx).unwrap()
   }
 }

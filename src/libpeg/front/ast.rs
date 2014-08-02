@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
 pub use rust::{SpannedIdent, Spanned, Attribute};
 pub use identifier::*;
 
@@ -55,16 +54,3 @@ pub struct CharacterInterval {
 }
 
 pub type Expression = Spanned<Expression_>;
-
-pub fn get_attribute<'a>(rule_attrs: &'a Vec<Attribute>,
- attr_name: &str) -> Option<&'a Attribute>
-{
-  for attr in rule_attrs.iter() {
-    match attr.node.value.node {
-      rust::MetaWord(ref w) if w.get() == attr_name =>
-        return Some(attr),
-      _ => ()
-    }
-  }
-  None
-}

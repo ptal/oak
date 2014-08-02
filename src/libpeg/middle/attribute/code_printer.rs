@@ -40,7 +40,7 @@ impl<'a> CodePrinterBuilder<'a>
     for lvl in print_levels.iter() {
       print_lvl_to_attr.insert(
         InternedString::new(*lvl),
-        bool_attribute(Default(false)));
+        AttributeInfo::new(Default(false)));
     }
     CodePrinterBuilder {
       print_lvl_to_attr: print_lvl_to_attr,
@@ -104,6 +104,6 @@ impl<'a> CodePrinterBuilder<'a>
   fn value_of(&self, level: &'static str) -> bool
   {
     let level = &InternedString::new(level);
-    self.print_lvl_to_attr.find(level).unwrap().value(self.cx).unwrap()
+    self.print_lvl_to_attr.find(level).unwrap().value_or_default(self.cx).unwrap()
   }
 }

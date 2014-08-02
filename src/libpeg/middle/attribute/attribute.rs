@@ -30,6 +30,15 @@ pub struct AttributeInfo<A>
 
 impl<A: Clone> AttributeInfo<A>
 {
+  pub fn new(default: DefaultOrRequired<A>) -> AttributeInfo<A>
+  {
+    AttributeInfo {
+      value: None,
+      span: rust::DUMMY_SP,
+      default: default
+    }
+  }
+
   pub fn has_value(&self) -> bool
   {
     self.value.is_some()
@@ -41,7 +50,7 @@ impl<A: Clone> AttributeInfo<A>
     self.span = span;
   }
 
-  pub fn value(&self, cx: &ExtCtxt) -> Option<A>
+  pub fn value_or_default(&self, cx: &ExtCtxt) -> Option<A>
   {
     match (&self.value, &self.default) {
       (&None, &Required(ref err)) => {
@@ -51,14 +60,5 @@ impl<A: Clone> AttributeInfo<A>
       (&None, &Default(ref val)) => Some(val.clone()),
       _ => self.value.clone()
     }
-  }
-}
-
-pub fn bool_attribute(default: DefaultOrRequired<bool>) -> AttributeInfo<bool>
-{
-  AttributeInfo {
-    value: None,
-    span: rust::DUMMY_SP,
-    default: default
   }
 }

@@ -14,9 +14,10 @@
 
 use rust::{ExtCtxt, Ident, Span};
 use front::ast::*;
-use middle::attribute::{CodePrinterBuilder, CodeGenerationBuilder};
+use middle::attribute::{CodePrinterBuilder, CodeGenerationBuilder, StartRuleBuilder};
 use middle::visitor::Visitor;
 use std::collections::hashmap::HashMap;
+use std::iter::count;
 
 mod lint;
 mod visitor;
@@ -65,7 +66,15 @@ impl<'a> SemanticAnalyser<'a>
       return None
     }
 
-    let mut start_rule_idx = self.start_rule();
+    let mut start_rule_builder = StartRuleBuilder::new(self.cx);
+
+    let _rules_attrs : Vec<&Attribute> = self.grammar.rules.iter().enumerate()
+      .flat_map(|(idx, r)| r.attributes.iter().zip(count(idx, 0)))
+      .filter(|&(a, idx)| start_rule_builder.from_attr(idx, a))
+      .map(|(a, _)| a)
+      .collect();
+
+    let mut start_rule_idx = start_rule_builder.build();
 
     let mut ident_to_rule_idx = HashMap::new();
     if self.multiple_rule_declaration(&mut ident_to_rule_idx) {
@@ -115,41 +124,6 @@ impl<'a> SemanticAnalyser<'a>
       false
     } else {
       true
-    }
-  }
-
-  fn start_rule(&self) -> uint
-  {
-    let mut start_rule_idx = None;
-    for (idx, rule) in self.grammar.rules.iter().enumerate() {
-      if self.can_be_start_attr(start_rule_idx, rule) {
-          start_rule_idx = Some(idx);
-      }
-    }
-    match start_rule_idx {
-      None => {
-        self.cx.parse_sess.span_diagnostic.handler.warn(
-          "No rule has been specified as the starting point (attribute `#[start]`). \
-          The first rule will be automatically considered as such.");
-        0
-      },
-      Some(idx) => idx
-    }
-  }
-
-  fn can_be_start_attr(&self, start_rule_idx: Option<uint>, rule: &Rule) -> bool
-  {
-    match (start_rule_idx, get_attribute(&rule.attributes, "start")) {
-      (Some(idx), Some(attr)) => {
-        self.span_err(attr.span, format!(
-          "Multiple `start` attributes are forbidden. \
-          Rules `{}` and `{}` conflict.",
-          id_to_string(self.grammar.rules[idx].name.node),
-          id_to_string(rule.name.node)).as_slice());
-        false
-      },
-      (None, Some(_)) => true,
-      _ => false
     }
   }
 
