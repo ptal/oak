@@ -21,6 +21,5 @@ mod attribute;
 mod code_printer;
 mod code_gen;
 mod start_rule;
-mod invisible_type;
-mod inline_type;
 mod rule_type;
+mod single_attribute_builder;

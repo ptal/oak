@@ -72,7 +72,7 @@ impl<'a> SemanticAnalyser<'a>
     for (idx, r) in self.grammar.rules.iter().enumerate() {
       let mut rule_type_builder = RuleTypeBuilder::new(self.cx);
       let _rules_attrs : Vec<&Attribute> = r.attributes.iter()
-        .filter(|&a| start_rule_builder.from_attr(idx, a))
+        .filter(|&a| start_rule_builder.from_attr(a, idx))
         .filter(|&a| rule_type_builder.from_attr(a))
         .collect();
       rules_type_attrs.push(rule_type_builder.build());

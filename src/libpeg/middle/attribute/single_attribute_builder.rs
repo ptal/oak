@@ -16,44 +16,44 @@ use rust;
 use rust::{ExtCtxt, InternedString, MetaWord};
 use middle::attribute::attribute::*;
 
-pub struct InlineTypeBuilder<'a>
+pub struct SingleAttributeBuilder<'a, Value>
 {
-  pub inline_type_attr: AttributeInfo<bool>,
-  inline_type: InternedString,
+  pub attr_info: AttributeInfo<Value>,
+  name: InternedString,
   cx: &'a ExtCtxt<'a>
 }
 
-impl<'a> InlineTypeBuilder<'a>
+impl<'a, Value: Clone> SingleAttributeBuilder<'a, Value>
 {
-  pub fn new(cx: &'a ExtCtxt) -> InlineTypeBuilder<'a>
+  pub fn new(cx: &'a ExtCtxt, name: &'static str, default: Value) -> SingleAttributeBuilder<'a, Value>
   {
-    InlineTypeBuilder {
-      inline_type_attr: AttributeInfo::new(false),
-      inline_type: InternedString::new("inline_type"),
+    SingleAttributeBuilder {
+      attr_info: AttributeInfo::new(default),
+      name: InternedString::new(name),
       cx: cx
     }
   }
 
-  pub fn from_attr(&mut self, attr: &rust::Attribute) -> bool
+  pub fn from_attr(&mut self, attr: &rust::Attribute, value: Value) -> bool
   {
     match attr.node.value.node {
-      MetaWord(ref word) if *word == self.inline_type => (),
+      MetaWord(ref word) if *word == self.name => (),
       _ => return true
     };
 
-    if self.inline_type_attr.has_value() {
+    if self.attr_info.has_value() {
       self.cx.parse_sess.span_diagnostic.span_warn(attr.span,
-        "Duplicate inline_type attribute.");
-      self.cx.parse_sess.span_diagnostic.span_note(self.inline_type_attr.span,
+        format!("Duplicate `{}` attribute.", self.name.get()).as_slice());
+      self.cx.parse_sess.span_diagnostic.span_note(self.attr_info.span,
         "Previous declaration here.");
     } else {
-      self.inline_type_attr.set(true, attr.span);
+      self.attr_info.set(value, attr.span);
     }
     false
   }
 
-  pub fn build(&self) -> bool
+  pub fn build(&self) -> Value
   {
-    self.inline_type_attr.value_or_default()
+    self.attr_info.value_or_default()
   }
 }
