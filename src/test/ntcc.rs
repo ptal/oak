@@ -15,8 +15,8 @@
 peg!(
   grammar ntcc;
 
-  #![print(all)]
-  #![disable_code(ast)]
+  // #![print(all)]
+  // #![disable_code(ast)]
 
   #[start]
   start = spacing expression
@@ -77,6 +77,7 @@ peg!(
 
   comparison = le / neq / lt / ge / gt / eq
 
+  #[invisible_type]
   spacing = [" \n\t"]*
 
   let_in = let_kw var_decl in_kw expression
@@ -95,7 +96,10 @@ peg!(
     / min_kw var_ident
     / max_kw var_ident
 
+  #[inline_type]
   integer = ["0-9"]+ spacing
+
+  #[inline_type]
   var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing
 
   pick_kw = "pick" spacing

@@ -14,10 +14,9 @@
 
 use rust::{ExtCtxt, Ident, Span};
 use front::ast::*;
-use middle::attribute::{CodePrinterBuilder, CodeGenerationBuilder, StartRuleBuilder};
+use middle::attribute::{CodePrinterBuilder, CodeGenerationBuilder, StartRuleBuilder, RuleTypeBuilder};
 use middle::visitor::Visitor;
 use std::collections::hashmap::HashMap;
-use std::iter::count;
 
 mod lint;
 mod visitor;
@@ -27,7 +26,7 @@ pub mod clean_ast
 {
   use rust::Ident;
   use front::ast::*;
-  use middle::attribute::{CodeGeneration, CodePrinter};
+  use middle::attribute::{CodeGeneration, CodePrinter, RuleType};
 
   pub struct Grammar{
     pub name: Ident,
@@ -39,7 +38,8 @@ pub mod clean_ast
 
   pub struct Rule{
     pub name: Ident,
-    pub def: Box<Expression>
+    pub def: Box<Expression>,
+    pub type_attrs: RuleType
   }
 }
 
@@ -67,12 +67,17 @@ impl<'a> SemanticAnalyser<'a>
     }
 
     let mut start_rule_builder = StartRuleBuilder::new(self.cx);
+    let mut rules_type_attrs = vec![];
 
-    let _rules_attrs : Vec<&Attribute> = self.grammar.rules.iter().enumerate()
-      .flat_map(|(idx, r)| r.attributes.iter().zip(count(idx, 0)))
-      .filter(|&(a, idx)| start_rule_builder.from_attr(idx, a))
-      .map(|(a, _)| a)
-      .collect();
+    for (idx, r) in self.grammar.rules.iter().enumerate() {
+      let mut rule_type_builder = RuleTypeBuilder::new(self.cx);
+      let _rules_attrs : Vec<&Attribute> = r.attributes.iter()
+        .filter(|&a| start_rule_builder.from_attr(idx, a))
+        .filter(|&a| rule_type_builder.from_attr(a))
+        .collect();
+      rules_type_attrs.push(rule_type_builder.build());
+      // Check here for unused attributes.
+    }
 
     let mut start_rule_idx = start_rule_builder.build();
 
@@ -90,16 +95,19 @@ impl<'a> SemanticAnalyser<'a>
     unused_rule_analyser.analyse(start_rule_idx);
 
     let mut rules = vec![];
-    for (idx, rule) in self.grammar.rules.iter().enumerate() {
+    let mut idx = 0;
+    for (rule, type_attrs) in self.grammar.rules.iter().zip(rules_type_attrs.iter()) {
       if unused_rule_analyser.is_used[idx] {
         rules.push(clean_ast::Rule{
           name: rule.name.node,
-          def: rule.def.clone()
+          def: rule.def.clone(),
+          type_attrs: *type_attrs
         });
         if idx == start_rule_idx {
           start_rule_idx = rules.len() - 1;
         }
       }
+      idx += 1;
     }
     let mut code_printer_builder = CodePrinterBuilder::new(self.cx);
     let mut code_gen_builder = CodeGenerationBuilder::new(self.cx);

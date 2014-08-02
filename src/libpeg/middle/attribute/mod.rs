@@ -15,8 +15,12 @@
 pub use middle::attribute::code_printer::{CodePrinterBuilder, CodePrinter};
 pub use middle::attribute::code_gen::{CodeGenerationBuilder, CodeGeneration};
 pub use middle::attribute::start_rule::StartRuleBuilder;
+pub use middle::attribute::rule_type::{RuleTypeBuilder, RuleType};
 
 mod attribute;
 mod code_printer;
 mod code_gen;
 mod start_rule;
+mod invisible_type;
+mod inline_type;
+mod rule_type;
