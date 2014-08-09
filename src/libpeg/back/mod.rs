@@ -123,6 +123,7 @@ impl<'a> PegCompiler<'a>
     if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
         rust::item_to_string(&*code).as_slice());
+    } else {
     }
 
     rust::MacItem::new(code)

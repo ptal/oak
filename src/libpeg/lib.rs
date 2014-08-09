@@ -51,6 +51,12 @@ fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let ast = parser.parse_grammar();
-  middle::analyse(cx, ast).map(|ast|
-    back::PegCompiler::compile(cx, ast)).unwrap()
+  let ast = middle::analyse(cx, ast);
+  match ast {
+    Some(ast) => back::PegCompiler::compile(cx, ast),
+    None => {
+      cx.parse_sess.span_diagnostic.handler.abort_if_errors();
+      rust::DummyResult::any(rust::DUMMY_SP)
+    }
+  }
 }

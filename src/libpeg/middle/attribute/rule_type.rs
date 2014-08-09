@@ -31,10 +31,10 @@ impl RuleTypeStyle
     let inline = inline_type.value_or(false);
     let invisible = invisible_type.value_or(false);
     if inline && invisible {
-      cx.parse_sess.span_diagnostic.span_err(inline_type.span(),
+      cx.span_err(inline_type.span(),
         "Incoherent rule type specifiers, a rule can't be inlined and invisible.");
-      cx.parse_sess.span_diagnostic.span_note(invisible_type.span(),
-        "Second incoherent rule type specifiers declared here.");
+      cx.span_note(invisible_type.span(),
+        "Previous declaration here.");
       New
     } else if inline {
       Inline(inline_type.span())
@@ -92,65 +92,4 @@ impl RuleType
 // {
 //   type_name: Option<String>,
 //   fields_names: Vec<String>
-// }
-
-// fn make_invisible_type_builder<'a>(cx: &'a ExtCtxt) -> SingleAttributeBuilder<'a, bool>
-// {
-//   SingleAttributeBuilder::new(cx, "invisible_type", false)
-// }
-
-// fn make_inline_type_builder<'a>(cx: &'a ExtCtxt) -> SingleAttributeBuilder<'a, bool>
-// {
-//   SingleAttributeBuilder::new(cx, "inline_type", false)
-// }
-
-// pub struct RuleTypeBuilder<'a>
-// {
-//   invisible_type_builder: SingleAttributeBuilder<'a, bool>,
-//   inline_type_builder: SingleAttributeBuilder<'a, bool>,
-//   cx: &'a ExtCtxt<'a>
-// }
-
-// impl<'a> RuleTypeBuilder<'a>
-// {
-//   pub fn new(cx: &'a ExtCtxt) -> RuleTypeBuilder<'a>
-//   {
-//     RuleTypeBuilder {
-//       invisible_type_builder: make_invisible_type_builder(cx),
-//       inline_type_builder: make_inline_type_builder(cx),
-//       cx: cx
-//     }
-//   }
-
-//   pub fn from_attr(&mut self, attr: &rust::Attribute) -> bool
-//   {
-//     if self.invisible_type_builder.from_attr(attr, true) {
-//       return self.inline_type_builder.from_attr(attr, true)
-//     }
-//     false
-//   }
-
-//   pub fn build(&self) -> RuleType
-//   {
-//     let invisible_type = self.invisible_type_builder.build();
-//     let inline_type = self.inline_type_builder.build();
-//     if invisible_type && inline_type {
-//       self.cx.parse_sess.span_diagnostic.span_err(self.invisible_type_builder.attr_info.span,
-//         "Incoherent rule attributes: `invisible_type` and `inline_type` cannot be used \
-//         together. The attribute `invisible_type` makes the type of the rule invisible \
-//         so it is ignored by calling rules, instead, `inline_type` doesn't declare a new type for \
-//         the rule but its type is merged with the one of the calling rule.");
-//       self.cx.parse_sess.span_diagnostic.span_note(self.inline_type_builder.attr_info.span,
-//         "`inline_type` attribute declared here.");
-//     }
-
-//     let type_style = 
-//       if invisible_type { Invisible }
-//       else if inline_type { Inline }
-//       else { New };
-
-//     RuleType {
-//       type_style: type_style
-//     }
-//   }
 // }

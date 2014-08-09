@@ -18,7 +18,7 @@ peg!(
   // #![print(all)]
   // #![disable_code(ast)]
 
-  #[start]
+  // #[start]
   start = spacing expression
 
   expression 

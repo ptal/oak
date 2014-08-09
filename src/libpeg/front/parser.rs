@@ -47,14 +47,13 @@ impl<'a> Parser<'a>
     let outer_attrs = self.parse_attributes();
     if !outer_attrs.is_empty() {
       self.rp.span_err(outer_attrs.iter().next().unwrap().span,
-        format!("Attributes of the grammar will be ignored. \
-          Use #![attr] for global attributes.").as_slice());
+        "Unknown attribute. Use #![...] for global attributes.");
     }
     if !self.eat_grammar_keyword() {
       let token_string = self.rp.this_token_to_string();
       let span = self.rp.span;
       self.rp.span_fatal(span,
-        format!("Expected the grammar declaration (of the form: `grammar <grammar-name>;`), \
+        format!("Expected grammar declaration (of the form: `grammar <grammar-name>;`), \
                 but found `{}`",
           token_string).as_slice())
     }

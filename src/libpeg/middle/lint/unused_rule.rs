@@ -62,8 +62,7 @@ impl<'a> UnusedRule<'a>
     for (id, used) in is_used.iter() {
       if !used {
         let rule = grammar.rules.pop(id).unwrap();
-        cx.parse_sess.span_diagnostic.span_warn(rule.name.span, 
-          "Unused rule.");
+        cx.span_warn(rule.name.span, "Unused rule.");
       }
     }
     Some(grammar)

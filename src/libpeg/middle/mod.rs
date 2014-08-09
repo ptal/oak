@@ -80,7 +80,7 @@ impl<'a> Visitor for UndeclaredRule<'a>
   fn visit_non_terminal_symbol(&mut self, sp: Span, id: Ident)
   {
     if !self.rules.contains_key(&id) {
-      self.cx.parse_sess.span_diagnostic.span_err(sp, "Undeclared rule.");
+      self.cx.span_err(sp, "Undeclared rule.");
       self.has_undeclared = true;
     }
   }

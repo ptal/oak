@@ -50,27 +50,27 @@ impl Grammar
 
   fn make_rules(cx: &ExtCtxt, rules: Vec<FRule>) -> Option<HashMap<Ident, Rule>>
   {
-    let mut idents_to_rules = HashMap::with_capacity(rules.len());
+    let mut rules_map = HashMap::with_capacity(rules.len());
     let rules_len = rules.len();
     for rule in rules.move_iter() {
       let rule_name = rule.name.node.clone();
-      if !idents_to_rules.contains_key(&rule_name) {
+      if !rules_map.contains_key(&rule_name) {
         Rule::new(cx, rule).map(|rule|
-            idents_to_rules.insert(rule_name, rule));
+            rules_map.insert(rule_name, rule));
       } else {
         Grammar::duplicate_rules(cx, 
-          idents_to_rules.get(&rule_name).name.span, rule.name.span)
+          rules_map.get(&rule_name).name.span, rule.name.span)
       }
     }
     // If the lengths differ, an error occurred.
-    Some(idents_to_rules).filtered(|id2rule|
-      id2rule.len() != rules_len)
+    Some(rules_map).filtered(|id2rule|
+      id2rule.len() == rules_len)
   }
 
   fn duplicate_rules(cx: &ExtCtxt, pre: Span, current: Span)
   {
-    cx.parse_sess.span_diagnostic.span_err(current, "Duplicate rule definition.");
-    cx.parse_sess.span_diagnostic.span_note(pre, "Previous declaration here.");
+    cx.span_err(current, "Duplicate rule definition.");
+    cx.span_note(pre, "Previous declaration here.");
   }
 }
 
