@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use rust::Span;
-pub use front::ast::*;
+pub use middle::ast::*;
 
 pub trait Visitor
 {
@@ -22,14 +22,10 @@ pub trait Visitor
     walk_grammar(self, grammar);
   }
 
-  fn visit_grammar_attr(&mut self, _attr: &Attribute) {}
-
-  fn visit_rule(&mut self, rule: & Rule)
+  fn visit_rule(&mut self, rule: &Rule)
   {
     walk_rule(self, rule);
   }
-
-  fn visit_rule_attr(&mut self, _attr: & Attribute) {}
 
   fn visit_expr(&mut self, expr: &Box<Expression>)
   {
@@ -80,19 +76,13 @@ pub trait Visitor
 
 pub fn walk_grammar<V: Visitor>(visitor: &mut V, grammar: &Grammar)
 {
-  for attr in grammar.attributes.iter() {
-    visitor.visit_grammar_attr(attr);
-  }
-  for rule in grammar.rules.iter() {
+  for rule in grammar.rules.values() {
     visitor.visit_rule(rule);
   }
 }
 
 pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule)
 {
-  for attr in rule.attributes.iter() {
-    visitor.visit_rule_attr(attr);
-  }
   visitor.visit_expr(&rule.def);
 }
 

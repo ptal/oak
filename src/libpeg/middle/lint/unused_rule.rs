@@ -18,36 +18,65 @@ use std::collections::hashmap::HashMap;
 
 pub struct UnusedRule<'a>
 {
-  cx: &'a ExtCtxt<'a>,
-  ident_to_rule_idx: &'a HashMap<Ident, uint>,
-  grammar: &'a Grammar,
-  pub is_used: Vec<bool>
+  rules: &'a HashMap<Ident, Rule>,
+  is_used: HashMap<Ident, bool>
 }
 
 impl<'a> UnusedRule<'a>
 {
-  pub fn new(cx: &'a ExtCtxt<'a>, grammar: &'a Grammar,
-    ident_to_rule_idx: &'a HashMap<Ident, uint>) -> UnusedRule<'a>
+  pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Option<Grammar>
   {
-    UnusedRule {
-      cx: cx,
-      ident_to_rule_idx: ident_to_rule_idx,
-      grammar: grammar,
-      is_used: Vec::from_fn(grammar.rules.len(), |_| false)
-    }
+    let is_used = UnusedRule::launch(&grammar);
+    UnusedRule::remove_unused(cx, grammar, is_used)
   }
 
-  pub fn analyse(&mut self, start_rule_idx: uint)
+  fn launch(grammar: &Grammar) -> HashMap<Ident, bool>
   {
-    *self.is_used.get_mut(start_rule_idx) = true;
-    self.visit_rule(&self.grammar.rules[start_rule_idx]);
-    for (idx, used) in self.is_used.iter().enumerate() {
+    let mut analyser = UnusedRule::new(&grammar.rules);
+    analyser.launch_dfs(&grammar.attributes.starting_rule);
+    analyser.is_used
+  }
+
+  fn new(rules: &'a HashMap<Ident, Rule>) -> UnusedRule<'a>
+  {
+    let mut analyser = UnusedRule {
+      rules: rules,
+      is_used: HashMap::new()
+    };
+    for k in rules.keys() {
+      analyser.is_used.insert(k.clone(), false);
+    }
+    analyser
+  }
+
+  fn launch_dfs(&mut self, start: &Ident)
+  {
+    *self.is_used.get_mut(start) = true;
+    self.visit_rule(self.rules.get(start));
+  }
+
+  fn remove_unused(cx: &ExtCtxt, grammar: Grammar, 
+    is_used: HashMap<Ident, bool>) -> Option<Grammar>
+  {
+    let mut grammar = grammar;
+    for (id, used) in is_used.iter() {
       if !used {
-        let sp = self.grammar.rules[idx].name.span;
-        self.cx.parse_sess.span_diagnostic.span_warn(sp, 
-          format!("The rule `{}` is not used.",
-            id_to_string(self.grammar.rules[idx].name.node)).as_slice());
+        let rule = grammar.rules.pop(id).unwrap();
+        cx.parse_sess.span_diagnostic.span_warn(rule.name.span, 
+          "Unused rule.");
       }
+    }
+    Some(grammar)
+  }
+
+  fn mark_rule(&mut self, id: Ident) -> bool
+  {
+    let used = self.is_used.get_mut(&id);
+    if !*used {
+      *used = true;
+      true
+    } else {
+      false
     }
   }
 }
@@ -56,10 +85,8 @@ impl<'a> Visitor for UnusedRule<'a>
 {
   fn visit_non_terminal_symbol(&mut self, _sp: Span, id: Ident)
   {
-    let idx = *self.ident_to_rule_idx.find(&id).unwrap();
-    if !self.is_used[idx] {
-      *self.is_used.get_mut(idx) = true;
-      self.visit_rule(&self.grammar.rules[idx]);
+    if self.mark_rule(id) {
+      self.visit_rule(self.rules.get(&id));
     }
   }
 }

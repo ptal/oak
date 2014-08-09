@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
-use rust::{ExtCtxt, InternedString, MetaList, MetaWord, Span};
-use middle::attribute::attribute::*;
-use std::collections::hashmap::HashMap;
+pub use std::default::Default;
 
 pub struct CodePrinter
 {
@@ -24,86 +21,72 @@ pub struct CodePrinter
   pub parser: bool
 }
 
-pub struct CodePrinterBuilder<'a>
+impl Default for CodePrinter
 {
-  print_lvl_to_attr: HashMap<InternedString, AttributeInfo<bool>>,
-  print: InternedString,
-  cx: &'a ExtCtxt<'a>
-}
-
-impl<'a> CodePrinterBuilder<'a>
-{
-  pub fn new(cx: &'a ExtCtxt) -> CodePrinterBuilder<'a>
+  fn default() -> CodePrinter
   {
-    let mut print_lvl_to_attr = HashMap::new();
-    let print_levels = vec!["parser", "ast", "code", "info", "all"];
-    for lvl in print_levels.iter() {
-      print_lvl_to_attr.insert(
-        InternedString::new(*lvl),
-        AttributeInfo::new(false));
-    }
-    CodePrinterBuilder {
-      print_lvl_to_attr: print_lvl_to_attr,
-      print: InternedString::new("print"),
-      cx: cx
-    }
-  }
-
-  pub fn from_attr(&mut self, attr: &rust::Attribute) -> bool
-  {
-    let levels = match attr.node.value.node {
-      MetaList(ref head, ref tail) if *head == self.print => tail,
-      _ => return true
-    };
-
-    for level in levels.iter() {
-      match level.node {
-        MetaWord(ref print_level) => self.insert_level(print_level, level.span),
-        _ => self.cx.parse_sess.span_diagnostic.span_err(level.span,
-               "unknown attribute in the print level list.")
-      }
-    }
-    false
-  }
-
-  // check if the print_level is known and if it's not already used.
-  fn insert_level(&mut self, level: &InternedString, span: Span)
-  {
-    let mut print_attr = self.print_lvl_to_attr.find_mut(level);
-    match print_attr {
-      None => self.cx.parse_sess.span_diagnostic.span_err(span,
-        format!("Unknown print level `{}`. The different print levels are `parser`, \
-          `ast`, `info`, `code`, `all`. For example: `#![print(code)]`.",
-          level.get()).as_slice()),
-      Some(ref attr_info) if attr_info.has_value() => {
-        self.cx.parse_sess.span_diagnostic.span_warn(span,
-          format!("The print level `{}` is already set.", level.get()).as_slice());
-        self.cx.parse_sess.span_diagnostic.span_note(attr_info.span,
-          "Previous declaration here.");
-      },
-      Some(ref mut attr_info) => {
-        attr_info.set(true, span);
-      }
-    }
-  }
-
-  pub fn build(&self) -> CodePrinter
-  {
-    let info = self.value_of("info");
-    let parser = self.value_of("parser");
-    let ast = self.value_of("ast");
-    let code = self.value_of("code");
-    let all = self.value_of("all");
     CodePrinter {
-      info: info || all,
-      ast: ast || code || all,
-      parser: parser || code || all
+      info: false,
+      ast: false,
+      parser: false
     }
   }
-
-  fn value_of(&self, level: &'static str) -> bool
-  {
-    let level = &InternedString::new(level);
-    self.print_lvl_to_attr.find(level).unwrap().value_or_default()
-  }
 }
+
+// impl CodePrinter
+// {
+//   pub fn register(attr_dict: &mut AttributeDict)
+//   {
+//     attr_dict.push(AttributeInfo::new(
+//       "print",
+//       "output the generated code on the standard output.",
+//       SubAttribute(Rc::new(
+//         AttributeDict::new(vec![
+//             AttributeInfo::simple(
+//               name: "parser",
+//               desc: "output the parser code."
+//             ),
+//             AttributeInfo::simple(
+//               name: "ast",
+//               desc: "output the abstract syntax tree code."
+//             ),
+//             AttributeInfo::simple(
+//               name: "info",
+//               desc: "output a header comment with the library version and license."
+//             ),
+//             AttributeInfo::simple(
+//               name: "code",
+//               desc: "output all the code generated, equivalent to `#![print(ast, parser)]`."
+//             ),
+//             AttributeInfo::simple(
+//               name: "all",
+//               desc: "output everything, equivalent to `#![print(code, info)]`."
+//             )
+//           ])
+//         ))
+//     ))
+//   }
+// }
+
+// impl SetByName for CodePrinter
+// {
+//   fn set_by_name<T>(&mut self, cx: &'a ExtCtxt, name: &str, value: &AttributeValue<T>)
+//   {
+//     if name == "info" {
+//       self.info = value.value_or(self.info);
+//     } else if name == "ast" {
+//       self.ast = value.value_or(self.ast);
+//     } else if name == "parser" {
+//       self.parser = value.value_or(self.parser);
+//     } else if name == "code" {
+//       self.ast = value.value_or(self.ast);
+//       self.parser = value.value_or(self.parser);
+//     } else if name == "all" {
+//       self.ast = value.value_or(self.ast);
+//       self.parser = value.value_or(self.parser);
+//       self.info = value.value_or(self.info);
+//     } else {
+//       default_set_by_name(cx, name, value);
+//     }
+//   }
+// }

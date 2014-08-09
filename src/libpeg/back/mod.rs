@@ -15,8 +15,7 @@
 use rust;
 use rust::ExtCtxt;
 use identifier::*;
-use front::ast::*;
-use middle::*;
+use middle::ast::*;
 use std::gc::GC;
 use std::collections::hashmap::HashMap;
 
@@ -52,42 +51,40 @@ pub struct PegCompiler<'a>
   top_level_items: Vec<rust::P<rust::Item>>,
   cx: &'a ExtCtxt<'a>,
   unique_id: uint,
-  grammar: &'a clean_ast::Grammar,
-  current_rule_idx: uint
+  current_rule_name: Ident
 }
 
 impl<'a> PegCompiler<'a>
 {
-  pub fn compile(cx: &'a ExtCtxt, grammar: &'a clean_ast::Grammar) -> Box<rust::MacResult>
+  pub fn compile(cx: &'a ExtCtxt, grammar: Grammar) -> Box<rust::MacResult>
   {
     let mut compiler = PegCompiler{
       top_level_items: Vec::new(),
       cx: cx,
       unique_id: 0,
-      grammar: grammar,
-      current_rule_idx: 0
+      current_rule_name: grammar.rules.keys().next().unwrap().clone()
     };
-    compiler.compile_peg()
+    compiler.compile_peg(&grammar)
   }
 
-  fn compile_peg(&mut self) -> Box<rust::MacResult>
+  fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult>
   {
     let ast = 
-      if self.grammar.code_gen.ast {
-        Some(self.compile_ast())
+      if grammar.attributes.code_gen.ast {
+        Some(self.compile_ast(grammar))
       } else {
         None
       };
 
     let parser =
-      if self.grammar.code_gen.parser {
-        Some(self.compile_parser())
+      if grammar.attributes.code_gen.parser {
+        Some(self.compile_parser(grammar))
       } else {
         None
       };
 
-    let grammar_name = self.grammar.name;
-    let grammar = quote_item!(self.cx,
+    let grammar_name = grammar.name;
+    let code = quote_item!(self.cx,
       pub mod $grammar_name
       {
         #![allow(dead_code)]
@@ -105,11 +102,11 @@ impl<'a> PegCompiler<'a>
       span: rust::DUMMY_SP
     };
 
-    let grammar = match &grammar.node {
+    let code = match &code.node {
       &rust::ItemMod(ref module) => {
         box(GC) rust::Item {
-          ident: grammar.ident,
-          attrs: grammar.attrs.clone(),
+          ident: code.ident,
+          attrs: code.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
           node: rust::ItemMod(rust::Mod{
             inner: rust::DUMMY_SP,
@@ -123,18 +120,18 @@ impl<'a> PegCompiler<'a>
       _ => fail!("Bug")
     };
 
-    if self.grammar.code_printer.parser {
+    if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
-        rust::item_to_string(&*grammar).as_slice());
+        rust::item_to_string(&*code).as_slice());
     }
 
-    rust::MacItem::new(grammar)
+    rust::MacItem::new(code)
   }
 
-  fn compile_parser(&mut self) -> Vec<rust::P<rust::Item>>
+  fn compile_parser(&mut self, grammar: &Grammar) -> Vec<rust::P<rust::Item>>
   {
-    for rule in self.grammar.rules.iter() {
-      let rule_name = rule.name;
+    for rule in grammar.rules.values() {
+      let rule_name = rule.name.node.clone();
       let rule_def = self.compile_expression(&rule.def);
       self.top_level_items.push(quote_item!(self.cx,
         fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
@@ -142,10 +139,10 @@ impl<'a> PegCompiler<'a>
           $rule_def
         }
       ).unwrap());
-      self.current_rule_idx += 1;
+      self.current_rule_name = rule_name;
     }
 
-    let parser_impl = self.compile_entry_point();
+    let parser_impl = self.compile_entry_point(grammar);
 
     let items = ToTokensVec{v: &self.top_level_items};
 
@@ -164,17 +161,16 @@ impl<'a> PegCompiler<'a>
     parser
   }
 
-  fn compile_entry_point(&mut self) -> rust::P<rust::Item>
+  fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
   {
-    let start_idx = self.grammar.start_rule_idx;
-    let start_rule = self.grammar.rules.as_slice()[start_idx].name;
+    let start_rule_name = grammar.attributes.starting_rule;
     (quote_item!(self.cx,
       impl peg::Parser for Parser
       {
         fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
         {
           peg::runtime::make_result(input,
-            &Parser::$start_rule(input, 0))
+            &Parser::$start_rule_name(input, 0))
         }
       })).unwrap()
   }
@@ -288,15 +284,9 @@ impl<'a> PegCompiler<'a>
     self.unique_id - 1
   }
 
-  fn current_rule(&'a self) -> &'a clean_ast::Rule
-  {
-    &self.grammar.rules.as_slice()[self.current_rule_idx]
-  }
-
   fn current_lc_rule_name(&self) -> String
   {
-    let current_rule_ident = self.current_rule().name;
-    let rule_name = id_to_string(current_rule_ident);
+    let rule_name = id_to_string(self.current_rule_name);
     string_to_lowercase(&rule_name)
   }
 
@@ -395,9 +385,11 @@ impl<'a> PegCompiler<'a>
     let mut seq_it = expr.intervals.iter();
 
     let CharacterInterval{lo:lo, hi:hi} = *seq_it.next().unwrap();
-    let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)), |accu, &CharacterInterval{lo:lo, hi:hi}| {
-      quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
-    });
+    let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)), 
+      |accu, &CharacterInterval{lo:lo, hi:hi}| {
+        quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
+      }
+    );
 
     self.top_level_items.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
@@ -413,28 +405,27 @@ impl<'a> PegCompiler<'a>
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
-  fn compile_ast(&mut self) -> rust::P<rust::Item>
+  fn compile_ast(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
   {
     let mut rules_types = HashMap::new();
-    for rule in self.grammar.rules.iter() {
+    for rule in grammar.rules.values() {
       rules_types.insert(rule.name, self.type_of_rule(rule));
     }
 
     let ast = quote_item!(self.cx,
       pub mod ast
       {
-
       }
     ).unwrap();
     ast
   }
 
-  fn type_of_rule(&mut self, rule: &clean_ast::Rule) -> Option<Box<AstRuleType>>
+  fn type_of_rule(&self, rule: &Rule) -> Option<Box<AstRuleType>>
   {
     self.type_of_expr(&rule.def)
   }
 
-  fn type_of_expr(&mut self, expr: &Box<Expression>) -> Option<Box<AstRuleType>>
+  fn type_of_expr(&self, expr: &Box<Expression>) -> Option<Box<AstRuleType>>
   {
     match &expr.node {
       &StrLiteral(_) |
@@ -451,7 +442,7 @@ impl<'a> PegCompiler<'a>
     }
   }
 
-  fn type_of_choice_expr(&mut self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
+  fn type_of_choice_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
   {
     fn flatten_tuple(ty: Box<AstRuleType>) -> Vec<Box<AstRuleType>>
     {
@@ -470,7 +461,7 @@ impl<'a> PegCompiler<'a>
     Some(box Sum(ty))
   }
 
-  fn type_of_seq_expr(&mut self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
+  fn type_of_seq_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
   {
     let tys: Vec<Box<AstRuleType>> = exprs.iter()
       .filter_map(|expr| self.type_of_expr(expr))
