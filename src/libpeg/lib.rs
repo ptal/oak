@@ -22,6 +22,7 @@
 
 extern crate rustc;
 extern crate syntax;
+extern crate attribute;
 
 use rustc::plugin::Registry;
 

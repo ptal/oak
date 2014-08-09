@@ -36,7 +36,8 @@ impl Grammar
 {
   pub fn new(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
   {
-    let attributes = GrammarAttributes::new(&fgrammar);
+    let attributes = GrammarAttributes::new(cx,
+      fgrammar.rules[0].name.node.clone(), fgrammar.attributes);
     let name = fgrammar.name;
     Grammar::make_rules(cx, fgrammar.rules).map(|rules|
       Grammar {

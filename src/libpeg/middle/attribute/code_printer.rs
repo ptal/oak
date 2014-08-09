@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub use std::default::Default;
+use attribute::model::*;
 
 pub struct CodePrinter
 {
@@ -21,72 +22,52 @@ pub struct CodePrinter
   pub parser: bool
 }
 
-impl Default for CodePrinter
+impl CodePrinter
 {
-  fn default() -> CodePrinter
+  pub fn new(model: &AttributeDict) -> CodePrinter
   {
+    let model = model.sub_model("print");
+    let ast = model.plain_value_or("ast", false);
+    let parser = model.plain_value_or("parser", false);
+    let info = model.plain_value_or("info", false);
+    let code = model.plain_value_or("code", false);
+    let all = model.plain_value_or("all", false);
     CodePrinter {
-      info: false,
-      ast: false,
-      parser: false
+      ast: ast || code || all,
+      parser: parser || code || all,
+      info: info || all
     }
   }
+
+  pub fn register(model: &mut AttributeDict)
+  {
+    model.push(AttributeInfo::new(
+      "print",
+      "output the generated code on the standard output.",
+      SubAttribute(
+        AttributeDict::new(vec![
+            AttributeInfo::simple(
+              "parser",
+              "output the parser code."
+            ),
+            AttributeInfo::simple(
+              "ast",
+              "output the abstract syntax tree code."
+            ),
+            AttributeInfo::simple(
+              "info",
+              "output a header comment with the library version and license."
+            ),
+            AttributeInfo::simple(
+              "code",
+              "output all the code generated, equivalent to `#![print(ast, parser)]`."
+            ),
+            AttributeInfo::simple(
+              "all",
+              "output everything, equivalent to `#![print(code, info)]`."
+            )
+          ])
+        )
+    ))
+  }
 }
-
-// impl CodePrinter
-// {
-//   pub fn register(attr_dict: &mut AttributeDict)
-//   {
-//     attr_dict.push(AttributeInfo::new(
-//       "print",
-//       "output the generated code on the standard output.",
-//       SubAttribute(Rc::new(
-//         AttributeDict::new(vec![
-//             AttributeInfo::simple(
-//               name: "parser",
-//               desc: "output the parser code."
-//             ),
-//             AttributeInfo::simple(
-//               name: "ast",
-//               desc: "output the abstract syntax tree code."
-//             ),
-//             AttributeInfo::simple(
-//               name: "info",
-//               desc: "output a header comment with the library version and license."
-//             ),
-//             AttributeInfo::simple(
-//               name: "code",
-//               desc: "output all the code generated, equivalent to `#![print(ast, parser)]`."
-//             ),
-//             AttributeInfo::simple(
-//               name: "all",
-//               desc: "output everything, equivalent to `#![print(code, info)]`."
-//             )
-//           ])
-//         ))
-//     ))
-//   }
-// }
-
-// impl SetByName for CodePrinter
-// {
-//   fn set_by_name<T>(&mut self, cx: &'a ExtCtxt, name: &str, value: &AttributeValue<T>)
-//   {
-//     if name == "info" {
-//       self.info = value.value_or(self.info);
-//     } else if name == "ast" {
-//       self.ast = value.value_or(self.ast);
-//     } else if name == "parser" {
-//       self.parser = value.value_or(self.parser);
-//     } else if name == "code" {
-//       self.ast = value.value_or(self.ast);
-//       self.parser = value.value_or(self.parser);
-//     } else if name == "all" {
-//       self.ast = value.value_or(self.ast);
-//       self.parser = value.value_or(self.parser);
-//       self.info = value.value_or(self.info);
-//     } else {
-//       default_set_by_name(cx, name, value);
-//     }
-//   }
-// }

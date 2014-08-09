@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub use std::default::Default;
+use attribute::model::*;
 
 pub struct CodeGeneration
 {
@@ -20,51 +21,34 @@ pub struct CodeGeneration
   pub parser: bool
 }
 
-impl Default for CodeGeneration
+impl CodeGeneration
 {
-  fn default() -> CodeGeneration
+  pub fn new(model: &AttributeDict) -> CodeGeneration
   {
+    let model = model.sub_model("disable_code");
     CodeGeneration {
-      ast: true,
-      parser: true
+      ast: !model.plain_value_or("ast", false),
+      parser: !model.plain_value_or("parser", false)
     }
   }
+
+  pub fn register(model: &mut AttributeDict)
+  {
+    model.push(AttributeInfo::new(
+      "disable_code",
+      "the specified code won't be generated.",
+      SubAttribute(
+        AttributeDict::new(vec![
+            AttributeInfo::simple(
+              "parser",
+              "do not generate the parser code."
+            ),
+            AttributeInfo::simple(
+              "ast",
+              "do not generate the abstract syntax tree code."
+            )
+          ])
+        )
+    ))
+  }
 }
-
-// impl CodeGeneration
-// {
-//   pub fn register(attr_dict: &mut AttributeDict)
-//   {
-//     attr_dict.push(AttributeInfo::new(
-//       "disable_code",
-//       "the specified code won't be generated.",
-//       SubAttribute(Rc::new(
-//         AttributeDict::new(vec![
-//             AttributeInfo::simple(
-//               name: "parser",
-//               desc: "do not generate the parser code."
-//             ),
-//             AttributeInfo::simple(
-//               name: "ast",
-//               desc: "do not generate the abstract syntax tree code."
-//             )
-//           ])
-//         ))
-//     ))
-//   }
-// }
-
-// impl SetByName for CodeGeneration
-// {
-//   fn set_by_name<T>(&mut self, cx: &'a ExtCtxt, name: &str, value: &AttributeValue<T>)
-//   {
-//     if name == "ast" {
-//       self.ast = value.value_or(self.ast);
-//     } else if name == "parser" {
-//       self.parser = value.value_or(self.parser);
-//     } else {
-//       default_set_by_name(cx, name, value);
-//     }
-//   }
-// }
-

@@ -17,8 +17,12 @@ pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
 pub use middle::attribute::rule_type::*;
-
 pub use std::default::Default;
+pub use rust;
+pub use rust::ExtCtxt;
+
+use attribute::model::AttributeDict;
+use attribute::model_checker;
 
 pub struct GrammarAttributes
 {
@@ -30,23 +34,28 @@ pub struct GrammarAttributes
 
 impl GrammarAttributes
 {
-  // pub fn register(attr_dict: &mut AttributeDict)
-  // {
-  //   CodeGeneration::register(attr_dict);
-  //   CodePrinter::register(attr_dict);
-  //   LintStore::register(attr_dict);
-  //   attr_dict.push(AttributeInfo::simple(
-  //     "start",
-  //     "entry point of the grammar, the parsing starts with this rule."
-  //   ));
-  // }
-
-  pub fn new(grammar: &FGrammar) -> GrammarAttributes
+  fn register(model: &mut AttributeDict)
   {
+    CodeGeneration::register(model);
+    CodePrinter::register(model);
+    // LintStore::register(model);
+    // model.push(AttributeInfo::simple(
+    //   "start",
+    //   "entry point of the grammar, the parsing starts with this rule."
+    // ));
+  }
+
+  pub fn new(cx: &ExtCtxt, first_rule: Ident, attributes: Vec<rust::Attribute>) -> GrammarAttributes
+  {
+    let mut model = AttributeDict::new(vec![]);
+    GrammarAttributes::register(&mut model);
+    let model = attributes.move_iter().fold(
+      model, |model, attr| model_checker::check(cx, model, attr));
+
     GrammarAttributes {
-      code_gen: Default::default(),
-      code_printer: Default::default(),
-      starting_rule: grammar.rules[0].name.node
+      code_gen: CodeGeneration::new(&model),
+      code_printer: CodePrinter::new(&model),
+      starting_rule: first_rule
       // "First rule is by default considered as the starting point. \
       // Annotate the starting rule with `#[start]`."
     }
