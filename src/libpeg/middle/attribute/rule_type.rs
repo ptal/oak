@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::Span;
-pub use std::default::Default;
+pub use rust::{ExtCtxt, Span};
+use attribute::model::*;
 
 pub enum RuleTypeStyle
 {
@@ -22,11 +22,41 @@ pub enum RuleTypeStyle
   Invisible(Span)
 }
 
-impl Default for RuleTypeStyle
+impl RuleTypeStyle
 {
-  fn default() -> RuleTypeStyle
+  pub fn new(cx: &ExtCtxt, model: &AttributeDict) -> RuleTypeStyle
   {
-    New
+    let inline_type = model.plain_value("inline_type");
+    let invisible_type = model.plain_value("invisible_type");
+    let inline = inline_type.value_or(false);
+    let invisible = invisible_type.value_or(false);
+    if inline && invisible {
+      cx.parse_sess.span_diagnostic.span_err(inline_type.span(),
+        "Incoherent rule type specifiers, a rule can't be inlined and invisible.");
+      cx.parse_sess.span_diagnostic.span_note(invisible_type.span(),
+        "Second incoherent rule type specifiers declared here.");
+      New
+    } else if inline {
+      Inline(inline_type.span())
+    } else if invisible {
+      Invisible(invisible_type.span())
+    } else {
+      New
+    }
+  }
+
+  pub fn register(model: &mut AttributeDict)
+  {
+    model.push_all(vec![
+      AttributeInfo::simple(
+        "inline_type",
+        "the type of the rule will be merged with the type of the calling site. No rule type will be created.",
+      ),
+      AttributeInfo::simple(
+        "invisible_type",
+        "the calling site will ignore the type of this rule. The AST of the calling rule will not reference this rule.",
+      )
+    ]);
   }
 }
 
@@ -37,13 +67,18 @@ pub struct RuleType
   // auto_gen_name: AutoGenName
 }
 
-impl Default for RuleType
+impl RuleType
 {
-  fn default() -> RuleType
+  pub fn new(cx: &ExtCtxt, model: &AttributeDict) -> RuleType
   {
     RuleType {
-      type_style: Default::default()
+      type_style: RuleTypeStyle::new(cx, model)
     }
+  }
+
+  pub fn register(model: &mut AttributeDict)
+  {
+    RuleTypeStyle::register(model);
   }
 }
 

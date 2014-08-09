@@ -67,12 +67,22 @@ pub struct RuleAttributes
   pub ty: RuleType
 }
 
-impl Default for RuleAttributes
+impl RuleAttributes
 {
-  fn default() -> RuleAttributes
+  fn register(model: &mut AttributeDict)
   {
+    RuleType::register(model);
+  }
+
+  pub fn new(cx: &ExtCtxt, attributes: Vec<rust::Attribute>) -> RuleAttributes
+  {
+    let mut model = AttributeDict::new(vec![]);
+    RuleAttributes::register(&mut model);
+    let model = attributes.move_iter().fold(
+      model, |model, attr| model_checker::check(cx, model, attr));
+
     RuleAttributes {
-      ty: Default::default()
+      ty: RuleType::new(cx, &model)
     }
   }
 }

@@ -46,9 +46,6 @@ impl Grammar
         attributes: attributes
       }
     )
-    // .map(|grammar|
-    //   grammar.attributes.update_with_grammar_attrs(fgrammar.attributes)
-    // )
   }
 
   fn make_rules(cx: &ExtCtxt, rules: Vec<FRule>) -> Option<HashMap<Ident, Rule>>
@@ -85,11 +82,12 @@ pub struct Rule{
 
 impl Rule
 {
-  fn new(_cx: &ExtCtxt, frule: FRule) -> Option<Rule>
+  fn new(cx: &ExtCtxt, frule: FRule) -> Option<Rule>
   {
+    let attributes = RuleAttributes::new(cx, frule.attributes);
     Some(Rule{
       name: frule.name,
-      attributes: Default::default(),
+      attributes: attributes,
       def: frule.def
     })
   }
