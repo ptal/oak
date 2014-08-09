@@ -1,0 +1,20 @@
+[package]
+
+name = "peg"
+version = "0.1.0"
+authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
+
+[[lib]]
+
+name = "peg"
+path = "src/libpeg/lib.rs"
+crate_type = ["dylib"]
+
+[[bin]]
+
+name = "testpeg"
+path = "src/test/testpeg.rs"
+
+[dependencies.attribute]
+
+git = "https://github.com/ptal/Rust.attribute"
