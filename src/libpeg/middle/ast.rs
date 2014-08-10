@@ -37,7 +37,7 @@ impl Grammar
   pub fn new(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
   {
     let attributes = GrammarAttributes::new(cx,
-      fgrammar.rules[0].name.node.clone(), fgrammar.attributes);
+      &fgrammar.rules, fgrammar.attributes);
     let name = fgrammar.name;
     Grammar::make_rules(cx, fgrammar.rules).map(|rules|
       Grammar {
@@ -55,16 +55,15 @@ impl Grammar
     for rule in rules.move_iter() {
       let rule_name = rule.name.node.clone();
       if !rules_map.contains_key(&rule_name) {
-        Rule::new(cx, rule).map(|rule|
-            rules_map.insert(rule_name, rule));
+        Rule::new(cx, rule).map(|rule| rules_map.insert(rule_name, rule));
       } else {
         Grammar::duplicate_rules(cx, 
           rules_map.get(&rule_name).name.span, rule.name.span)
       }
     }
     // If the lengths differ, an error occurred.
-    Some(rules_map).filtered(|id2rule|
-      id2rule.len() == rules_len)
+    Some(rules_map).filtered(|rules_map|
+      rules_map.len() == rules_len)
   }
 
   fn duplicate_rules(cx: &ExtCtxt, pre: Span, current: Span)
