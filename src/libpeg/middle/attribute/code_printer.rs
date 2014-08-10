@@ -39,9 +39,9 @@ impl CodePrinter
     }
   }
 
-  pub fn register(model: &mut AttributeArray)
+  pub fn model() -> AttributeArray
   {
-    model.push(AttributeInfo::new(
+    vec![(AttributeInfo::new(
       "print",
       "output the generated code on the standard output.",
       SubAttribute(vec![
@@ -66,6 +66,6 @@ impl CodePrinter
           "output everything, equivalent to `#![print(code, info)]`."
         )
       ])
-    ))
+    ))]
   }
 }

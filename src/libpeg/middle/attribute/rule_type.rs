@@ -45,9 +45,9 @@ impl RuleTypeStyle
     }
   }
 
-  pub fn register(model: &mut AttributeArray)
+  pub fn model() -> AttributeArray
   {
-    model.push_all_move(vec![
+    vec![
       AttributeInfo::simple(
         "inline_type",
         "the type of the rule will be merged with the type of the calling site. No rule type will be created.",
@@ -56,7 +56,7 @@ impl RuleTypeStyle
         "invisible_type",
         "the calling site will ignore the type of this rule. The AST of the calling rule will not reference this rule.",
       )
-    ]);
+    ]
   }
 }
 
@@ -76,9 +76,9 @@ impl RuleType
     }
   }
 
-  pub fn register(model: &mut AttributeArray)
+  pub fn model() -> AttributeArray
   {
-    RuleTypeStyle::register(model);
+    RuleTypeStyle::model()
   }
 }
 

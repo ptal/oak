@@ -32,9 +32,9 @@ impl CodeGeneration
     }
   }
 
-  pub fn register(model: &mut AttributeArray)
+  pub fn model() -> AttributeArray
   {
-    model.push(AttributeInfo::new(
+    vec![AttributeInfo::new(
       "disable_code",
       "the specified code won't be generated.",
       SubAttribute(vec![
@@ -47,6 +47,6 @@ impl CodeGeneration
           "do not generate the abstract syntax tree code."
         )
       ])
-    ))
+    )]
   }
 }

@@ -36,11 +36,11 @@ pub struct GrammarAttributes
 
 impl GrammarAttributes
 {
-  fn register(model: &mut AttributeArray)
+  fn model() -> AttributeArray
   {
-    CodeGeneration::register(model);
-    CodePrinter::register(model);
-    // LintStore::register(model);
+    CodeGeneration::model().move_iter()
+      .chain(CodePrinter::model().move_iter())
+      .collect()
   }
 
 // StartingRule struct that takes Vec<Model> (of attributes).
@@ -49,8 +49,7 @@ impl GrammarAttributes
 
   pub fn new(cx: &ExtCtxt, rules: &Vec<FRule>, attributes: Vec<rust::Attribute>) -> GrammarAttributes
   {
-    let mut model = vec![];
-    GrammarAttributes::register(&mut model);
+    let model = GrammarAttributes::model();
     let model = attributes.move_iter().fold(
       model, |model, attr| model_checker::check(cx, model, attr));
     let starting_rule = rules[0].name.node.clone();
@@ -70,10 +69,10 @@ pub struct RuleAttributes
 
 impl RuleAttributes
 {
-  fn register(model: &mut AttributeArray)
+  fn model() -> AttributeArray
   {
-    RuleType::register(model);
-    model.push(AttributeInfo::simple(
+    let model = RuleType::model();
+    model.append_one(AttributeInfo::simple(
       "start",
       "entry point of the grammar, the parsing starts with this rule."
     ))
@@ -81,8 +80,7 @@ impl RuleAttributes
 
   pub fn new(cx: &ExtCtxt, attributes: Vec<rust::Attribute>) -> RuleAttributes
   {
-    let mut model = vec![];
-    RuleAttributes::register(&mut model);
+    let model = RuleAttributes::model();
     let model = attributes.move_iter().fold(
       model, |model, attr| model_checker::check(cx, model, attr));
 
