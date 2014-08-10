@@ -24,14 +24,14 @@ pub struct CodePrinter
 
 impl CodePrinter
 {
-  pub fn new(model: &AttributeDict) -> CodePrinter
+  pub fn new(model: &AttributeArray) -> CodePrinter
   {
-    let model = model.sub_model("print");
-    let ast = model.plain_value_or("ast", false);
-    let parser = model.plain_value_or("parser", false);
-    let info = model.plain_value_or("info", false);
-    let code = model.plain_value_or("code", false);
-    let all = model.plain_value_or("all", false);
+    let model = access::sub_model(model, "print");
+    let ast = access::plain_value_or(model, "ast", false);
+    let parser = access::plain_value_or(model, "parser", false);
+    let info = access::plain_value_or(model, "info", false);
+    let code = access::plain_value_or(model, "code", false);
+    let all = access::plain_value_or(model, "all", false);
     CodePrinter {
       ast: ast || code || all,
       parser: parser || code || all,
@@ -39,35 +39,33 @@ impl CodePrinter
     }
   }
 
-  pub fn register(model: &mut AttributeDict)
+  pub fn register(model: &mut AttributeArray)
   {
     model.push(AttributeInfo::new(
       "print",
       "output the generated code on the standard output.",
-      SubAttribute(
-        AttributeDict::new(vec![
-            AttributeInfo::simple(
-              "parser",
-              "output the parser code."
-            ),
-            AttributeInfo::simple(
-              "ast",
-              "output the abstract syntax tree code."
-            ),
-            AttributeInfo::simple(
-              "info",
-              "output a header comment with the library version and license."
-            ),
-            AttributeInfo::simple(
-              "code",
-              "output all the code generated, equivalent to `#![print(ast, parser)]`."
-            ),
-            AttributeInfo::simple(
-              "all",
-              "output everything, equivalent to `#![print(code, info)]`."
-            )
-          ])
+      SubAttribute(vec![
+        AttributeInfo::simple(
+          "parser",
+          "output the parser code."
+        ),
+        AttributeInfo::simple(
+          "ast",
+          "output the abstract syntax tree code."
+        ),
+        AttributeInfo::simple(
+          "info",
+          "output a header comment with the library version and license."
+        ),
+        AttributeInfo::simple(
+          "code",
+          "output all the code generated, equivalent to `#![print(ast, parser)]`."
+        ),
+        AttributeInfo::simple(
+          "all",
+          "output everything, equivalent to `#![print(code, info)]`."
         )
+      ])
     ))
   }
 }

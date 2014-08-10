@@ -36,7 +36,7 @@ pub struct GrammarAttributes
 
 impl GrammarAttributes
 {
-  fn register(model: &mut AttributeDict)
+  fn register(model: &mut AttributeArray)
   {
     CodeGeneration::register(model);
     CodePrinter::register(model);
@@ -49,7 +49,7 @@ impl GrammarAttributes
 
   pub fn new(cx: &ExtCtxt, rules: &Vec<FRule>, attributes: Vec<rust::Attribute>) -> GrammarAttributes
   {
-    let mut model = AttributeDict::new(vec![]);
+    let mut model = vec![];
     GrammarAttributes::register(&mut model);
     let model = attributes.move_iter().fold(
       model, |model, attr| model_checker::check(cx, model, attr));
@@ -70,7 +70,7 @@ pub struct RuleAttributes
 
 impl RuleAttributes
 {
-  fn register(model: &mut AttributeDict)
+  fn register(model: &mut AttributeArray)
   {
     RuleType::register(model);
     model.push(AttributeInfo::simple(
@@ -81,7 +81,7 @@ impl RuleAttributes
 
   pub fn new(cx: &ExtCtxt, attributes: Vec<rust::Attribute>) -> RuleAttributes
   {
-    let mut model = AttributeDict::new(vec![]);
+    let mut model = vec![];
     RuleAttributes::register(&mut model);
     let model = attributes.move_iter().fold(
       model, |model, attr| model_checker::check(cx, model, attr));

@@ -24,12 +24,12 @@ pub enum RuleTypeStyle
 
 impl RuleTypeStyle
 {
-  pub fn new(cx: &ExtCtxt, model: &AttributeDict) -> RuleTypeStyle
+  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
   {
-    let inline_type = model.plain_value("inline_type");
-    let invisible_type = model.plain_value("invisible_type");
-    let inline = inline_type.value_or(false);
-    let invisible = invisible_type.value_or(false);
+    let inline_type = access::plain_value(model, "inline_type");
+    let invisible_type = access::plain_value(model, "invisible_type");
+    let inline = inline_type.has_value() || false;
+    let invisible = invisible_type.has_value() || false;
     if inline && invisible {
       cx.span_err(inline_type.span(),
         "Incoherent rule type specifiers, a rule can't be inlined and invisible.");
@@ -45,9 +45,9 @@ impl RuleTypeStyle
     }
   }
 
-  pub fn register(model: &mut AttributeDict)
+  pub fn register(model: &mut AttributeArray)
   {
-    model.push_all(vec![
+    model.push_all_move(vec![
       AttributeInfo::simple(
         "inline_type",
         "the type of the rule will be merged with the type of the calling site. No rule type will be created.",
@@ -69,14 +69,14 @@ pub struct RuleType
 
 impl RuleType
 {
-  pub fn new(cx: &ExtCtxt, model: &AttributeDict) -> RuleType
+  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleType
   {
     RuleType {
       type_style: RuleTypeStyle::new(cx, model)
     }
   }
 
-  pub fn register(model: &mut AttributeDict)
+  pub fn register(model: &mut AttributeArray)
   {
     RuleTypeStyle::register(model);
   }

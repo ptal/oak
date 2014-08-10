@@ -23,32 +23,30 @@ pub struct CodeGeneration
 
 impl CodeGeneration
 {
-  pub fn new(model: &AttributeDict) -> CodeGeneration
+  pub fn new(model: &AttributeArray) -> CodeGeneration
   {
-    let model = model.sub_model("disable_code");
+    let model = access::sub_model(model, "disable_code");
     CodeGeneration {
-      ast: !model.plain_value_or("ast", false),
-      parser: !model.plain_value_or("parser", false)
+      ast: !access::plain_value_or(model, "ast", false),
+      parser: !access::plain_value_or(model, "parser", false)
     }
   }
 
-  pub fn register(model: &mut AttributeDict)
+  pub fn register(model: &mut AttributeArray)
   {
     model.push(AttributeInfo::new(
       "disable_code",
       "the specified code won't be generated.",
-      SubAttribute(
-        AttributeDict::new(vec![
-            AttributeInfo::simple(
-              "parser",
-              "do not generate the parser code."
-            ),
-            AttributeInfo::simple(
-              "ast",
-              "do not generate the abstract syntax tree code."
-            )
-          ])
+      SubAttribute(vec![
+        AttributeInfo::simple(
+          "parser",
+          "do not generate the parser code."
+        ),
+        AttributeInfo::simple(
+          "ast",
+          "do not generate the abstract syntax tree code."
         )
+      ])
     ))
   }
 }
