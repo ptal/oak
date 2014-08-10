@@ -24,7 +24,8 @@ pub use identifier::*;
 pub use std::collections::hashmap::HashMap;
 
 pub use FGrammar = front::ast::Grammar;
-use FRule = front::ast::Rule;
+use attribute::model_checker;
+use attribute::model::AttributeArray;
 
 pub struct Grammar{
   pub name: Ident,
@@ -36,34 +37,39 @@ impl Grammar
 {
   pub fn new(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
   {
-    let attributes = GrammarAttributes::new(cx,
-      &fgrammar.rules, fgrammar.attributes);
-    let name = fgrammar.name;
-    Grammar::make_rules(cx, fgrammar.rules).map(|rules|
-      Grammar {
-        name: name,
-        rules: rules,
-        attributes: attributes
-      }
-    )
-  }
+    let grammar_model = GrammarAttributes::model();
+    let grammar_model = model_checker::check_all(cx, grammar_model, fgrammar.attributes);
+    
+    let rules_len = fgrammar.rules.len();
+    let mut rules_models = Vec::with_capacity(rules_len);
+    let mut rules: HashMap<Ident, Rule> = HashMap::with_capacity(rules_len);
+    for rule in fgrammar.rules.move_iter() {
+      let rule_model = RuleAttributes::model();
+      let rule_model = model_checker::check_all(cx, rule_model, rule.attributes);
 
-  fn make_rules(cx: &ExtCtxt, rules: Vec<FRule>) -> Option<HashMap<Ident, Rule>>
-  {
-    let mut rules_map = HashMap::with_capacity(rules.len());
-    let rules_len = rules.len();
-    for rule in rules.move_iter() {
       let rule_name = rule.name.node.clone();
-      if !rules_map.contains_key(&rule_name) {
-        Rule::new(cx, rule).map(|rule| rules_map.insert(rule_name, rule));
+      if rules.contains_key(&rule_name) {
+        Grammar::duplicate_rules(cx, rules.get(&rule_name).name.span, rule.name.span);
       } else {
-        Grammar::duplicate_rules(cx, 
-          rules_map.get(&rule_name).name.span, rule.name.span)
+        let rule = Rule::new(cx, rule.name, rule.def, &rule_model);
+        if rule.is_some() {
+          rules.insert(rule_name, rule.unwrap());
+          rules_models.push((rule_name, rule_model));
+        }
       }
     }
-    // If the lengths differ, an error occurred.
-    Some(rules_map).filtered(|rules_map|
-      rules_map.len() == rules_len)
+
+    if rules.len() == rules_len {
+      let attributes = GrammarAttributes::new(cx, rules_models, grammar_model);
+      let grammar = Grammar{
+        name: fgrammar.name,
+        rules: rules,
+        attributes: attributes
+      };
+      Some(grammar)
+    } else {
+      None
+    }
   }
 
   fn duplicate_rules(cx: &ExtCtxt, pre: Span, current: Span)
@@ -81,13 +87,13 @@ pub struct Rule{
 
 impl Rule
 {
-  fn new(cx: &ExtCtxt, frule: FRule) -> Option<Rule>
+  fn new(cx: &ExtCtxt, name: SpannedIdent, def: Box<Expression>, attrs: &AttributeArray) -> Option<Rule>
   {
-    let attributes = RuleAttributes::new(cx, frule.attributes);
+    let attributes = RuleAttributes::new(cx, attrs);
     Some(Rule{
-      name: frule.name,
+      name: name,
       attributes: attributes,
-      def: frule.def
+      def: def
     })
   }
 }

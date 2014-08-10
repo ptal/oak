@@ -18,7 +18,6 @@ pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
 pub use middle::attribute::rule_type::*;
-pub use std::default::Default;
 pub use rust;
 pub use rust::ExtCtxt;
 
@@ -36,30 +35,64 @@ pub struct GrammarAttributes
 
 impl GrammarAttributes
 {
-  fn model() -> AttributeArray
+  pub fn model() -> AttributeArray
   {
-    CodeGeneration::model().move_iter()
-      .chain(CodePrinter::model().move_iter())
-      .collect()
+    let mut model = CodeGeneration::model();
+    model.push_all_move(CodePrinter::model());
+    model
   }
 
-// StartingRule struct that takes Vec<Model> (of attributes).
-// Extract model creation stuff outside of the new method. Just take models as arguments.
-// Take grammar attributes and rules attributes models.
-
-  pub fn new(cx: &ExtCtxt, rules: &Vec<FRule>, attributes: Vec<rust::Attribute>) -> GrammarAttributes
+  pub fn new(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>, 
+    grammar_attrs: AttributeArray) -> GrammarAttributes
   {
-    let model = GrammarAttributes::model();
-    let model = attributes.move_iter().fold(
-      model, |model, attr| model_checker::check(cx, model, attr));
-    let starting_rule = rules[0].name.node.clone();
-
     GrammarAttributes {
-      code_gen: CodeGeneration::new(&model),
-      code_printer: CodePrinter::new(&model),
-      starting_rule: starting_rule
+      code_gen: CodeGeneration::new(&grammar_attrs),
+      code_printer: CodePrinter::new(&grammar_attrs),
+      starting_rule: GrammarAttributes::starting_rule(cx, rules_attrs)
     }
   }
+
+  fn starting_rule(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>) -> Ident
+  {
+    let mut start_name = None;
+    for &(ref name, ref attr) in rules_attrs.iter() {
+      if access::plain_value(attr, "start").has_value() {
+        start_name = Some(name.clone());
+      }
+    }
+    match start_name {
+      None => GrammarAttributes::starting_rule_default(cx, rules_attrs),
+      Some(name) => {
+        GrammarAttributes::check_start_duplicate(cx, rules_attrs);
+        name
+      }
+    }
+  }
+
+  fn check_start_duplicate(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>)
+  {
+    let duplicate = DuplicateAttribute::error(
+      "There is only one starting rule per grammar.");
+    let merger = AttributeMerger::new(cx, duplicate);
+    let mut rules_iter = rules_attrs.move_iter().map(|(_, attr)| attr);
+    let first = rules_iter.next().unwrap();
+    rules_iter.fold(start_by_name(first), 
+      |accu, attr| merger.merge(accu, start_by_name(attr)));
+  }
+
+  fn starting_rule_default(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>) -> Ident
+  {
+    cx.parse_sess.span_diagnostic.handler.warn(
+      "No rule has been specified as the starting point (attribute `#[start]`). \
+       The first rule will be automatically considered as such.");
+    let (name, _) = rules_attrs[0];
+    name
+  }
+}
+
+fn start_by_name(attr: AttributeArray) -> AttributeInfo
+{
+  access::by_name(&attr, "start").clone()
 }
 
 pub struct RuleAttributes
@@ -69,7 +102,7 @@ pub struct RuleAttributes
 
 impl RuleAttributes
 {
-  fn model() -> AttributeArray
+  pub fn model() -> AttributeArray
   {
     let model = RuleType::model();
     model.append_one(AttributeInfo::simple(
@@ -78,14 +111,10 @@ impl RuleAttributes
     ))
   }
 
-  pub fn new(cx: &ExtCtxt, attributes: Vec<rust::Attribute>) -> RuleAttributes
+  pub fn new(cx: &ExtCtxt, rule_attr: &AttributeArray) -> RuleAttributes
   {
-    let model = RuleAttributes::model();
-    let model = attributes.move_iter().fold(
-      model, |model, attr| model_checker::check(cx, model, attr));
-
     RuleAttributes {
-      ty: RuleType::new(cx, &model)
+      ty: RuleType::new(cx, rule_attr)
     }
   }
 }
