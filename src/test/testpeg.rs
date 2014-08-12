@@ -31,7 +31,8 @@ use peg::Parser;
 
 use term::*;
 
-pub mod ntcc;
+mod ntcc;
+mod type_name;
 
 enum ExpectedResult {
   Match,
@@ -306,5 +307,6 @@ fn main()
   test_path.push("test");
   let mut test_engine = TestEngine::new(test_path);
   test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
+  test_engine.register("type_name", box type_name::type_name::Parser::new());
   test_engine.run();
 }
