@@ -15,7 +15,7 @@
 peg!(
   grammar type_name;
 
-  #![print(all)]
+  // #![print(all)]
   // #![disable_code(ast)]
 
   #[start]

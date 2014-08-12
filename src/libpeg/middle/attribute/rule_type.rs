@@ -62,9 +62,8 @@ impl RuleTypeStyle
 
 pub struct RuleType
 {
-  pub type_style: RuleTypeStyle
-  // name: Option<RuleTypeNameAttribute>,
-  // auto_gen_name: AutoGenName
+  pub style: RuleTypeStyle,
+  pub name: Option<ComposedTypeName>
 }
 
 impl RuleType
@@ -72,24 +71,52 @@ impl RuleType
   pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleType
   {
     RuleType {
-      type_style: RuleTypeStyle::new(cx, model)
+      style: RuleTypeStyle::new(cx, model),
+      name: ComposedTypeName::new(cx, model)
     }
   }
 
   pub fn model() -> AttributeArray
   {
-    RuleTypeStyle::model()
+    let mut model = RuleTypeStyle::model();
+    model.push_all_move(ComposedTypeName::model());
+    model
   }
 }
 
-// enum AutoGenName
-// {
-//   NoTransformation,
-//   CamelCased
-// }
+// If the name must be infered, than name = None.
+struct ComposedTypeName
+{
+  name: Option<String>,
+  fields_names: Vec<ComposedTypeName>
+}
 
-// struct RuleTypeNameAttribute
-// {
-//   type_name: Option<String>,
-//   fields_names: Vec<String>
-// }
+impl ComposedTypeName
+{
+  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> Option<ComposedTypeName>
+  {
+    None
+    // let value = access::lit_str(model, "type_name");
+    // let span = value.span;
+    // value.value.map(|(val, _)| ComposedTypeName::from_str(cx, span, val.get()))
+  }
+
+  // fn from_str(cx: &ExtCtxt, span: Span, val: &str) -> ComposedTypeName
+  // {
+
+  // }
+
+  pub fn model() -> AttributeArray
+  {
+    vec![
+      AttributeInfo::new(
+        "type_name",
+        "the name of the generated type. `#[type_name = \"EnumName(EnumField, EnumField2)\"]` is \
+        for a rule with the shape `rule = r1 / r2`. It also works for structure such as \
+        `StructName(field1, field2)` if the rule have the shape `rule = r1 r2`. Use `_` if \
+        you want the name to be inferred.",
+        KeyValue(MLitStr(AttributeValue::new(DuplicateAttribute::simple(Error))))
+      )
+    ]
+  }
+}
