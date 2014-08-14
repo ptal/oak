@@ -38,3 +38,33 @@ pub fn string_to_lowercase(s: &String) -> String
   }
   res
 }
+
+// From the Rust compiler source (librustc/lint/builtin.rs)
+pub fn is_camel_case(ident: Ident) -> bool
+{
+  let ident = rust::get_ident(ident);
+  assert!(!ident.get().is_empty());
+  let ident = ident.get().trim_chars('_');
+
+  // start with a non-lowercase letter rather than non-uppercase
+  // ones (some scripts don't have a concept of upper/lowercase)
+  !ident.char_at(0).is_lowercase() && !ident.contains_char('_')
+}
+
+// From the Rust compiler source (librustc/lint/builtin.rs)
+pub fn to_camel_case(s: &str) -> String
+{
+  s.split('_').flat_map(|word| word.chars().enumerate().map(|(i, c)|
+    if i == 0 { c.to_uppercase() }
+    else { c }
+  )).collect()
+}
+
+pub fn id_to_camel_case(ident: Ident) -> String
+{
+  if !is_camel_case(ident.clone()) {
+    to_camel_case(rust::get_ident(ident).get())
+  } else {
+    id_to_string(ident)
+  }
+}

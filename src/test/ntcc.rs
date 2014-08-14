@@ -86,15 +86,20 @@ peg!(
 
   var_range 
     = range
-    / dom_kw var_ident
+    / domain
+
+  domain = dom_kw var_ident
 
   // max x .. 10 / min x .. max y / 0..10
   range = range_bound dotdot range_bound
   
   range_bound 
     = integer
-    / min_kw var_ident
-    / max_kw var_ident
+    / min_bound
+    / max_bound
+
+  min_bound = min_kw var_ident
+  max_bound = max_kw var_ident
 
   #[inline_type]
   integer = ["0-9"]+ spacing

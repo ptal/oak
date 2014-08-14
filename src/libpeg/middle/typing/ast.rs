@@ -118,7 +118,32 @@ fn type_of_rule(cx: &ExtCtxt, rule: &ARule) -> RuleType
 
 fn named_type_of_rule(cx: &ExtCtxt, rule: &ARule) -> Box<NamedExpressionType>
 {
-  box TypeAlias(String::from_str("test"), box Character)
+  match &rule.def.node {
+    &Choice(ref expr) => named_choice_of_rule(cx, rule, expr),
+    _ => box TypeAlias(String::from_str("blah"), box Unit)
+  }
+}
+
+fn named_choice_of_rule(cx: &ExtCtxt, rule: &ARule, exprs: &Vec<Box<Expression>>) -> Box<NamedExpressionType>
+{
+  let mut branches = vec![];
+  for expr in exprs.iter() {
+    let ty = type_of_expr(cx, expr);
+    match ty {
+      box RuleTypePlaceholder(ident) => 
+        branches.push((name_of_sum(ident.clone()), box RuleTypePlaceholder(ident))),
+      _ => {
+        cx.span_err(expr.span.clone(), "Missing name of this expression. Name is \
+          needed to build the AST of the current choice statement.");
+      }
+    }
+  }
+  box Sum(name_of_sum(rule.name.node), branches)
+}
+
+fn name_of_sum(ident: Ident) -> String
+{
+  id_to_camel_case(ident)
 }
 
 fn type_of_expr(cx: &ExtCtxt, expr: &Box<Expression>) -> Box<ExpressionType>
@@ -141,13 +166,15 @@ fn type_of_expr(cx: &ExtCtxt, expr: &Box<Expression>) -> Box<ExpressionType>
 
 fn type_of_sequence(cx: &ExtCtxt, exprs: &Vec<Box<Expression>>) -> Box<ExpressionType>
 {
-  let tys: Vec<Box<ExpressionType>> = exprs.iter()
+  let mut tys: Vec<Box<ExpressionType>> = exprs.iter()
     .map(|expr| type_of_expr(cx, expr))
     .filter(|ty| !ty.is_unit())
     .collect();
   
   if tys.is_empty() {
     box Unit
+  } else if tys.len() == 1 {
+    tys.pop().unwrap()
   } else {
     box Tuple(tys)
   }
@@ -155,7 +182,7 @@ fn type_of_sequence(cx: &ExtCtxt, exprs: &Vec<Box<Expression>>) -> Box<Expressio
 
 fn type_of_choice(cx: &ExtCtxt, span: Span, _exprs: &Vec<Box<Expression>>) -> Box<ExpressionType>
 {
-  cx.span_err(span, "choice statement type required but the name of the type and constructors \
+  cx.span_err(span, "Choice statement type required but the name of the type and constructors \
     cannot be inferred from the context. Use the attribute `type_name` or move this expression in \
     a dedicated rule.");
   box Unit
