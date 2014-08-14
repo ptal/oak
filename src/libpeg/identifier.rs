@@ -39,7 +39,7 @@ pub fn string_to_lowercase(s: &String) -> String
   res
 }
 
-// From the Rust compiler source (librustc/lint/builtin.rs)
+// Adapted from the Rust compiler source (librustc/lint/builtin.rs)
 pub fn is_camel_case(ident: Ident) -> bool
 {
   let ident = rust::get_ident(ident);
@@ -51,7 +51,7 @@ pub fn is_camel_case(ident: Ident) -> bool
   !ident.char_at(0).is_lowercase() && !ident.contains_char('_')
 }
 
-// From the Rust compiler source (librustc/lint/builtin.rs)
+// Adapted from the Rust compiler source (librustc/lint/builtin.rs)
 pub fn to_camel_case(s: &str) -> String
 {
   s.split('_').flat_map(|word| word.chars().enumerate().map(|(i, c)|
@@ -64,6 +64,52 @@ pub fn id_to_camel_case(ident: Ident) -> String
 {
   if !is_camel_case(ident.clone()) {
     to_camel_case(rust::get_ident(ident).get())
+  } else {
+    id_to_string(ident)
+  }
+}
+
+// Adapted from the Rust compiler source (librustc/lint/builtin.rs)
+fn is_snake_case(ident: Ident) -> bool 
+{
+    let ident = rust::get_ident(ident);
+    assert!(!ident.get().is_empty());
+    let ident = ident.get().trim_chars('_');
+
+    let mut allow_underscore = true;
+    ident.chars().all(|c| {
+        allow_underscore = match c {
+            c if c.is_lowercase() || c.is_digit() => true,
+            '_' if allow_underscore => false,
+            _ => return false,
+        };
+        true
+    })
+}
+
+// Adapted from the Rust compiler source (librustc/lint/builtin.rs)
+fn to_snake_case(str: &str) -> String
+{
+    let mut words = vec![];
+    for s in str.split('_') {
+        let mut buf = String::new();
+        if s.is_empty() { continue; }
+        for ch in s.chars() {
+            if !buf.is_empty() && ch.is_uppercase() {
+                words.push(buf);
+                buf = String::new();
+            }
+            buf.push_char(ch.to_lowercase());
+        }
+        words.push(buf);
+    }
+    words.connect("_")
+}
+
+pub fn id_to_snake_case(ident: Ident) -> String
+{
+  if !is_snake_case(ident.clone()) {
+    to_snake_case(rust::get_ident(ident).get())
   } else {
     id_to_string(ident)
   }

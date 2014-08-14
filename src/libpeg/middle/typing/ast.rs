@@ -74,11 +74,28 @@ impl ExpressionType
       _ => false
     }
   }
+
+  fn is_type_ph(&self) -> bool
+  {
+    match self {
+      &RuleTypePlaceholder(_) => true,
+      _ => false
+    }
+  }
+
+  fn ph_ident(&self) -> Ident
+  {
+    match self {
+      &RuleTypePlaceholder(ref ident) => ident.clone(),
+      _ => fail!("Cannot extract ident of `RuleTypePlaceholder` from `ExpressionType`.")
+    }
+  }
 }
 
 pub enum NamedExpressionType
 {
   Struct(String, Vec<(String, Box<ExpressionType>)>),
+  StructTuple(String, Vec<Box<ExpressionType>>),
   Sum(String, Vec<(String, Box<ExpressionType>)>),
   TypeAlias(String, Box<ExpressionType>)
 }
@@ -110,17 +127,18 @@ pub fn type_of_rules(cx: &ExtCtxt, grammar: &mut Grammar, arules: HashMap<Ident,
 fn type_of_rule(cx: &ExtCtxt, rule: &ARule) -> RuleType
 {
   match rule.attributes.ty.style.clone() {
-    New => NewTy(named_type_of_rule(cx, rule)),
+    New => named_type_of_rule(cx, rule),
     Inline(_) => InlineTy(type_of_expr(cx, &rule.def)),
     Invisible(_) => InlineTy(box UnitPropagate)
   }
 }
 
-fn named_type_of_rule(cx: &ExtCtxt, rule: &ARule) -> Box<NamedExpressionType>
+fn named_type_of_rule(cx: &ExtCtxt, rule: &ARule) -> RuleType
 {
   match &rule.def.node {
-    &Choice(ref expr) => named_choice_of_rule(cx, rule, expr),
-    _ => box TypeAlias(String::from_str("blah"), box Unit)
+    &Choice(ref expr) => NewTy(named_choice_of_rule(cx, rule, expr)),
+    &Sequence(_) => named_sequence_of_rule(cx, rule),
+    _ => type_alias_of_rule(cx, rule, type_of_expr(cx, &rule.def))
   }
 }
 
@@ -144,6 +162,40 @@ fn named_choice_of_rule(cx: &ExtCtxt, rule: &ARule, exprs: &Vec<Box<Expression>>
 fn name_of_sum(ident: Ident) -> String
 {
   id_to_camel_case(ident)
+}
+
+fn named_sequence_of_rule(cx: &ExtCtxt, rule: &ARule) -> RuleType
+{
+  let ty = type_of_expr(cx, &rule.def);
+  match *ty {
+    Tuple(tys) => NewTy(named_seq_tuple_of_rule(cx, rule, tys)),
+    Unit => InlineTy(box Unit),
+    UnitPropagate => InlineTy(box UnitPropagate),
+    _ => type_alias_of_rule(cx, rule, ty)
+  }
+}
+
+fn named_seq_tuple_of_rule(cx: &ExtCtxt, rule: &ARule,
+  tys: Vec<Box<ExpressionType>>) -> Box<NamedExpressionType>
+{
+  if tys.iter().all(|ty| ty.is_type_ph()) {
+    let names_tys = tys.move_iter()
+      .map(|ty| (id_to_snake_case(ty.ph_ident()), ty))
+      .collect();
+    box Struct(type_name_of_rule(rule), names_tys)
+  } else {
+    box StructTuple(type_name_of_rule(rule), tys)
+  }
+}
+
+fn type_alias_of_rule(cx: &ExtCtxt, rule: &ARule, ty: Box<ExpressionType>) -> RuleType
+{
+  NewTy(box TypeAlias(type_name_of_rule(rule), ty))
+}
+
+fn type_name_of_rule(rule: &ARule) -> String
+{
+  id_to_camel_case(rule.name.node.clone())
 }
 
 fn type_of_expr(cx: &ExtCtxt, expr: &Box<Expression>) -> Box<ExpressionType>
