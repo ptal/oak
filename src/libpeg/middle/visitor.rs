@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use rust::Span;
-pub use middle::ast::*;
+pub use middle::attribute::ast::*;
 
 pub trait Visitor
 {

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub mod attribute;
+pub mod ast;
 mod code_printer;
 mod code_gen;
 mod rule_type;

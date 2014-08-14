@@ -19,17 +19,6 @@ use middle::ast::*;
 use std::gc::GC;
 use std::collections::hashmap::HashMap;
 
-enum AstRuleType
-{
-  Character,
-  RuleTypePlaceholder(Ident),
-  Vector(Box<AstRuleType>),
-  Tuple(Vec<Box<AstRuleType>>),
-  OptionalTy(Box<AstRuleType>),
-  Sum(Vec<Box<AstRuleType>>),
-  SumBranch(Vec<Box<AstRuleType>>)
-}
-
 struct ToTokensVec<'a, T>
 {
   v: &'a Vec<T>
@@ -406,72 +395,13 @@ impl<'a> PegCompiler<'a>
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
   }
 
-  fn compile_ast(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
+  fn compile_ast(&mut self, _grammar: &Grammar) -> rust::P<rust::Item>
   {
-    let mut rules_types = HashMap::new();
-    for rule in grammar.rules.values() {
-      rules_types.insert(rule.name, self.type_of_rule(rule));
-    }
-
     let ast = quote_item!(self.cx,
       pub mod ast
       {
       }
     ).unwrap();
     ast
-  }
-
-  fn type_of_rule(&self, rule: &Rule) -> Option<Box<AstRuleType>>
-  {
-    self.type_of_expr(&rule.def)
-  }
-
-  fn type_of_expr(&self, expr: &Box<Expression>) -> Option<Box<AstRuleType>>
-  {
-    match &expr.node {
-      &StrLiteral(_) |
-      &AnySingleChar |
-      &NotPredicate(_) |
-      &AndPredicate(_) => None,
-      &NonTerminalSymbol(ident) => Some(box RuleTypePlaceholder(ident)),
-      &CharacterClass(_) => Some(box Character),
-      &Sequence(ref expr) => self.type_of_seq_expr(expr),
-      &Choice(ref expr) => self.type_of_choice_expr(expr),
-      &ZeroOrMore(ref expr) |
-      &OneOrMore(ref expr) => self.type_of_expr(expr).map(|r| box Vector(r)),
-      &Optional(ref expr) => self.type_of_expr(expr).map(|r| box OptionalTy(r))
-    }
-  }
-
-  fn type_of_choice_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
-  {
-    fn flatten_tuple(ty: Box<AstRuleType>) -> Vec<Box<AstRuleType>>
-    {
-      match ty {
-        box Tuple(tys) => tys,
-        _ => vec![ty]
-      }
-    };
-
-    let ty = exprs.iter()
-      .map(|expr| self.type_of_expr(expr))
-      .map(|ty| ty.map_or(vec![], flatten_tuple))
-      .map(|tys| box SumBranch(tys))
-      .collect();
-
-    Some(box Sum(ty))
-  }
-
-  fn type_of_seq_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<AstRuleType>>
-  {
-    let tys: Vec<Box<AstRuleType>> = exprs.iter()
-      .filter_map(|expr| self.type_of_expr(expr))
-      .collect();
-    
-    if tys.is_empty() {
-      None
-    } else {
-      Some(box Tuple(tys))
-    }
   }
 }

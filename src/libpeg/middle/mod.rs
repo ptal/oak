@@ -17,10 +17,15 @@ use middle::visitor::Visitor;
 use middle::lint::unused_rule::UnusedRule;
 
 use middle::ast::*;
+use middle::typing::ast;
+pub use FGrammar = front::ast::Grammar;
+pub use AGrammar = middle::attribute::ast::Grammar;
+pub use ARule = middle::attribute::ast::Rule;
 
 mod lint;
 mod visitor;
 mod attribute;
+mod typing;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
@@ -29,9 +34,10 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
     return None
   }
 
-  Grammar::new(cx, fgrammar)
+  AGrammar::new(cx, fgrammar)
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
+    .and_then(|grammar| typing::ast::grammar_typing(cx, grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
@@ -48,13 +54,13 @@ fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
 struct UndeclaredRule<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  rules: &'a HashMap<Ident, Rule>,
+  rules: &'a HashMap<Ident, ARule>,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredRule<'a>
 {
-  fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Option<Grammar>
+  fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Option<AGrammar>
   {
     if UndeclaredRule::has_undeclared(cx, &grammar) {
       None
@@ -63,7 +69,7 @@ impl<'a> UndeclaredRule<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool
   {
     let mut analyser = UndeclaredRule {
       cx: cx,
