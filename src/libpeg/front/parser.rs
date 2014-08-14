@@ -128,7 +128,11 @@ impl<'a> Parser<'a>
       }
     }
     let hi = self.rp.last_span.hi;
-    box spanned(lo, hi, Choice(choices))
+    if choices.len() == 1 { 
+      choices.pop().unwrap() 
+    } else {
+      box spanned(lo, hi, Choice(choices))
+    }
   }
 
   fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression>

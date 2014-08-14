@@ -15,6 +15,7 @@
 pub use rust::{ExtCtxt, Span};
 use attribute::model::*;
 
+#[deriving(Clone)]
 pub enum RuleTypeStyle
 {
   New,
