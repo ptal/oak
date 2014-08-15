@@ -64,7 +64,7 @@ impl RuleTypeStyle
 pub struct RuleType
 {
   pub style: RuleTypeStyle,
-  pub name: Option<ComposedTypeName>
+  pub _name: Option<ComposedTypeName>
 }
 
 impl RuleType
@@ -73,7 +73,7 @@ impl RuleType
   {
     RuleType {
       style: RuleTypeStyle::new(cx, model),
-      name: ComposedTypeName::new(cx, model)
+      _name: ComposedTypeName::new(cx, model)
     }
   }
 
@@ -88,13 +88,13 @@ impl RuleType
 // If the name must be infered, than name = None.
 struct ComposedTypeName
 {
-  name: Option<String>,
-  fields_names: Vec<ComposedTypeName>
+  _name: Option<String>,
+  _fields_names: Vec<ComposedTypeName>
 }
 
 impl ComposedTypeName
 {
-  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> Option<ComposedTypeName>
+  pub fn new(_cx: &ExtCtxt, _model: &AttributeArray) -> Option<ComposedTypeName>
   {
     None
     // let value = access::lit_str(model, "type_name");

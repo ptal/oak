@@ -17,7 +17,6 @@ use rust::ExtCtxt;
 use identifier::*;
 use middle::ast::*;
 use std::gc::GC;
-use std::collections::hashmap::HashMap;
 
 struct ToTokensVec<'a, T>
 {

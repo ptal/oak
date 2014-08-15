@@ -22,7 +22,6 @@ pub use rust;
 pub use rust::ExtCtxt;
 
 use attribute::model::*;
-use attribute::model_checker;
 use attribute::compile_error::DuplicateAttribute;
 
 pub struct GrammarAttributes

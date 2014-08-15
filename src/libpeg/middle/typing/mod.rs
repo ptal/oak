@@ -13,3 +13,5 @@
 // limitations under the License.
 
 pub mod ast;
+pub mod typing;
+mod visitor;

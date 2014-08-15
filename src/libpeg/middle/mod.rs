@@ -17,7 +17,6 @@ use middle::visitor::Visitor;
 use middle::lint::unused_rule::UnusedRule;
 
 use middle::ast::*;
-use middle::typing::ast;
 pub use FGrammar = front::ast::Grammar;
 pub use AGrammar = middle::attribute::ast::Grammar;
 pub use ARule = middle::attribute::ast::Rule;
@@ -37,7 +36,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
   AGrammar::new(cx, fgrammar)
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
-    .and_then(|grammar| typing::ast::grammar_typing(cx, grammar))
+    .and_then(|grammar| typing::typing::grammar_typing(cx, grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
