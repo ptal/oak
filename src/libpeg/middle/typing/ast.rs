@@ -49,12 +49,14 @@ impl Rule
   }
 }
 
+#[deriving(Clone)]
 pub enum RuleType
 {
   InlineTy(Box<ExpressionType>),
   NewTy(Box<NamedExpressionType>)
 }
 
+#[deriving(Clone)]
 pub enum ExpressionType
 {
   Character,
@@ -102,6 +104,7 @@ impl ExpressionType
   }
 }
 
+#[deriving(Clone)]
 pub enum NamedExpressionType
 {
   Struct(String, Vec<(String, Box<ExpressionType>)>),
