@@ -30,6 +30,7 @@ pub struct Grammar
 {
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
+  pub named_types: HashMap<Ident, NamedExpressionType>,
   pub attributes: GrammarAttributes
 }
 
@@ -37,14 +38,7 @@ pub struct Rule
 {
   pub name: SpannedIdent,
   pub def: Box<Expression>,
-  pub ty: RuleType
-}
-
-#[deriving(Clone)]
-pub enum RuleType
-{
-  InlineTy(Rc<ExpressionType>),
-  NewTy(Box<NamedExpressionType>)
+  pub attributes: RuleAttributes
 }
 
 // Explicitly typed expression.
@@ -69,8 +63,15 @@ pub enum ExpressionType
   Vector(Rc<ExpressionType>),
   Tuple(Vec<Rc<ExpressionType>>),
   OptionalTy(Rc<ExpressionType>),
-  DelayedChoice
+  UnnamedSum(Vec<Rc<ExpressionType>>)
 }
+
+// #[deriving(Clone)]
+// pub enum RuleType
+// {
+//   InlineTy(Rc<ExpressionType>),
+//   NewTy(Box<NamedExpressionType>)
+// }
 
 #[deriving(Clone)]
 pub enum NamedExpressionType
@@ -81,16 +82,16 @@ pub enum NamedExpressionType
   TypeAlias(String, Rc<ExpressionType>)
 }
 
-impl Rule
-{
-  pub fn is_inline(&self) -> bool
-  {
-    match &self.ty {
-      &InlineTy(_) => true,
-      _ => false
-    }
-  }
-}
+// impl Rule
+// {
+//   pub fn is_inline(&self) -> bool
+//   {
+//     match &self.ty {
+//       &InlineTy(_) => true,
+//       _ => false
+//     }
+//   }
+// }
 
 impl ExpressionType
 {
