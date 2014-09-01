@@ -53,12 +53,17 @@ pub struct Expression
 
 pub type ExpressionNode = Expression_<Expression>;
 
-// Pointer to type.
-pub type PTy = Rc<RefCell<ExpressionType>>;
+// Type pointer. The types are a DAG structure because type loops are guarded
+// by the RuleTypePlaceholder or RuleTypeName constructors: type are indirectly 
+// referenced through a ident.
+// The type can be replaced during the inlining or propagation and that's why 
+// we use a RefCell. Note that a RefCell has a unique author or is guarded by
+// a Rc (by recursive definition).
+pub type PTy = RefCell<Rc<ExpressionType>>;
 
 pub fn make_pty(expr: ExpressionType) -> PTy
 {
-  Rc::new(RefCell::new(expr))
+  RefCell::new(Rc::new(expr))
 }
 
 #[deriving(Clone)]
@@ -68,7 +73,7 @@ pub enum ExpressionType
   Unit,
   UnitPropagate,
   RuleTypePlaceholder(Ident),
-  // RuleTypeName(Ident),
+  RuleTypeName(Ident),
   Vector(PTy),
   Tuple(Vec<PTy>),
   OptionalTy(PTy),

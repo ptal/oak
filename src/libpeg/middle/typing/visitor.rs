@@ -39,7 +39,7 @@ pub trait Visitor
   fn visit_character(&mut self) {}
   fn visit_unit(&mut self) {}
   fn visit_unit_propagate(&mut self) {}
-  fn visit_rule_type_ph(&mut self, _ident: Ident) {}
+  fn visit_rule_type_ph(&mut self, _ty: &PTy, _ident: Ident) {}
 
   fn visit_named_type(&mut self, _name: &String, ty: &PTy)
   {
@@ -102,11 +102,18 @@ pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule)
 
 pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &PTy)
 {
-  match ty.borrow().deref() {
+  // We don't want to borrow for the entire exploration, it'd
+  // prevent mutable borrow.
+  let ty_rc = {
+    let ty_ref = ty.borrow();
+    ty_ref.clone()
+  };
+  match &*ty_rc {
     &Character => visitor.visit_character(),
     &Unit => visitor.visit_unit(),
     &UnitPropagate => visitor.visit_unit_propagate(),
-    &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(id.clone()),
+    &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(ty, id.clone()),
+    &RuleTypeName(_) => (),
     &Vector(ref ty) => visitor.visit_vector(ty),
     &Tuple(ref tys) => visitor.visit_tuple(tys),
     &OptionalTy(ref ty) => visitor.visit_optional(ty),

@@ -120,8 +120,8 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
     &AndPredicate(ref expr) => {
       visitor.visit_and_predicate(sp, expr)
     }
-    &CharacterClass(ref charClass) => {
-      visitor.visit_character_class(sp, charClass)
+    &CharacterClass(ref char_class) => {
+      visitor.visit_character_class(sp, char_class)
     }
   }
 }

@@ -15,70 +15,60 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
+// The RuleTypePlaceholder(ident) are replaced following these rules:
+//  * if rules[ident].inline --> rules[ident].type
+//  * if rules[ident].invisible --> UnitPropagate
+//  * if rules[ident].new --> RuleTypeName(ident)
+// No loop can arise due to the InliningLoop analysis.
+
 pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 {
   let has_cycle = InliningLoop::analyse(cx, grammar.attributes.starting_rule.clone(), &grammar.rules);
   if !has_cycle {
-    // inline_rules(&mut grammar.rules);
+    Inliner::inline(cx, &grammar.rules);
   }
 }
 
-// struct Inliner<'a>
-// {
-//   cx: &'a ExtCtxt<'a>,
-//   rules: &'a HashMap<Ident, Rule>,
-//   tys: HashMap<Ident, RuleType>
-// }
+struct Inliner<'a>
+{
+  cx: &'a ExtCtxt<'a>,
+  rules: &'a HashMap<Ident, Rule>
+}
 
-// impl<'a> Inliner<'a>
-// {
-//   pub fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> Inliner<'a>
-//   {
-//     Inliner {
-//       cx: cx,
-//       rules: rules,
-//       tys: HashMap::with_capacity(rules.len())
-//     }
-//   }
+impl<'a> Inliner<'a>
+{
+  pub fn inline(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>)
+  {
+    let mut inliner = Inliner {
+      cx: cx,
+      rules: rules
+    };
+    inliner.inline_rules();
+  }
 
-//   fn inline_rules(&mut self)
-//   {
-//     let mut tys = HashMap::with_capacity(rules.len());
-//     let rules = &self.rules;
-//     for rule in rules.values() {
-//       self.inline_rule(rule);
-//     }
-//   }
+  fn inline_rules(&mut self)
+  {
+    for (ident, rule) in self.rules.iter() {
+      self.visit_rule(rule);
+    }
+  }
+}
 
-//   fn inline_rule(&mut self, rule: &Rule)
-//   {
-//     if !tys.contains(&rule.name.node) {
-//       let inlined_ty = self.inline_rule_ty(&rule.ty);
-//       tys.insert(rule.name.node.clone(), inlined_ty);
-//     }
-//   }
-
-//   fn inline_rule_ty(&mut self, ty: &RuleType) -> RuleType
-//   {
-//     match ty {
-//       &NewTy(ref ty) => self.inline_expr_ty(ty),
-//       &InlineTy(ref ty) => InlineTy(ty.clone())
-//     }
-//   }
-
-//   fn inline_expr_ty(&mut self, ty: &Box<ExpressionType>) -> Box<ExpressionType>
-//   {
-//     match **ty {
-//       Character => box Character,
-//       Unit => box Unit,
-//       UnitPropagate => box UnitPropagate,
-//       RuleTypePlaceholder(ref ident) => self.inline_placeholder(ident),
-//       Vector(ref ty) => self.inline_vector(ty),
-//       Tuple(ref tys) => self.inline_tuple(tys),
-//       OptionalTy(ref ty) => self.inline_optional(ty)
-//     }
-//   }
-// }
+impl<'a> Visitor for Inliner<'a>
+{
+  fn visit_rule_type_ph(&mut self, ty: &PTy, ident: Ident)
+  {
+    let rule = self.rules.get(&ident);
+    match &rule.attributes.ty.style {
+      &New => *ty.borrow_mut() = Rc::new(RuleTypeName(ident)),
+      &Inline(_) => {
+        let this = self;
+        *ty.borrow_mut() = this.rules.get(&ident).def.ty.borrow().clone();
+      },
+      &Invisible(_) => *ty.borrow_mut() = Rc::new(UnitPropagate)
+    }
+  }
+}
 
 struct InliningLoop<'a>
 {
@@ -154,7 +144,7 @@ impl<'a> Visitor for InliningLoop<'a>
   }
 
   // On the (inline) edge.
-  fn visit_rule_type_ph(&mut self, ident: Ident)
+  fn visit_rule_type_ph(&mut self, _ty: &PTy, ident: Ident)
   {
     if !self.cycle_detected {
       let rule = self.rules.get(&ident);
