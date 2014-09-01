@@ -42,12 +42,12 @@ pub fn plugin_registrar(reg: &mut Registry)
   reg.register_macro("peg", expand)
 }
 
-fn expand(cx: &mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult> 
+fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx> 
 {
   parse(cx, tts)
 }
 
-fn parse(cx: &mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult>
+fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
   let ast = parser.parse_grammar();

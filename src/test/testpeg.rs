@@ -41,7 +41,7 @@ enum ExpectedResult {
 
 struct TestDisplay
 {
-  terminal: Box<Terminal<WriterWrapper>>,
+  terminal: Box<Terminal<WriterWrapper>+'static>,
   code_snippet_len: uint,
   num_success: uint,
   num_failure: uint,
@@ -180,7 +180,7 @@ impl TestDisplay
 struct GrammarInfo
 {
   name: String,
-  parser: Box<Parser>
+  parser: Box<Parser + 'static>
 }
 
 struct Test<'a>
@@ -268,7 +268,7 @@ impl TestEngine
     }
   }
 
-  fn register(&mut self, name: &str, parser: Box<Parser>)
+  fn register(&mut self, name: &str, parser: Box<Parser+'static>)
   {
     self.grammars.push(GrammarInfo{name: String::from_str(name), parser: parser});
   }

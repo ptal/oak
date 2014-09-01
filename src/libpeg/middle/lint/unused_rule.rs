@@ -13,8 +13,6 @@
 // limitations under the License.
 
 use middle::visitor::*;
-use rust::{ExtCtxt, Ident};
-use std::collections::hashmap::HashMap;
 
 pub struct UnusedRule<'a>
 {

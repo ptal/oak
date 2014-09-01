@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use FGrammar = front::ast::Grammar;
-pub use FRule = front::ast::Rule;
+pub use front::ast::Grammar as FGrammar;
+pub use front::ast::Rule as FRule;
 pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
@@ -22,7 +22,6 @@ pub use rust;
 pub use rust::ExtCtxt;
 
 use attribute::model::*;
-use attribute::compile_error::DuplicateAttribute;
 
 pub struct GrammarAttributes
 {

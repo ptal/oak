@@ -15,9 +15,9 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 use middle::typing::inlining::*;
-pub use AGrammar = middle::attribute::ast::Grammar;
-pub use ARule = middle::attribute::ast::Rule;
-pub use AExpression = middle::attribute::ast::Expression;
+pub use middle::attribute::ast::Grammar as AGrammar;
+pub use middle::attribute::ast::Rule as ARule;
+pub use middle::attribute::ast::Expression as AExpression;
 
 pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Option<Grammar>
 {

@@ -27,7 +27,7 @@ pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 // {
 //   cx: &'a ExtCtxt<'a>,
 //   rules: &'a HashMap<Ident, Rule>,
-//   tys: HashMap<Ident, RuleType>  
+//   tys: HashMap<Ident, RuleType>
 // }
 
 // impl<'a> Inliner<'a>
@@ -117,6 +117,7 @@ impl<'a> InliningLoop<'a>
   {
     self.cycle_detected = true;
     let in_cycle = self.current_inline_path.pop().unwrap();
+    // Consider the smallest cycle.
     let mut trimmed_cycle = vec![in_cycle];
     for id in self.current_inline_path.iter().rev() {
       trimmed_cycle.push(id.clone());

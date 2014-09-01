@@ -17,9 +17,8 @@ use middle::visitor::Visitor;
 use middle::lint::unused_rule::UnusedRule;
 
 use middle::ast::*;
-pub use FGrammar = front::ast::Grammar;
-pub use AGrammar = middle::attribute::ast::Grammar;
-pub use ARule = middle::attribute::ast::Rule;
+pub use middle::attribute::ast::Grammar as AGrammar;
+pub use middle::attribute::ast::Rule as ARule;
 
 mod lint;
 mod visitor;

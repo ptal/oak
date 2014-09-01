@@ -23,7 +23,6 @@ pub use middle::attribute::attribute::*;
 pub use identifier::*;
 pub use std::collections::hashmap::HashMap;
 
-pub use FGrammar = front::ast::Grammar;
 use attribute::model_checker;
 use attribute::model::AttributeArray;
 

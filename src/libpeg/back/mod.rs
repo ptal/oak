@@ -18,12 +18,12 @@ use identifier::*;
 use middle::ast::*;
 use std::gc::GC;
 
-struct ToTokensVec<'a, T>
+struct ToTokensVec<'a, T: 'a>
 {
   v: &'a Vec<T>
 }
 
-impl<'a, T: rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
+impl<'a, T: 'a + rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
 {
   fn to_tokens(&self, cx: &ExtCtxt) -> Vec<rust::TokenTree> {
     let mut tts = Vec::new();
@@ -34,17 +34,17 @@ impl<'a, T: rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
   }
 }
 
-pub struct PegCompiler<'a>
+pub struct PegCompiler<'cx>
 {
   top_level_items: Vec<rust::P<rust::Item>>,
-  cx: &'a ExtCtxt<'a>,
+  cx: &'cx ExtCtxt<'cx>,
   unique_id: uint,
   current_rule_name: Ident
 }
 
-impl<'a> PegCompiler<'a>
+impl<'cx> PegCompiler<'cx>
 {
-  pub fn compile(cx: &'a ExtCtxt, grammar: Grammar) -> Box<rust::MacResult>
+  pub fn compile<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
     let mut compiler = PegCompiler{
       top_level_items: Vec::new(),
@@ -55,7 +55,7 @@ impl<'a> PegCompiler<'a>
     compiler.compile_peg(&grammar)
   }
 
-  fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult>
+  fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
   {
     let ast = 
       if grammar.attributes.code_gen.ast {
