@@ -59,7 +59,7 @@ pub enum ExpressionType
   Unit,
   UnitPropagate,
   RuleTypePlaceholder(Ident),
-  RuleTypeName(Ident),
+  // RuleTypeName(Ident),
   Vector(Rc<ExpressionType>),
   Tuple(Vec<Rc<ExpressionType>>),
   OptionalTy(Rc<ExpressionType>),
@@ -82,16 +82,16 @@ pub enum NamedExpressionType
   TypeAlias(String, Rc<ExpressionType>)
 }
 
-// impl Rule
-// {
-//   pub fn is_inline(&self) -> bool
-//   {
-//     match &self.ty {
-//       &InlineTy(_) => true,
-//       _ => false
-//     }
-//   }
-// }
+impl Rule
+{
+  pub fn is_inline(&self) -> bool
+  {
+    match self.attributes.ty.style {
+      Inline(_) => true,
+      _ => false
+    }
+  }
+}
 
 impl ExpressionType
 {

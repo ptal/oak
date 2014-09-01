@@ -14,7 +14,7 @@
 
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
-// use middle::typing::inlining::*;
+use middle::typing::inlining::*;
 pub use AGrammar = middle::attribute::ast::Grammar;
 pub use ARule = middle::attribute::ast::Rule;
 pub use AExpression = middle::attribute::ast::Expression;
@@ -28,7 +28,7 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Option<Grammar>
     attributes: agrammar.attributes
   };
   infer_rules_type(cx, &mut grammar, agrammar.rules);
-  // inlining_phase(cx, &mut grammar);
+  inlining_phase(cx, &mut grammar);
   Some(grammar)
 }
 

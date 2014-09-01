@@ -40,7 +40,6 @@ pub trait Visitor
   fn visit_unit(&mut self) {}
   fn visit_unit_propagate(&mut self) {}
   fn visit_rule_type_ph(&mut self, _ident: Ident) {}
-  fn visit_rule_type_name(&mut self, _ident: Ident) {}
 
   fn visit_named_type(&mut self, _name: &String, ty: &Rc<ExpressionType>)
   {
@@ -60,6 +59,11 @@ pub trait Visitor
   fn visit_optional(&mut self, ty: &Rc<ExpressionType>)
   {
     walk_ty(self, ty);
+  }
+
+  fn visit_unnamed_sum(&mut self, tys: &Vec<Rc<ExpressionType>>)
+  {
+    walk_tys(self, tys);
   }
 
   // fn visit_struct(&mut self, _name: &String, fields: &Vec<(String, Rc<ExpressionType>)>)
@@ -103,11 +107,10 @@ pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &Rc<ExpressionType>)
     &Unit => visitor.visit_unit(),
     &UnitPropagate => visitor.visit_unit_propagate(),
     &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(id.clone()),
-    &RuleTypeName(ref id) => visitor.visit_rule_type_name(id.clone()),
     &Vector(ref ty) => visitor.visit_vector(ty),
     &Tuple(ref tys) => visitor.visit_tuple(tys),
     &OptionalTy(ref ty) => visitor.visit_optional(ty),
-    &UnnamedSum(_) => ()
+    &UnnamedSum(ref tys) => visitor.visit_unnamed_sum(tys)
   }
 }
 

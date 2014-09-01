@@ -15,4 +15,4 @@
 pub mod ast;
 pub mod typing;
 mod visitor;
-// mod inlining;
+mod inlining;
