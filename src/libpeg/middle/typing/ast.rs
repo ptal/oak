@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::attribute::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
+pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassExpr};
 pub use middle::attribute::ast::{
   StrLiteral, AnySingleChar, NonTerminalSymbol, Sequence,
   Choice, ZeroOrMore, OneOrMore, Optional, NotPredicate,
@@ -24,6 +24,8 @@ pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
 pub use std::collections::hashmap::HashMap;
 pub use identifier::*;
 
+pub use std::rc::Rc;
+
 pub struct Grammar
 {
   pub name: Ident,
@@ -34,8 +36,49 @@ pub struct Grammar
 pub struct Rule
 {
   pub name: SpannedIdent,
-  pub ty: RuleType,
   pub def: Box<Expression>,
+  pub ty: RuleType
+}
+
+#[deriving(Clone)]
+pub enum RuleType
+{
+  InlineTy(Rc<ExpressionType>),
+  NewTy(Box<NamedExpressionType>)
+}
+
+// Explicitly typed expression.
+#[deriving(Clone)]
+pub struct Expression
+{
+  pub span: Span,
+  pub node: ExpressionNode,
+  pub ty: Rc<ExpressionType>
+}
+
+pub type ExpressionNode = Expression_<Expression>;
+
+#[deriving(Clone, Show)]
+pub enum ExpressionType
+{
+  Character,
+  Unit,
+  UnitPropagate,
+  RuleTypePlaceholder(Ident),
+  RuleTypeName(Ident),
+  Vector(Rc<ExpressionType>),
+  Tuple(Vec<Rc<ExpressionType>>),
+  OptionalTy(Rc<ExpressionType>),
+  DelayedChoice
+}
+
+#[deriving(Clone)]
+pub enum NamedExpressionType
+{
+  Struct(String, Vec<(String, Rc<ExpressionType>)>),
+  StructTuple(String, Vec<Rc<ExpressionType>>),
+  Sum(String, Vec<(String, Rc<ExpressionType>)>),
+  TypeAlias(String, Rc<ExpressionType>)
 }
 
 impl Rule
@@ -49,32 +92,14 @@ impl Rule
   }
 }
 
-#[deriving(Clone)]
-pub enum RuleType
-{
-  InlineTy(Box<ExpressionType>),
-  NewTy(Box<NamedExpressionType>)
-}
-
-#[deriving(Clone)]
-pub enum ExpressionType
-{
-  Character,
-  Unit,
-  UnitPropagate,
-  RuleTypePlaceholder(Ident),
-  Vector(Box<ExpressionType>),
-  Tuple(Vec<Box<ExpressionType>>),
-  OptionalTy(Box<ExpressionType>),
-}
-
 impl ExpressionType
 {
-  pub fn map(self, f: |ExpressionType| -> ExpressionType) -> ExpressionType
+  pub fn propagate(&self, self_rc: Rc<ExpressionType>, 
+    f: |Rc<ExpressionType>| -> Rc<ExpressionType>) -> Rc<ExpressionType>
   {
     match self {
-      UnitPropagate => UnitPropagate,
-      expr => f(expr)
+      &UnitPropagate => self_rc,
+      _ => f(self_rc)
     }
   }
 
@@ -102,13 +127,4 @@ impl ExpressionType
       _ => fail!("Cannot extract ident of `RuleTypePlaceholder` from `ExpressionType`.")
     }
   }
-}
-
-#[deriving(Clone)]
-pub enum NamedExpressionType
-{
-  Struct(String, Vec<(String, Box<ExpressionType>)>),
-  StructTuple(String, Vec<Box<ExpressionType>>),
-  Sum(String, Vec<(String, Box<ExpressionType>)>),
-  TypeAlias(String, Box<ExpressionType>)
 }

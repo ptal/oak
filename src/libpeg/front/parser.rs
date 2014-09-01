@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use rust;
-use rust::{mk_sp, spanned, respan, ParserAttr};
+use rust::{mk_sp, respan, ParserAttr};
 use std::str::Chars;
 
 use front::ast::*;
@@ -131,7 +131,7 @@ impl<'a> Parser<'a>
     if choices.len() == 1 { 
       choices.pop().unwrap() 
     } else {
-      box spanned(lo, hi, Choice(choices))
+      spanned_expr(lo, hi, Choice(choices))
     }
   }
 
@@ -152,7 +152,7 @@ impl<'a> Parser<'a>
         format!("In rule {}: must defined at least one parsing expression.",
           rule_name).as_slice());
     }
-    box spanned(lo, hi, Sequence(seq))
+    spanned_expr(lo, hi, Sequence(seq))
   }
 
   fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -170,7 +170,7 @@ impl<'a> Parser<'a>
   }
 
   fn parse_prefix(&mut self, rule_name: &str, 
-    make_prefix: |Box<Expression>| -> Expression_) -> Option<Box<Expression>>
+    make_prefix: |Box<Expression>| -> ExpressionNode) -> Option<Box<Expression>>
   {
     let lo = self.rp.span.lo;
     self.rp.bump();
@@ -188,7 +188,7 @@ impl<'a> Parser<'a>
       }
     };
     let hi = self.rp.span.hi;
-    Some(box spanned(lo, hi, make_prefix(expr)))
+    Some(spanned_expr(lo, hi, make_prefix(expr)))
   }
 
   fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -203,23 +203,23 @@ impl<'a> Parser<'a>
     match token {
       rust::BINOP(rust::STAR) => {
         self.rp.bump();
-        Some(box spanned(lo, hi, ZeroOrMore(expr)))
+        Some(spanned_expr(lo, hi, ZeroOrMore(expr)))
       },
       rust::BINOP(rust::PLUS) => {
         self.rp.bump();
-        Some(box spanned(lo, hi, OneOrMore(expr)))
+        Some(spanned_expr(lo, hi, OneOrMore(expr)))
       },
       rust::DOLLAR => {
         self.rp.bump();
-        Some(box spanned(lo, hi, Optional(expr)))
+        Some(spanned_expr(lo, hi, Optional(expr)))
       },
       _ => Some(expr)
     }
   }
 
-  fn last_respan<T>(&self, t: T) -> Box<Spanned<T>>
+  fn last_respan(&self, expr: ExpressionNode) -> Box<Expression>
   {
-    box respan(self.rp.last_span, t)
+    respan_expr(self.rp.last_span, expr)
   }
 
   fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
@@ -309,7 +309,7 @@ impl<'a> Parser<'a>
         None => break
       }
     }
-    Some(box respan(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
+    Some(respan_expr(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
   }
 
   fn parse_char_range<'a>(&mut self, ranges: &mut Chars<'a>, rule_name: &str) -> Option<Vec<CharacterInterval>>

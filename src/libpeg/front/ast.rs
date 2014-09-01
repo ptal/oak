@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{SpannedIdent, Spanned, Attribute};
+pub use rust::{SpannedIdent, Spanned, Span, Attribute, BytePos, mk_sp};
 pub use identifier::*;
 
 pub struct Grammar{
@@ -28,17 +28,17 @@ pub struct Rule{
 }
 
 #[deriving(Clone)]
-pub enum Expression_{
+pub enum Expression_<SubExpr>{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
   NonTerminalSymbol(Ident), // a_rule
-  Sequence(Vec<Box<Expression>>), // a_rule next_rule
-  Choice(Vec<Box<Expression>>), // try_this / or_try_this_one
-  ZeroOrMore(Box<Expression>), // space*
-  OneOrMore(Box<Expression>), // space+
-  Optional(Box<Expression>), // space? - `?` replaced by `$`
-  NotPredicate(Box<Expression>), // !space
-  AndPredicate(Box<Expression>), // &space
+  Sequence(Vec<Box<SubExpr>>), // a_rule next_rule
+  Choice(Vec<Box<SubExpr>>), // try_this / or_try_this_one
+  ZeroOrMore(Box<SubExpr>), // space*
+  OneOrMore(Box<SubExpr>), // space+
+  Optional(Box<SubExpr>), // space? - `?` replaced by `$`
+  NotPredicate(Box<SubExpr>), // !space
+  AndPredicate(Box<SubExpr>), // &space
   CharacterClass(CharacterClassExpr)
 }
 
@@ -53,4 +53,22 @@ pub struct CharacterInterval {
   pub hi: char
 }
 
-pub type Expression = Spanned<Expression_>;
+// Implicitly typed expression.
+#[deriving(Clone)]
+pub struct Expression
+{
+  pub span: Span,
+  pub node: ExpressionNode
+}
+
+pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
+{
+  respan_expr(mk_sp(lo, hi), expr)
+}
+
+pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression>
+{
+  box Expression {span : sp, node: expr}
+}
+
+pub type ExpressionNode = Expression_<Expression>;
