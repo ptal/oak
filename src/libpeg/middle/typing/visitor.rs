@@ -21,12 +21,12 @@ pub trait Visitor
     walk_rule(self, rule);
   }
 
-  fn visit_rule_type(&mut self, ty: &Rc<ExpressionType>)
+  fn visit_rule_type(&mut self, ty: &PTy)
   {
     walk_ty(self, ty);
   }
 
-  // fn visit_inlined_rule(&mut self, ty: &Rc<ExpressionType>)
+  // fn visit_inlined_rule(&mut self, ty: &PTy)
   // {
   //   walk_ty(self, ty);
   // }
@@ -41,47 +41,47 @@ pub trait Visitor
   fn visit_unit_propagate(&mut self) {}
   fn visit_rule_type_ph(&mut self, _ident: Ident) {}
 
-  fn visit_named_type(&mut self, _name: &String, ty: &Rc<ExpressionType>)
+  fn visit_named_type(&mut self, _name: &String, ty: &PTy)
   {
     walk_ty(self, ty);
   }
 
-  fn visit_vector(&mut self, ty: &Rc<ExpressionType>)
+  fn visit_vector(&mut self, ty: &PTy)
   {
     walk_ty(self, ty);
   }
 
-  fn visit_tuple(&mut self, tys: &Vec<Rc<ExpressionType>>)
+  fn visit_tuple(&mut self, tys: &Vec<PTy>)
   {
     walk_tys(self, tys);
   }
 
-  fn visit_optional(&mut self, ty: &Rc<ExpressionType>)
+  fn visit_optional(&mut self, ty: &PTy)
   {
     walk_ty(self, ty);
   }
 
-  fn visit_unnamed_sum(&mut self, tys: &Vec<Rc<ExpressionType>>)
+  fn visit_unnamed_sum(&mut self, tys: &Vec<PTy>)
   {
     walk_tys(self, tys);
   }
 
-  // fn visit_struct(&mut self, _name: &String, fields: &Vec<(String, Rc<ExpressionType>)>)
+  // fn visit_struct(&mut self, _name: &String, fields: &Vec<(String, PTy)>)
   // {
   //   walk_named_tys(self, fields);
   // }
 
-  // fn visit_struct_tuple(&mut self, _name: &String, fields: &Vec<Rc<ExpressionType>>)
+  // fn visit_struct_tuple(&mut self, _name: &String, fields: &Vec<PTy>)
   // {
   //   walk_tys(self, fields);
   // }
 
-  // fn visit_sum(&mut self, _name: &String, variants: &Vec<(String, Rc<ExpressionType>)>)
+  // fn visit_sum(&mut self, _name: &String, variants: &Vec<(String, PTy)>)
   // {
   //   walk_named_tys(self, variants);
   // }
 
-  // fn visit_type_alias(&mut self, _name: &String, ty: &Rc<ExpressionType>)
+  // fn visit_type_alias(&mut self, _name: &String, ty: &PTy)
   // {
   //   walk_ty(self, ty);
   // }
@@ -100,9 +100,9 @@ pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule)
 //   }
 // }
 
-pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &Rc<ExpressionType>)
+pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &PTy)
 {
-  match &**ty {
+  match ty.borrow().deref() {
     &Character => visitor.visit_character(),
     &Unit => visitor.visit_unit(),
     &UnitPropagate => visitor.visit_unit_propagate(),
@@ -124,14 +124,14 @@ pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &Rc<ExpressionType>)
 //   }
 // }
 
-pub fn walk_tys<V: Visitor>(visitor: &mut V, tys: &Vec<Rc<ExpressionType>>)
+pub fn walk_tys<V: Visitor>(visitor: &mut V, tys: &Vec<PTy>)
 {
   for ty in tys.iter() {
     walk_ty(visitor, ty);
   }
 }
 
-// pub fn walk_named_tys<V: Visitor>(visitor: &mut V, tys: &Vec<(String, Rc<ExpressionType>)>)
+// pub fn walk_named_tys<V: Visitor>(visitor: &mut V, tys: &Vec<(String, PTy)>)
 // {
 //   for &(ref name, ref ty) in tys.iter() {
 //     visitor.visit_named_type(name, ty);

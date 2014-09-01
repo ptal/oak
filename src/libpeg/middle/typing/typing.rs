@@ -102,9 +102,9 @@ fn infer_rule_type(cx: &ExtCtxt, rule: ARule) -> Rule
 //       &RuleTypePlaceholder(ref ident) |
 //       &RuleTypeName(ref ident) => 
 //         branches.push((name_of_sum(ident.clone()), ty)),
-//       e => {
-//         cx.span_err(expr.span.clone(), format!("{}, Name missing from this expression. Name is \
-//           needed to build the AST of the current choice statement.", e).as_slice());
+//       _ => {
+//         cx.span_err(expr.span.clone(), format!("Name missing from this expression. Name is \
+//           needed to build the AST of the current choice statement.").as_slice());
 //       }
 //     }
 //   }
@@ -116,7 +116,7 @@ fn infer_rule_type(cx: &ExtCtxt, rule: ARule) -> Rule
 //   id_to_camel_case(ident)
 // }
 
-// fn named_sequence_of_rule(rule_name: Ident, ty: &Rc<ExpressionType>) -> RuleType
+// fn named_sequence_of_rule(rule_name: Ident, ty: &PTy) -> RuleType
 // {
 //   match &**ty {
 //     &Tuple(ref tys) => NewTy(named_seq_tuple_of_rule(rule_name, tys)),
@@ -127,7 +127,7 @@ fn infer_rule_type(cx: &ExtCtxt, rule: ARule) -> Rule
 // }
 
 // fn named_seq_tuple_of_rule(rule_name: Ident,
-//   tys: &Vec<Rc<ExpressionType>>) -> Box<NamedExpressionType>
+//   tys: &Vec<PTy>) -> Box<NamedExpressionType>
 // {
 //   if tys.iter().all(|ty| ty.is_type_ph()) {
 //     let names_tys = tys.iter()
@@ -139,7 +139,7 @@ fn infer_rule_type(cx: &ExtCtxt, rule: ARule) -> Rule
 //   }
 // }
 
-// fn type_alias_of_rule(rule_name: Ident, ty: Rc<ExpressionType>) -> RuleType
+// fn type_alias_of_rule(rule_name: Ident, ty: PTy) -> RuleType
 // {
 //   NewTy(box TypeAlias(type_name_of_rule(rule_name), ty))
 // }
@@ -172,7 +172,7 @@ fn infer_char_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
   box Expression {
     span: sp,
     node: node,
-    ty: Rc::new(Character)
+    ty: make_pty(Character)
   }
 }
 
@@ -181,7 +181,7 @@ fn infer_unit_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
   box Expression {
     span: sp,
     node: node,
-    ty: Rc::new(Unit)
+    ty: make_pty(Unit)
   }
 }
 
@@ -196,25 +196,25 @@ fn infer_rule_type_ph(sp: Span, ident: Ident) -> Box<Expression>
   box Expression {
     span: sp,
     node: NonTerminalSymbol(ident.clone()),
-    ty: Rc::new(RuleTypePlaceholder(ident))
+    ty: make_pty(RuleTypePlaceholder(ident))
   }
 }
 
 fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
   make_node: |Box<Expression>| -> ExpressionNode,
-  make_type: |Rc<ExpressionType>| -> ExpressionType) -> Box<Expression>
+  make_type: |PTy| -> ExpressionType) -> Box<Expression>
 {
   let node = infer_expr_type(cx, sub);
   let ty = node.ty.clone();
   box Expression {
     span: sp,
     node: make_node(node),
-    ty: Rc::new(make_type(ty))
+    ty: make_pty(make_type(ty))
   }
 }
 
 fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>) 
-  -> (Vec<Box<Expression>>, Vec<Rc<ExpressionType>>)
+  -> (Vec<Box<Expression>>, Vec<PTy>)
 {
   let nodes : Vec<Box<Expression>> = subs.move_iter()
     .map(|sub| infer_expr_type(cx, sub))
@@ -234,7 +234,7 @@ fn infer_tuple_expr(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<
     box Expression {
       span: sp,
       node: Sequence(nodes),
-      ty: Rc::new(Tuple(tys))
+      ty: make_pty(Tuple(tys))
     }
   }
 }
@@ -249,6 +249,6 @@ fn type_of_choice(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Ex
   box Expression {
     span: sp,
     node: Choice(nodes),
-    ty: Rc::new(UnnamedSum(tys))
+    ty: make_pty(UnnamedSum(tys))
   }
 }

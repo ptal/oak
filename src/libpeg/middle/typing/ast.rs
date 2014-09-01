@@ -25,6 +25,7 @@ pub use std::collections::hashmap::HashMap;
 pub use identifier::*;
 
 pub use std::rc::Rc;
+pub use std::cell::RefCell;
 
 pub struct Grammar
 {
@@ -47,12 +48,20 @@ pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
-  pub ty: Rc<ExpressionType>
+  pub ty: PTy
 }
 
 pub type ExpressionNode = Expression_<Expression>;
 
-#[deriving(Clone, Show)]
+// Pointer to type.
+pub type PTy = Rc<RefCell<ExpressionType>>;
+
+pub fn make_pty(expr: ExpressionType) -> PTy
+{
+  Rc::new(RefCell::new(expr))
+}
+
+#[deriving(Clone)]
 pub enum ExpressionType
 {
   Character,
@@ -60,10 +69,10 @@ pub enum ExpressionType
   UnitPropagate,
   RuleTypePlaceholder(Ident),
   // RuleTypeName(Ident),
-  Vector(Rc<ExpressionType>),
-  Tuple(Vec<Rc<ExpressionType>>),
-  OptionalTy(Rc<ExpressionType>),
-  UnnamedSum(Vec<Rc<ExpressionType>>)
+  Vector(PTy),
+  Tuple(Vec<PTy>),
+  OptionalTy(PTy),
+  UnnamedSum(Vec<PTy>)
 }
 
 // #[deriving(Clone)]
@@ -76,10 +85,10 @@ pub enum ExpressionType
 #[deriving(Clone)]
 pub enum NamedExpressionType
 {
-  Struct(String, Vec<(String, Rc<ExpressionType>)>),
-  StructTuple(String, Vec<Rc<ExpressionType>>),
-  Sum(String, Vec<(String, Rc<ExpressionType>)>),
-  TypeAlias(String, Rc<ExpressionType>)
+  Struct(String, Vec<(String, PTy)>),
+  StructTuple(String, Vec<PTy>),
+  Sum(String, Vec<(String, PTy)>),
+  TypeAlias(String, PTy)
 }
 
 impl Rule
@@ -95,8 +104,8 @@ impl Rule
 
 impl ExpressionType
 {
-  pub fn propagate(&self, self_rc: Rc<ExpressionType>, 
-    f: |Rc<ExpressionType>| -> Rc<ExpressionType>) -> Rc<ExpressionType>
+  pub fn propagate(&self, self_rc: PTy, 
+    f: |PTy| -> PTy) -> PTy
   {
     match self {
       &UnitPropagate => self_rc,

@@ -170,7 +170,7 @@ impl<'a> Visitor for InliningLoop<'a>
   }
 
   // Sum type breaks the potential cycles since it cannot be unnamed.
-  fn visit_unnamed_sum(&mut self, tys: &Vec<Rc<ExpressionType>>)
+  fn visit_unnamed_sum(&mut self, _tys: &Vec<PTy>)
   {}
 }
 
