@@ -80,13 +80,6 @@ pub enum ExpressionType
   UnnamedSum(Vec<PTy>)
 }
 
-// #[deriving(Clone)]
-// pub enum RuleType
-// {
-//   InlineTy(Rc<ExpressionType>),
-//   NewTy(Box<NamedExpressionType>)
-// }
-
 #[deriving(Clone)]
 pub enum NamedExpressionType
 {

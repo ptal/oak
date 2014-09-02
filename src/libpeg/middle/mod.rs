@@ -35,7 +35,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
   AGrammar::new(cx, fgrammar)
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
-    .and_then(|grammar| typing::typing::grammar_typing(cx, grammar))
+    .and_then(|grammar| typing::grammar_typing(cx, grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool

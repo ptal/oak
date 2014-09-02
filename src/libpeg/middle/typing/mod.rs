@@ -12,8 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use middle::typing::inference::*;
+use middle::typing::inlining::*;
+use middle::typing::propagation::*;
+use middle::typing::ast::*;
+
 pub mod ast;
-pub mod typing;
+pub mod inference;
 mod visitor;
 mod inlining;
 mod propagation;
+
+pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Option<Grammar>
+{
+  let mut grammar = Grammar {
+    name: agrammar.name,
+    rules: HashMap::with_capacity(agrammar.rules.len()),
+    named_types: HashMap::with_capacity(agrammar.rules.len()),
+    attributes: agrammar.attributes
+  };
+  infer_rules_type(cx, &mut grammar, agrammar.rules);
+  inlining_phase(cx, &mut grammar);
+  propagation_phase(cx, &mut grammar);
+  Some(grammar)
+}
