@@ -149,7 +149,7 @@ impl<'a> Parser<'a>
     if seq.len() == 0 {
       self.rp.span_err(
         mk_sp(lo, hi),
-        format!("In rule {}: must defined at least one parsing expression.",
+        format!("In rule {}: must defined at least one expression.",
           rule_name).as_slice());
     }
     spanned_expr(lo, hi, Sequence(seq))

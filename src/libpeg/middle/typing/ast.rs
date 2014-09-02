@@ -109,12 +109,11 @@ impl Rule
 
 impl ExpressionType
 {
-  pub fn propagate(&self, self_rc: PTy, 
-    f: |PTy| -> PTy) -> PTy
+  pub fn must_propagate(&self) -> bool
   {
     match self {
-      &UnitPropagate => self_rc,
-      _ => f(self_rc)
+      &UnitPropagate => true,
+      _ => false
     }
   }
 

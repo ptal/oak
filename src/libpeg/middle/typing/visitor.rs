@@ -38,32 +38,32 @@ pub trait Visitor
 
   fn visit_character(&mut self) {}
   fn visit_unit(&mut self) {}
-  fn visit_unit_propagate(&mut self) {}
-  fn visit_rule_type_ph(&mut self, _ty: &PTy, _ident: Ident) {}
+  fn visit_unit_propagate(&mut self, _parent: &PTy) {}
+  fn visit_rule_type_ph(&mut self, _parent: &PTy, _ident: Ident) {}
 
-  fn visit_named_type(&mut self, _name: &String, ty: &PTy)
+  // fn visit_named_type(&mut self, _name: &String, ty: &PTy)
+  // {
+  //   walk_ty(self, ty);
+  // }
+
+  fn visit_vector(&mut self, _parent: &PTy, inner: &PTy)
   {
-    walk_ty(self, ty);
+    walk_ty(self, inner);
   }
 
-  fn visit_vector(&mut self, ty: &PTy)
+  fn visit_tuple(&mut self, _parent: &PTy, inners: &Vec<PTy>)
   {
-    walk_ty(self, ty);
+    walk_tys(self, inners);
   }
 
-  fn visit_tuple(&mut self, tys: &Vec<PTy>)
+  fn visit_optional(&mut self, _parent: &PTy, inner: &PTy)
   {
-    walk_tys(self, tys);
+    walk_ty(self, inner);
   }
 
-  fn visit_optional(&mut self, ty: &PTy)
+  fn visit_unnamed_sum(&mut self, _parent: &PTy, inners: &Vec<PTy>)
   {
-    walk_ty(self, ty);
-  }
-
-  fn visit_unnamed_sum(&mut self, tys: &Vec<PTy>)
-  {
-    walk_tys(self, tys);
+    walk_tys(self, inners);
   }
 
   // fn visit_struct(&mut self, _name: &String, fields: &Vec<(String, PTy)>)
@@ -111,13 +111,13 @@ pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &PTy)
   match &*ty_rc {
     &Character => visitor.visit_character(),
     &Unit => visitor.visit_unit(),
-    &UnitPropagate => visitor.visit_unit_propagate(),
+    &UnitPropagate => visitor.visit_unit_propagate(ty),
     &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(ty, id.clone()),
     &RuleTypeName(_) => (),
-    &Vector(ref ty) => visitor.visit_vector(ty),
-    &Tuple(ref tys) => visitor.visit_tuple(tys),
-    &OptionalTy(ref ty) => visitor.visit_optional(ty),
-    &UnnamedSum(ref tys) => visitor.visit_unnamed_sum(tys)
+    &Vector(ref sub_ty) => visitor.visit_vector(ty, sub_ty),
+    &Tuple(ref sub_tys) => visitor.visit_tuple(ty, sub_tys),
+    &OptionalTy(ref sub_ty) => visitor.visit_optional(ty, sub_ty),
+    &UnnamedSum(ref sub_tys) => visitor.visit_unnamed_sum(ty, sub_tys)
   }
 }
 
