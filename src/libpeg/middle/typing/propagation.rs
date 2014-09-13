@@ -122,7 +122,7 @@ impl<'a> Visitor for Propagator<'a>
   fn visit_rule_type_ph(&mut self, _parent: &PTy, _ident: Ident)
   {
     assert!(false, "PEG compiler bug: Hit a type placeholder node while propagating, \
-      they should be all removed by theinlining phase.");
+      they should all be removed during the inlining phase.");
   }
 }
 
@@ -157,23 +157,3 @@ impl<'a> Visitor for PropagatorCleaner<'a>
     *parent.borrow_mut() = Rc::new(Unit);
   }
 }
-
-// fn type_of_choice_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<ExpressionType>>
-// {
-//   fn flatten_tuple(ty: Box<ExpressionType>) -> Vec<Box<ExpressionType>>
-//   {
-//     match ty {
-//       box Tuple(tys) => tys,
-//       _ => vec![ty]
-//     }
-//   };
-
-//   let ty = exprs.iter()
-//     .map(|expr| self.type_of_expr(expr))
-//     .map(|ty| ty.map_or(vec![], flatten_tuple))
-//     .map(|tys| box SumBranch(tys))
-//     .collect();
-
-//   Some(box Sum(ty))
-// }
-

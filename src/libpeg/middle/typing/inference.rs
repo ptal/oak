@@ -56,20 +56,12 @@ fn infer_expr_type(cx: &ExtCtxt, expr: Box<AExpression>) -> Box<Expression>
 
 fn infer_char_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
 {
-  box Expression {
-    span: sp,
-    node: node,
-    ty: make_pty(Character)
-  }
+  box Expression::new(sp, node, make_pty(Character))
 }
 
 fn infer_unit_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
 {
-  box Expression {
-    span: sp,
-    node: node,
-    ty: make_pty(Unit)
-  }
+  box Expression::new(sp, node, make_pty(Unit))
 }
 
 fn infer_sub_unit_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
@@ -80,11 +72,9 @@ fn infer_sub_unit_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
 
 fn infer_rule_type_ph(sp: Span, ident: Ident) -> Box<Expression>
 {
-  box Expression {
-    span: sp,
-    node: NonTerminalSymbol(ident.clone()),
-    ty: make_pty(RuleTypePlaceholder(ident))
-  }
+  box Expression::new(sp, 
+    NonTerminalSymbol(ident.clone()),
+    make_pty(RuleTypePlaceholder(ident)))
 }
 
 fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
@@ -93,11 +83,7 @@ fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
 {
   let node = infer_expr_type(cx, sub);
   let ty = node.ty.clone();
-  box Expression {
-    span: sp,
-    node: make_node(node),
-    ty: make_pty(make_type(ty))
-  }
+  box Expression::new(sp, make_node(node), make_pty(make_type(ty)))
 }
 
 fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>) 
@@ -118,11 +104,7 @@ fn infer_tuple_expr(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<
   if nodes.len() == 1 {
     nodes.move_iter().next().unwrap()
   } else {
-    box Expression {
-      span: sp,
-      node: Sequence(nodes),
-      ty: make_pty(Tuple(tys))
-    }
+    box Expression::new(sp, Sequence(nodes), make_pty(Tuple(tys)))
   }
 }
 
@@ -133,9 +115,5 @@ fn type_of_choice(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Ex
   //   a dedicated rule.");
   let (nodes, tys) = infer_list_expr(cx, subs);
 
-  box Expression {
-    span: sp,
-    node: Choice(nodes),
-    ty: make_pty(UnnamedSum(tys))
-  }
+  box Expression::new(sp, Choice(nodes), make_pty(UnnamedSum(tys)))
 }

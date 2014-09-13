@@ -163,22 +163,3 @@ impl<'a> Visitor for InliningLoop<'a>
   fn visit_unnamed_sum(&mut self, _parent: &PTy, _inners: &Vec<PTy>)
   {}
 }
-
-// fn type_of_choice_expr(&self, exprs: &Vec<Box<Expression>>) -> Option<Box<ExpressionType>>
-// {
-//   fn flatten_tuple(ty: Box<ExpressionType>) -> Vec<Box<ExpressionType>>
-//   {
-//     match ty {
-//       box Tuple(tys) => tys,
-//       _ => vec![ty]
-//     }
-//   };
-
-//   let ty = exprs.iter()
-//     .map(|expr| self.type_of_expr(expr))
-//     .map(|ty| ty.map_or(vec![], flatten_tuple))
-//     .map(|tys| box SumBranch(tys))
-//     .collect();
-
-//   Some(box Sum(ty))
-// }

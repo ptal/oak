@@ -42,23 +42,45 @@ pub struct Rule
   pub attributes: RuleAttributes
 }
 
+#[deriving(Clone)]
+pub enum ExpressionTypeVersion
+{
+  Typed,
+  UnTyped,
+  Both
+}
+
 // Explicitly typed expression.
 #[deriving(Clone)]
 pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
-  pub ty: PTy
+  pub ty: PTy,
+  pub version: Option<ExpressionTypeVersion>
+}
+
+impl Expression
+{
+  pub fn new(sp: Span, node: ExpressionNode, ty: PTy) -> Expression
+  {
+    Expression {
+      span: sp,
+      node: node,
+      ty: ty,
+      version: None
+    }
+  }
 }
 
 pub type ExpressionNode = Expression_<Expression>;
 
 // Type pointer. The types are a DAG structure because type loops are guarded
-// by the RuleTypePlaceholder or RuleTypeName constructors: type are indirectly 
+// by the RuleTypePlaceholder or RuleTypeName constructors: types are indirectly 
 // referenced through a ident.
 // The type can be replaced during the inlining or propagation and that's why 
 // we use a RefCell. Note that a RefCell has a unique author or is guarded by
-// a Rc (by recursive definition).
+// a Rc (proof by induction).
 pub type PTy = RefCell<Rc<ExpressionType>>;
 
 pub fn make_pty(expr: ExpressionType) -> PTy
