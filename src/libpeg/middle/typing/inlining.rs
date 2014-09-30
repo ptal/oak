@@ -25,22 +25,20 @@ pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 {
   let has_cycle = InliningLoop::analyse(cx, grammar.attributes.starting_rule.clone(), &grammar.rules);
   if !has_cycle {
-    Inliner::inline(cx, &grammar.rules);
+    Inliner::inline(&grammar.rules);
   }
 }
 
 struct Inliner<'a>
 {
-  cx: &'a ExtCtxt<'a>,
   rules: &'a HashMap<Ident, Rule>
 }
 
 impl<'a> Inliner<'a>
 {
-  pub fn inline(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>)
+  pub fn inline(rules: &'a HashMap<Ident, Rule>)
   {
     let mut inliner = Inliner {
-      cx: cx,
       rules: rules
     };
     inliner.inline_rules();
@@ -48,7 +46,7 @@ impl<'a> Inliner<'a>
 
   fn inline_rules(&mut self)
   {
-    for (ident, rule) in self.rules.iter() {
+    for rule in self.rules.values() {
       self.visit_rule(rule);
     }
   }
@@ -91,7 +89,7 @@ impl<'a> InliningLoop<'a>
   fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> InliningLoop<'a>
   {
     let mut visited = HashMap::with_capacity(rules.len());
-    for (id, rule) in rules.iter() {
+    for id in rules.keys() {
       visited.insert(id.clone(), false);
     }
     InliningLoop {

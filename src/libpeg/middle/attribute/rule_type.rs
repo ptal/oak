@@ -80,7 +80,7 @@ impl RuleType
   pub fn model() -> AttributeArray
   {
     let mut model = RuleTypeStyle::model();
-    model.push_all_move(ComposedTypeName::model());
+    model.extend(ComposedTypeName::model().into_iter());
     model
   }
 }

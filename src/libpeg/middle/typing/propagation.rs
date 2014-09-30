@@ -34,24 +34,22 @@ use middle::typing::ast::*;
 
 // There is no propagation loops since it stops propagating at rule level.
 
-pub fn propagation_phase(cx: &ExtCtxt, grammar: &mut Grammar)
+pub fn propagation_phase(grammar: &mut Grammar)
 {
-  Propagator::propagate(cx, &grammar.rules);
+  Propagator::propagate(&grammar.rules);
   PropagatorCleaner::clean(&grammar.rules);
 }
 
 struct Propagator<'a>
 {
-  cx: &'a ExtCtxt<'a>,
   rules: &'a HashMap<Ident, Rule>
 }
 
 impl<'a> Propagator<'a>
 {
-  pub fn propagate(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>)
+  pub fn propagate(rules: &'a HashMap<Ident, Rule>)
   {
     let mut propagator = Propagator {
-      cx: cx,
       rules: rules
     };
     propagator.propagate_rules();
@@ -59,7 +57,7 @@ impl<'a> Propagator<'a>
 
   fn propagate_rules(&mut self)
   {
-    for (ident, rule) in self.rules.iter() {
+    for rule in self.rules.values() {
       self.visit_rule(rule);
     }
   }
@@ -144,7 +142,7 @@ impl<'a> PropagatorCleaner<'a>
 
   fn clean_rules(&mut self)
   {
-    for (ident, rule) in self.rules.iter() {
+    for rule in self.rules.values() {
       self.visit_rule(rule);
     }
   }

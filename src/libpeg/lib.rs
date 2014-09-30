@@ -49,7 +49,7 @@ fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTr
 
 fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
 {
-  let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), Vec::from_slice(tts));
+  let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts.to_vec());
   let ast = parser.parse_grammar();
   let ast = middle::analyse(cx, ast);
   match ast {

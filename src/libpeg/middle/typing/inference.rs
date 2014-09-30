@@ -20,7 +20,7 @@ pub use middle::attribute::ast::Expression as AExpression;
 
 pub fn infer_rules_type(cx: &ExtCtxt, grammar: &mut Grammar, arules: HashMap<Ident, ARule>)
 {
-  for (id, rule) in arules.move_iter() {
+  for (id, rule) in arules.into_iter() {
     let typed_rule = infer_rule_type(cx, rule);
     grammar.rules.insert(id, typed_rule);
   }
@@ -89,7 +89,7 @@ fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
 fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>) 
   -> (Vec<Box<Expression>>, Vec<PTy>)
 {
-  let nodes : Vec<Box<Expression>> = subs.move_iter()
+  let nodes : Vec<Box<Expression>> = subs.into_iter()
     .map(|sub| infer_expr_type(cx, sub))
     .collect();
   let tys = nodes.iter()
@@ -102,7 +102,7 @@ fn infer_tuple_expr(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<
 {
   let (nodes, tys) = infer_list_expr(cx, subs);
   if nodes.len() == 1 {
-    nodes.move_iter().next().unwrap()
+    nodes.into_iter().next().unwrap()
   } else {
     box Expression::new(sp, Sequence(nodes), make_pty(Tuple(tys)))
   }

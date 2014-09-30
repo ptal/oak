@@ -33,6 +33,6 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Option<Grammar>
   };
   infer_rules_type(cx, &mut grammar, agrammar.rules);
   inlining_phase(cx, &mut grammar);
-  propagation_phase(cx, &mut grammar);
+  propagation_phase(&mut grammar);
   Some(grammar)
 }

@@ -36,7 +36,7 @@ impl GrammarAttributes
   pub fn model() -> AttributeArray
   {
     let mut model = CodeGeneration::model();
-    model.push_all_move(CodePrinter::model());
+    model.extend(CodePrinter::model().into_iter());
     model
   }
 
@@ -72,7 +72,7 @@ impl GrammarAttributes
     let duplicate = DuplicateAttribute::error(
       "There is only one starting rule per grammar.");
     let merger = AttributeMerger::new(cx, duplicate);
-    let mut rules_iter = rules_attrs.move_iter().map(|(_, attr)| attr);
+    let mut rules_iter = rules_attrs.into_iter().map(|(_, attr)| attr);
     let first = rules_iter.next().unwrap();
     rules_iter.fold(start_by_name(first), 
       |accu, attr| merger.merge(accu, start_by_name(attr)));
@@ -102,11 +102,12 @@ impl RuleAttributes
 {
   pub fn model() -> AttributeArray
   {
-    let model = RuleType::model();
-    model.append_one(AttributeInfo::simple(
+    let mut model = RuleType::model();
+    model.push(AttributeInfo::simple(
       "start",
       "entry point of the grammar, the parsing starts with this rule."
-    ))
+    ));
+    model
   }
 
   pub fn new(cx: &ExtCtxt, rule_attr: &AttributeArray) -> RuleAttributes

@@ -34,7 +34,7 @@ pub fn string_to_lowercase(s: &String) -> String
   for c in s.as_slice().chars()
     .map(unicode::char::to_lowercase)
   {
-    res.push_char(c);
+    res.push(c);
   }
   res
 }
@@ -99,7 +99,7 @@ fn to_snake_case(str: &str) -> String
                 words.push(buf);
                 buf = String::new();
             }
-            buf.push_char(ch.to_lowercase());
+            buf.push(ch.to_lowercase());
         }
         words.push(buf);
     }

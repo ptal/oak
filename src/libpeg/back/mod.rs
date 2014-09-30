@@ -29,7 +29,7 @@ impl<'a, T: 'a + rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
   fn to_tokens(&self, cx: &ExtCtxt) -> Vec<rust::TokenTree> {
     let mut tts = Vec::new();
     for e in self.v.iter() {
-      tts = tts.append(e.to_tokens(cx).as_slice());
+      tts.extend(e.to_tokens(cx).into_iter());
     }
     tts
   }

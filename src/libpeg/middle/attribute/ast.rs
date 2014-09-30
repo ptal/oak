@@ -42,7 +42,7 @@ impl Grammar
     let rules_len = fgrammar.rules.len();
     let mut rules_models = Vec::with_capacity(rules_len);
     let mut rules: HashMap<Ident, Rule> = HashMap::with_capacity(rules_len);
-    for rule in fgrammar.rules.move_iter() {
+    for rule in fgrammar.rules.into_iter() {
       let rule_model = RuleAttributes::model();
       let rule_model = model_checker::check_all(cx, rule_model, rule.attributes);
 
