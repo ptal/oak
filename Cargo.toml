@@ -4,7 +4,7 @@ name = "peg"
 version = "0.1.0"
 authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
-[[lib]]
+[lib]
 
 name = "peg"
 path = "src/libpeg/lib.rs"

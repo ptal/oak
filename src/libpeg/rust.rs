@@ -24,3 +24,4 @@ pub use syntax::print::pprust;
 pub use syntax::print::pprust::*;
 pub use syntax::ext::quote::rt::ToTokens;
 pub use syntax::ext::base::*;
+pub use syntax::ptr::*;

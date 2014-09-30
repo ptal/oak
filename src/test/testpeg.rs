@@ -24,6 +24,7 @@ extern crate term;
 
 use std::os;
 use std::io::File;
+use std::io::fs::PathExtensions;
 use std::io::fs;
 use std::io;
 

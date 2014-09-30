@@ -14,9 +14,10 @@
 
 use rust;
 use rust::ExtCtxt;
+use rust::P;
+use std::iter::*;
 use identifier::*;
 use middle::ast::*;
-use std::gc::GC;
 
 struct ToTokensVec<'a, T: 'a>
 {
@@ -92,7 +93,7 @@ impl<'cx> PegCompiler<'cx>
 
     let code = match &code.node {
       &rust::ItemMod(ref module) => {
-        box(GC) rust::Item {
+        P(rust::Item {
           ident: code.ident,
           attrs: code.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
@@ -103,7 +104,7 @@ impl<'cx> PegCompiler<'cx>
           }),
           vis: rust::Public,
           span: rust::DUMMY_SP
-        }
+        })
       },
       _ => fail!("Bug")
     };
@@ -114,7 +115,7 @@ impl<'cx> PegCompiler<'cx>
     } else {
     }
 
-    rust::MacItem::new(code)
+    rust::MacItems::new(Some(code).into_iter())
   }
 
   fn compile_parser(&mut self, grammar: &Grammar) -> Vec<rust::P<rust::Item>>

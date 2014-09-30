@@ -57,7 +57,7 @@ pub struct Expression
   pub span: Span,
   pub node: ExpressionNode,
   pub ty: PTy,
-  pub version: Option<ExpressionTypeVersion>
+  pub version: ExpressionTypeVersion
 }
 
 impl Expression
@@ -68,7 +68,7 @@ impl Expression
       span: sp,
       node: node,
       ty: ty,
-      version: None
+      version: Both
     }
   }
 }
