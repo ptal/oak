@@ -80,7 +80,7 @@ impl TestDisplay
 
   pub fn path(&mut self, path: &Path)
   {
-    self.write_line(term::color::CYAN, "  [ path ] ", 
+    self.write_line(term::color::CYAN, "  [ path ] ",
       &format!("{}", path.display()));
   }
 
@@ -93,7 +93,7 @@ impl TestDisplay
     self.write_line(term::color::BLUE, "\n\n[ stats ] ", &msg);
   }
 
-  pub fn failure<'a>(&mut self, path: &Path, expectation: ExpectedResult, 
+  pub fn failure<'a>(&mut self, path: &Path, expectation: ExpectedResult,
     result: &Result<Option<&'a str>, String>)
   {
     self.num_failure += 1;
@@ -260,7 +260,7 @@ impl TestEngine
   fn new(test_path: Path) -> TestEngine
   {
     if !test_path.is_dir() {
-      fail!(format!("`{}` is not a valid grammar directory.", test_path.display()));
+      panic!(format!("`{}` is not a valid grammar directory.", test_path.display()));
     }
     TestEngine{
       test_path: test_path.clone(),
@@ -285,7 +285,7 @@ impl TestEngine
         info: grammar,
         display: &mut self.display
       };
-      test.test_directory(&format!("Run and Pass tests of `{}`", grammar.name), 
+      test.test_directory(&format!("Run and Pass tests of `{}`", grammar.name),
         &grammar_path.join(Path::new("run-pass")), Match);
       test.test_directory(&format!("Run and Fail tests of `{}`", grammar.name),
         &grammar_path.join(Path::new("run-fail")), Error);
@@ -298,11 +298,11 @@ fn main()
 {
   let args = os::args();
   if args.len() != 2 {
-    fail!(format!("usage: {} <data-dir>", args.as_slice()[0]));
+    panic!(format!("usage: {} <data-dir>", args.as_slice()[0]));
   }
   let data_path = Path::new(args.as_slice()[1].clone());
   if !data_path.is_dir() {
-    fail!(format!("`{}` is not a valid data directory.", data_path.display()));
+    panic!(format!("`{}` is not a valid data directory.", data_path.display()));
   }
   let mut test_path = data_path.clone();
   test_path.push("test");

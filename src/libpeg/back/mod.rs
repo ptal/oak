@@ -58,7 +58,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
   {
-    let ast = 
+    let ast =
       if grammar.attributes.code_gen.ast {
         Some(self.compile_ast(grammar))
       } else {
@@ -106,7 +106,7 @@ impl<'cx> PegCompiler<'cx>
           span: rust::DUMMY_SP
         })
       },
-      _ => fail!("Bug")
+      _ => panic!("Bug")
     };
 
     if grammar.attributes.code_printer.parser {
@@ -138,7 +138,7 @@ impl<'cx> PegCompiler<'cx>
 
     let mut parser = vec![];
     parser.push(quote_item!(self.cx, pub struct Parser;).unwrap());
-    parser.push(quote_item!(self.cx, 
+    parser.push(quote_item!(self.cx,
         impl Parser
         {
           pub fn new() -> Parser
@@ -225,7 +225,7 @@ impl<'cx> PegCompiler<'cx>
     )
   }
 
-  fn map_foldr_expr<'a>(&mut self, seq: &'a [Box<Expression>], 
+  fn map_foldr_expr<'a>(&mut self, seq: &'a [Box<Expression>],
     f: |rust::P<rust::Expr>, rust::P<rust::Expr>| -> rust::P<rust::Expr>) -> rust::P<rust::Expr>
   {
     assert!(seq.len() > 0);
@@ -283,8 +283,8 @@ impl<'cx> PegCompiler<'cx>
   fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
   {
     rust::gensym_ident(format!(
-      "{}_{}_{}", prefix, 
-        self.current_lc_rule_name(), 
+      "{}_{}_{}", prefix,
+        self.current_lc_rule_name(),
         self.gen_uid()).as_slice())
   }
 
@@ -375,7 +375,7 @@ impl<'cx> PegCompiler<'cx>
     let mut seq_it = expr.intervals.iter();
 
     let CharacterInterval{lo:lo, hi:hi} = *seq_it.next().unwrap();
-    let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)), 
+    let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)),
       |accu, &CharacterInterval{lo:lo, hi:hi}| {
         quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
       }

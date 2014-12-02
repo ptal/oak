@@ -76,9 +76,9 @@ impl Expression
 pub type ExpressionNode = Expression_<Expression>;
 
 // Type pointer. The types are a DAG structure because type loops are guarded
-// by the RuleTypePlaceholder or RuleTypeName constructors: types are indirectly 
+// by the RuleTypePlaceholder or RuleTypeName constructors: types are indirectly
 // referenced through a ident.
-// The type can be replaced during the inlining or propagation and that's why 
+// The type can be replaced during the inlining or propagation and that's why
 // we use a RefCell. Note that a RefCell has a unique author or is guarded by
 // a Rc (proof by induction).
 pub type PTy = RefCell<Rc<ExpressionType>>;
@@ -153,7 +153,7 @@ impl ExpressionType
   {
     match self {
       &RuleTypePlaceholder(ref ident) => ident.clone(),
-      _ => fail!("Cannot extract ident of `RuleTypePlaceholder` from `ExpressionType`.")
+      _ => panic!("Cannot extract ident of `RuleTypePlaceholder` from `ExpressionType`.")
     }
   }
 }
