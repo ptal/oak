@@ -59,7 +59,7 @@ impl<'a> UnusedRule<'a>
     let mut grammar = grammar;
     for (id, &used) in is_used.iter() {
       if !used {
-        let rule = grammar.rules.pop(id).unwrap();
+        let rule = grammar.rules.remove(id).unwrap();
         cx.span_warn(rule.name.span, "Unused rule.");
       }
     }

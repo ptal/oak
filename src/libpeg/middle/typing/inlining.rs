@@ -15,9 +15,7 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
-use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
-use middle::typing::ast::NamedExpressionType::*;
 
 // The RuleTypePlaceholder(ident) are replaced following these rules:
 //  * if rules[ident].inline --> rules[ident].type

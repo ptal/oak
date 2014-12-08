@@ -18,9 +18,7 @@ pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
-use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
-use middle::typing::ast::NamedExpressionType::*;
 
 pub fn infer_rules_type(cx: &ExtCtxt, grammar: &mut Grammar, arules: HashMap<Ident, ARule>)
 {

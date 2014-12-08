@@ -376,9 +376,9 @@ impl<'cx> PegCompiler<'cx>
 
     let mut seq_it = expr.intervals.iter();
 
-    let CharacterInterval{lo:lo, hi:hi} = *seq_it.next().unwrap();
+    let CharacterInterval{lo, hi} = *seq_it.next().unwrap();
     let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)),
-      |accu, &CharacterInterval{lo:lo, hi:hi}| {
+      |accu, &CharacterInterval{lo, hi}| {
         quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
       }
     );

@@ -32,7 +32,7 @@ pub fn string_to_lowercase(s: &String) -> String
 {
   let mut res = String::new();
   for c in s.as_slice().chars()
-    .map(unicode::char::to_lowercase)
+    .map(|c|c.to_lowercase())
   {
     res.push(c);
   }

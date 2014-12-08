@@ -14,10 +14,7 @@
 
 pub use middle::typing::ast::*;
 
-
-use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
-use middle::typing::ast::NamedExpressionType::*;
 
 pub trait Visitor
 {

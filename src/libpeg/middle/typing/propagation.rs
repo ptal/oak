@@ -15,9 +15,7 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
-use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
-use middle::typing::ast::NamedExpressionType::*;
 
 // The UnitPropagate (expressed with P in the following rules) nodes
 // are propagated following these rules:
