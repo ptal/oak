@@ -31,6 +31,7 @@ use std::io;
 use peg::Parser;
 
 use term::*;
+use ExpectedResult::*;
 
 mod ntcc;
 mod type_name;

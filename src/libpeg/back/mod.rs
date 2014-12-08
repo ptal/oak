@@ -77,7 +77,7 @@ impl<'cx> PegCompiler<'cx>
       pub mod $grammar_name
       {
         #![allow(dead_code)]
-        #![allow(unnecessary_parens)]
+        #![allow(unused_parens)]
 
         $ast
         $parser
