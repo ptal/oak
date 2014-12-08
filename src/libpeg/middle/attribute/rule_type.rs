@@ -13,7 +13,11 @@
 // limitations under the License.
 
 pub use rust::{ExtCtxt, Span};
+pub use middle::attribute::rule_type::RuleTypeStyle::*;
 use attribute::model::*;
+use attribute::compile_error::CompileErrorLevel::*;
+use attribute::model::AttributeLitModel::*;
+use attribute::model::AttributeModel::*;
 
 #[deriving(Clone)]
 pub enum RuleTypeStyle

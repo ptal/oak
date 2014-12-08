@@ -13,15 +13,12 @@
 // limitations under the License.
 
 pub use front::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
-pub use front::ast::{
-  StrLiteral, AnySingleChar, NonTerminalSymbol, Sequence,
-  Choice, ZeroOrMore, OneOrMore, Optional, NotPredicate,
-  AndPredicate, CharacterClass};
+pub use front::ast::Expression_::*;
 
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
 pub use middle::attribute::attribute::*;
 pub use identifier::*;
-pub use std::collections::hashmap::HashMap;
+pub use std::collections::HashMap;
 
 use attribute::model_checker;
 use attribute::model::AttributeArray;
@@ -38,7 +35,7 @@ impl Grammar
   {
     let grammar_model = GrammarAttributes::model();
     let grammar_model = model_checker::check_all(cx, grammar_model, fgrammar.attributes);
-    
+
     let rules_len = fgrammar.rules.len();
     let mut rules_models = Vec::with_capacity(rules_len);
     let mut rules: HashMap<Ident, Rule> = HashMap::with_capacity(rules_len);
@@ -48,7 +45,7 @@ impl Grammar
 
       let rule_name = rule.name.node.clone();
       if rules.contains_key(&rule_name) {
-        Grammar::duplicate_rules(cx, rules.get(&rule_name).name.span, rule.name.span);
+        Grammar::duplicate_rules(cx, rules.get(&rule_name).unwrap().name.span, rule.name.span);
       } else {
         let rule = Rule::new(cx, rule.name, rule.def, &rule_model);
         if rule.is_some() {

@@ -14,6 +14,7 @@
 
 pub use std::default::Default;
 use attribute::model::*;
+use attribute::model::AttributeModel::*;
 
 pub struct CodeGeneration
 {

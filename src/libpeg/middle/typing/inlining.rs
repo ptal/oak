@@ -15,6 +15,10 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
+use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::NamedExpressionType::*;
+
 // The RuleTypePlaceholder(ident) are replaced following these rules:
 //  * if rules[ident].inline --> rules[ident].type
 //  * if rules[ident].invisible --> UnitPropagate
@@ -56,12 +60,12 @@ impl<'a> Visitor for Inliner<'a>
 {
   fn visit_rule_type_ph(&mut self, ty: &PTy, ident: Ident)
   {
-    let rule = self.rules.get(&ident);
+    let rule = self.rules.get(&ident).unwrap();
     match &rule.attributes.ty.style {
       &New => *ty.borrow_mut() = Rc::new(RuleTypeName(ident)),
       &Inline(_) => {
         let this = self;
-        *ty.borrow_mut() = this.rules.get(&ident).def.ty.borrow().clone();
+        *ty.borrow_mut() = this.rules.get(&ident).unwrap().def.ty.borrow().clone();
       },
       &Invisible(_) => *ty.borrow_mut() = Rc::new(UnitPropagate)
     }
@@ -82,7 +86,7 @@ impl<'a> InliningLoop<'a>
   pub fn analyse(cx: &'a ExtCtxt, start_rule: Ident, rules: &'a HashMap<Ident, Rule>) -> bool
   {
     let mut inlining_loop = InliningLoop::new(cx, rules);
-    inlining_loop.visit_rule(rules.get(&start_rule));
+    inlining_loop.visit_rule(rules.get(&start_rule).unwrap());
     inlining_loop.cycle_detected
   }
 
@@ -113,11 +117,11 @@ impl<'a> InliningLoop<'a>
         break;
       }
     }
-    self.cx.span_err(self.rules.get(&in_cycle).name.span, "Inlining cycle detected. Indirectly (or not), \
+    self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. Indirectly (or not), \
       the type of a rule must be inlined into itself, which is impossible. Break the cycle by removing \
       one of the inlining annotations.");
     for cycle_node in trimmed_cycle.iter().rev() {
-      self.cx.span_note(self.rules.get(cycle_node).name.span, "This rule is in the inlining loop.");
+      self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span, "This rule is in the inlining loop.");
     }
   }
 }
@@ -128,7 +132,7 @@ impl<'a> Visitor for InliningLoop<'a>
   fn visit_rule(&mut self, rule: &Rule)
   {
     let ident = rule.name.node.clone();
-    *self.visited.get_mut(&ident) = true;
+    *self.visited.get_mut(&ident).unwrap() = true;
     if rule.is_inline() {
       self.current_inline_path.push(ident);
       walk_rule(self, rule);
@@ -145,13 +149,13 @@ impl<'a> Visitor for InliningLoop<'a>
   fn visit_rule_type_ph(&mut self, _ty: &PTy, ident: Ident)
   {
     if !self.cycle_detected {
-      let rule = self.rules.get(&ident);
+      let rule = self.rules.get(&ident).unwrap();
       let ident = rule.name.node.clone();
       if rule.is_inline() && self.current_inline_path.contains(&ident) {
         self.current_inline_path.push(ident);
         self.loop_detected();
-      } 
-      else if !self.visited.get(&ident) {
+      }
+      else if !*self.visited.get(&ident).unwrap() {
         self.visit_rule(rule);
       }
     }

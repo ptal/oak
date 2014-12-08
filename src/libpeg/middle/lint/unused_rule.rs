@@ -49,15 +49,15 @@ impl<'a> UnusedRule<'a>
 
   fn launch_dfs(&mut self, start: &Ident)
   {
-    *self.is_used.get_mut(start) = true;
-    self.visit_rule(self.rules.get(start));
+    *self.is_used.get_mut(start).unwrap() = true;
+    self.visit_rule(self.rules.get(start).unwrap());
   }
 
-  fn remove_unused(cx: &ExtCtxt, grammar: Grammar, 
+  fn remove_unused(cx: &ExtCtxt, grammar: Grammar,
     is_used: HashMap<Ident, bool>) -> Option<Grammar>
   {
     let mut grammar = grammar;
-    for (id, used) in is_used.iter() {
+    for (id, &used) in is_used.iter() {
       if !used {
         let rule = grammar.rules.pop(id).unwrap();
         cx.span_warn(rule.name.span, "Unused rule.");
@@ -68,7 +68,7 @@ impl<'a> UnusedRule<'a>
 
   fn mark_rule(&mut self, id: Ident) -> bool
   {
-    let used = self.is_used.get_mut(&id);
+    let used = self.is_used.get_mut(&id).unwrap();
     if !*used {
       *used = true;
       true
@@ -83,7 +83,7 @@ impl<'a> Visitor for UnusedRule<'a>
   fn visit_non_terminal_symbol(&mut self, _sp: Span, id: Ident)
   {
     if self.mark_rule(id) {
-      self.visit_rule(self.rules.get(&id));
+      self.visit_rule(self.rules.get(&id).unwrap());
     }
   }
 }

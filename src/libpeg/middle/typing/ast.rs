@@ -13,19 +13,20 @@
 // limitations under the License.
 
 pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassExpr};
-pub use middle::attribute::ast::{
-  StrLiteral, AnySingleChar, NonTerminalSymbol, Sequence,
-  Choice, ZeroOrMore, OneOrMore, Optional, NotPredicate,
-  AndPredicate, CharacterClass};
+pub use middle::attribute::ast::Expression_::*;
 
 pub use middle::attribute::attribute::*;
 
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
-pub use std::collections::hashmap::HashMap;
+pub use std::collections::HashMap;
 pub use identifier::*;
 
 pub use std::rc::Rc;
 pub use std::cell::RefCell;
+
+use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::NamedExpressionType::*;
 
 pub struct Grammar
 {

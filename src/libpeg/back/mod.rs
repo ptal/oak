@@ -93,13 +93,15 @@ impl<'cx> PegCompiler<'cx>
 
     let code = match &code.node {
       &rust::ItemMod(ref module) => {
+        let mut view_items = module.view_items.clone();
+        view_items.push(peg_crate);
         P(rust::Item {
           ident: code.ident,
           attrs: code.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
           node: rust::ItemMod(rust::Mod{
             inner: rust::DUMMY_SP,
-            view_items: module.view_items.clone().append_one(peg_crate),
+            view_items: view_items,
             items: module.items.clone()
           }),
           vis: rust::Public,

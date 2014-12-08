@@ -17,6 +17,7 @@ pub use syntax::ast::*;
 pub use syntax::parse;
 pub use syntax::parse::*;
 pub use syntax::parse::token::*;
+pub use syntax::parse::token::DelimToken::*;
 pub use syntax::parse::attr::ParserAttr;
 pub use syntax::parse::parser::Parser;
 pub use syntax::codemap::*;

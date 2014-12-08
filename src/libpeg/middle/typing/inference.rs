@@ -18,6 +18,10 @@ pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
+use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::NamedExpressionType::*;
+
 pub fn infer_rules_type(cx: &ExtCtxt, grammar: &mut Grammar, arules: HashMap<Ident, ARule>)
 {
   for (id, rule) in arules.into_iter() {
@@ -72,7 +76,7 @@ fn infer_sub_unit_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
 
 fn infer_rule_type_ph(sp: Span, ident: Ident) -> Box<Expression>
 {
-  box Expression::new(sp, 
+  box Expression::new(sp,
     NonTerminalSymbol(ident.clone()),
     make_pty(RuleTypePlaceholder(ident)))
 }
@@ -86,7 +90,7 @@ fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
   box Expression::new(sp, make_node(node), make_pty(make_type(ty)))
 }
 
-fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>) 
+fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>)
   -> (Vec<Box<Expression>>, Vec<PTy>)
 {
   let nodes : Vec<Box<Expression>> = subs.into_iter()

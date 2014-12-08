@@ -70,7 +70,7 @@ pub fn id_to_camel_case(ident: Ident) -> String
 }
 
 // Adapted from the Rust compiler source (librustc/lint/builtin.rs)
-fn is_snake_case(ident: Ident) -> bool 
+fn is_snake_case(ident: Ident) -> bool
 {
     let ident = rust::get_ident(ident);
     assert!(!ident.get().is_empty());
@@ -79,7 +79,7 @@ fn is_snake_case(ident: Ident) -> bool
     let mut allow_underscore = true;
     ident.chars().all(|c| {
         allow_underscore = match c {
-            c if c.is_lowercase() || c.is_digit() => true,
+            c if c.is_lowercase() || c.is_numeric() => true,
             '_' if allow_underscore => false,
             _ => return false,
         };

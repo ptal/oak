@@ -15,7 +15,11 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
-// The UnitPropagate (expressed with P in the following rules) nodes 
+use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::NamedExpressionType::*;
+
+// The UnitPropagate (expressed with P in the following rules) nodes
 // are propagated following these rules:
 //  * Vector(P) -> P
 //  * OptionalTy(P) -> P
@@ -98,7 +102,7 @@ impl<'a> Visitor for Propagator<'a>
         .map(|ty| RefCell::new(ty.borrow().clone()))
         .collect();
 
-      *parent.borrow_mut() = 
+      *parent.borrow_mut() =
         if inners.is_empty() {
           Rc::new(Unit)
         } else if inners.len() == 1 {

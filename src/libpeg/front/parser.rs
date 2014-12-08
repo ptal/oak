@@ -17,6 +17,7 @@ use rust::{mk_sp, respan, ParserAttr};
 use std::str::Chars;
 
 use front::ast::*;
+use front::ast::Expression_::*;
 
 pub struct Parser<'a>
 {
@@ -28,7 +29,7 @@ impl<'a> Parser<'a>
 {
   pub fn new(sess: &'a rust::ParseSess,
          cfg: rust::CrateConfig,
-         tts: Vec<rust::TokenTree>) -> Parser<'a> 
+         tts: Vec<rust::TokenTree>) -> Parser<'a>
   {
     Parser{
       rp: rust::new_parser_from_tts(sess, cfg, tts),
@@ -38,7 +39,7 @@ impl<'a> Parser<'a>
   pub fn parse_grammar(&mut self) -> Grammar
   {
     let grammar_name = self.parse_grammar_decl();
-    let rules = self.parse_rules(); 
+    let rules = self.parse_rules();
     Grammar{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_vec()}
   }
 
@@ -58,14 +59,14 @@ impl<'a> Parser<'a>
           token_string).as_slice())
     }
     let grammar_name = self.rp.parse_ident();
-    self.rp.expect(&rust::SEMI);
+    self.rp.expect(&rust::Semi);
     grammar_name
   }
 
   fn eat_grammar_keyword(&mut self) -> bool
   {
     let is_grammar_kw = match self.rp.token {
-      rust::IDENT(sid, false) => "grammar" == id_to_string(sid).as_slice(),
+      rust::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_slice(),
       _ => false
     };
     if is_grammar_kw { self.rp.bump() }
@@ -75,7 +76,7 @@ impl<'a> Parser<'a>
   fn parse_rules(&mut self) -> Vec<Rule>
   {
     let mut rules = vec![];
-    while self.rp.token != rust::EOF
+    while self.rp.token != rust::Eof
     {
       let rule = self.parse_rule();
       rules.push(rule);
@@ -87,7 +88,7 @@ impl<'a> Parser<'a>
   {
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
-    self.rp.expect(&rust::EQ);
+    self.rp.expect(&rust::Eq);
     let body = self.parse_rule_rhs(id_to_string(name.node).as_slice());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
@@ -123,13 +124,13 @@ impl<'a> Parser<'a>
       choices.push(self.parse_rule_seq(rule_name));
       let token = self.rp.token.clone();
       match token {
-        rust::BINOP(rust::SLASH) => self.rp.bump(),
+        rust::BinOp(rust::Slash) => self.rp.bump(),
         _ => break
       }
     }
     let hi = self.rp.last_span.hi;
-    if choices.len() == 1 { 
-      choices.pop().unwrap() 
+    if choices.len() == 1 {
+      choices.pop().unwrap()
     } else {
       spanned_expr(lo, hi, Choice(choices))
     }
@@ -159,17 +160,17 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::NOT => {
+      rust::Not => {
         self.parse_prefix(rule_name, |e| NotPredicate(e))
       }
-      rust::BINOP(rust::AND) => {
+      rust::BinOp(rust::And) => {
         self.parse_prefix(rule_name, |e| AndPredicate(e))
       }
       _ => self.parse_rule_suffixed(rule_name)
     }
   }
 
-  fn parse_prefix(&mut self, rule_name: &str, 
+  fn parse_prefix(&mut self, rule_name: &str,
     make_prefix: |Box<Expression>| -> ExpressionNode) -> Option<Box<Expression>>
   {
     let lo = self.rp.span.lo;
@@ -201,15 +202,15 @@ impl<'a> Parser<'a>
     let hi = self.rp.span.hi;
     let token = self.rp.token.clone();
     match token {
-      rust::BINOP(rust::STAR) => {
+      rust::BinOp(rust::Star) => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, ZeroOrMore(expr)))
       },
-      rust::BINOP(rust::PLUS) => {
+      rust::BinOp(rust::Plus) => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, OneOrMore(expr)))
       },
-      rust::DOLLAR => {
+      rust::Dollar => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, Optional(expr)))
       },
@@ -226,32 +227,32 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::LIT_STR(name) => {
+      rust::Literal(rust::Lit::Str_(name),_) => {
         self.rp.bump();
         Some(self.last_respan(StrLiteral(name_to_string(name))))
       },
-      rust::DOT => {
+      rust::Dot => {
         self.rp.bump();
         Some(self.last_respan(AnySingleChar))
       },
-      rust::LPAREN => {
+      rust::OpenDelim(rust::Paren) => {
         self.rp.bump();
         let res = self.parse_rule_rhs(rule_name);
-        self.rp.expect(&rust::RPAREN);
+        self.rp.expect(&rust::CloseDelim(rust::Paren));
         Some(res)
       },
-      rust::IDENT(id, _) => {
+      rust::Ident(id, _) => {
         if self.is_rule_lhs() { None }
         else {
           self.rp.bump();
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
-      rust::LBRACKET => {
+      rust::OpenDelim(rust::Bracket) => {
         self.rp.bump();
         let res = self.parse_char_class(rule_name);
         match self.rp.token {
-          rust::RBRACKET => {
+          rust::CloseDelim(rust::Bracket) => {
             self.rp.bump();
             res
           },
@@ -274,7 +275,7 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::LIT_STR(name) => {
+      rust::Literal(rust::Lit::Str_(name),_) => {
         self.rp.bump();
         let cooked_lit = rust::str_lit(name_to_string(name).as_slice());
         self.parse_set_of_char_range(&cooked_lit, rule_name)
@@ -333,9 +334,9 @@ impl<'a> Parser<'a>
         ranges.next();
         match ranges.next() {
           Some('-') => { self.rp.span_err(span, separator_err.as_slice()); None }
-          Some(hi) => { 
-            res.push(CharacterInterval{lo: lo, hi: hi}); 
-            Some(res) 
+          Some(hi) => {
+            res.push(CharacterInterval{lo: lo, hi: hi});
+            Some(res)
           }
           None => {
             res.push(CharacterInterval{lo:lo, hi:lo});
@@ -343,7 +344,7 @@ impl<'a> Parser<'a>
             Some(res)
           }
         }
-        
+
       },
       (Some(lo), _) => {
         res.push(CharacterInterval{lo: lo, hi: lo}); // If lo == '-', it ends the class, allowed.
@@ -355,6 +356,6 @@ impl<'a> Parser<'a>
 
   fn is_rule_lhs(&mut self) -> bool
   {
-    self.rp.look_ahead(1, |t| match t { &rust::EQ => true, _ => false})
+    self.rp.look_ahead(1, |t| match t { &rust::Eq => true, _ => false})
   }
 }
