@@ -21,7 +21,7 @@ use middle::typing::ast::ExpressionType::*;
 //  * if rules[ident].inline --> rules[ident].type
 //  * if rules[ident].invisible --> UnitPropagate
 //  * if rules[ident].new --> RuleTypeName(ident)
-// No loop can arise due to the InliningLoop analysis.
+// No loop can arise thanks to the InliningLoop analysis.
 
 pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 {

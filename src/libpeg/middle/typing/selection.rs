@@ -15,9 +15,11 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::*;
 
+use middle::typing::ast::ExpressionTypeVersion::*;
+
 // The selection phase is used to select the type versions of the future
 // parsing functions.
-// 
+//
 // It can be untyped, typed or both depending on the calling contexts.
 
 pub fn selection_phase(cx: &ExtCtxt, grammar: &mut Grammar)
@@ -108,7 +110,7 @@ impl<'a> Visitor for Selector<'a>
       if rule.is_inline() && self.current_inline_path.contains(&ident) {
         self.current_inline_path.push(ident);
         self.loop_detected();
-      } 
+      }
       else if !self.visited.get(&ident) {
         self.visit_rule(rule);
       }

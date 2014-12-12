@@ -122,6 +122,7 @@ impl<'a> Parser<'a>
     let mut choices = Vec::new();
     loop{
       choices.push(self.parse_rule_seq(rule_name));
+      self.parse_fun_redirection();
       let token = self.rp.token.clone();
       match token {
         rust::BinOp(rust::Slash) => self.rp.bump(),
@@ -133,6 +134,18 @@ impl<'a> Parser<'a>
       choices.pop().unwrap()
     } else {
       spanned_expr(lo, hi, Choice(choices))
+    }
+  }
+
+  fn parse_fun_redirection(&mut self) -> ()
+  {
+    let token = self.rp.token.clone();
+    match token {
+      rust::Gt => {
+        self.rp.bump();
+        let _fun_name = self.rp.parse_ident();
+      }
+      _ => ()
     }
   }
 

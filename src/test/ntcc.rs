@@ -21,19 +21,19 @@ peg!(
   #[start]
   start = spacing expression
 
-  expression 
+  expression
     = sum
-    / par
-    / tell
-    / next
-    / async
-    / rep
-    / unless
-    / let_in
-    / skip_kw
+    / par > make_par
+    / tell > make_tell
+    / next > make_next
+    / async > make_async
+    / rep > make_rep
+    / unless > make_unless
+    / let_in > make_letin
+    / skip_kw > make_skip
 
   sum
-    = pick_kw or$ when sum_body* end_kw$
+    = pick_kw or$ when sum_body* end_kw$ > make_sum
 
   sum_body
     = or when
@@ -41,7 +41,7 @@ peg!(
   par
     = par_kw oror$ expression par_body* end_kw$
 
-  par_body 
+  par_body
     = oror expression
 
   tell
@@ -84,7 +84,7 @@ peg!(
 
   var_decl = var_ident eq_bind var_range
 
-  var_range 
+  var_range
     = range
     / domain
 
@@ -92,8 +92,8 @@ peg!(
 
   // max x .. 10 / min x .. max y / 0..10
   range = range_bound dotdot range_bound
-  
-  range_bound 
+
+  range_bound
     = integer
     / min_bound
     / max_bound
@@ -122,7 +122,7 @@ peg!(
   async_kw = "async" spacing
   rep_kw = "rep" spacing
   unless_kw = "unless" spacing
-  
+
   or = "|" spacing
   oror = "||" spacing
   entail = "|=" spacing

@@ -39,7 +39,8 @@ pub enum Expression_<SubExpr>{
   Optional(Box<SubExpr>), // space? - `?` replaced by `$`
   NotPredicate(Box<SubExpr>), // !space
   AndPredicate(Box<SubExpr>), // &space
-  CharacterClass(CharacterClassExpr)
+  CharacterClass(CharacterClassExpr) // [0-9]
+  // SemanticAction(Box<SubExpr>, Ident), // rule > function
 }
 
 #[deriving(Clone)]

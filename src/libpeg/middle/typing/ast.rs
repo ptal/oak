@@ -80,7 +80,7 @@ pub type ExpressionNode = Expression_<Expression>;
 // by the RuleTypePlaceholder or RuleTypeName constructors: types are indirectly
 // referenced through a ident.
 // The type can be replaced during the inlining or propagation and that's why
-// we use a RefCell. Note that a RefCell has a unique author or is guarded by
+// we use a RefCell. Note that a RefCell has a unique owner or is guarded by
 // a Rc (proof by induction).
 pub type PTy = RefCell<Rc<ExpressionType>>;
 

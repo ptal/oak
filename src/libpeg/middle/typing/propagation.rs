@@ -21,7 +21,7 @@ use middle::typing::ast::ExpressionType::*;
 // are propagated following these rules:
 //  * Vector(P) -> P
 //  * OptionalTy(P) -> P
-//  * Tuple([P*]) -> P // Tested before any other propagation, if there is a (), it doesn't propagate.
+//  * Tuple([e*]) -> P (with all e=P) // Tested before any other propagation, if there is a (), it doesn't propagate.
 //  * Tuple([e, P, e']) -> Tuple([e, e'])
 //  * Tuple([e, (), e']) -> Tuple([e, e'])
 //  * UnnamedSum([e, P, e']) -> UnnamedSum([e, (), e'])
