@@ -13,11 +13,13 @@
 // limitations under the License.
 
 pub use rust::{SpannedIdent, Spanned, Span, Attribute, BytePos, mk_sp};
+pub use rust;
 pub use identifier::*;
 
 pub struct Grammar{
   pub name: Ident,
   pub rules: Vec<Rule>,
+  pub functions: Vec<rust::P<rust::Item>>,
   pub attributes: Vec<Attribute>
 }
 

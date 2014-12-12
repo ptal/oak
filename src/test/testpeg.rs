@@ -35,6 +35,7 @@ use ExpectedResult::*;
 
 mod ntcc;
 mod type_name;
+mod calculator;
 
 enum ExpectedResult {
   Match,
@@ -310,5 +311,6 @@ fn main()
   let mut test_engine = TestEngine::new(test_path);
   test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
   test_engine.register("type_name", box type_name::type_name::Parser::new());
+  test_engine.register("calculator", box calculator::calculator::Parser::new());
   test_engine.run();
 }

@@ -12,18 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use syntax::ast;
-pub use syntax::ast::*;
-pub use syntax::parse;
-pub use syntax::parse::*;
-pub use syntax::parse::token::*;
-pub use syntax::parse::token::keywords::*;
-pub use syntax::parse::token::DelimToken::*;
-pub use syntax::parse::attr::ParserAttr;
-pub use syntax::parse::parser::Parser;
-pub use syntax::codemap::*;
-pub use syntax::print::pprust;
-pub use syntax::print::pprust::*;
-pub use syntax::ext::quote::rt::ToTokens;
-pub use syntax::ext::base::*;
-pub use syntax::ptr::*;
+peg!(
+  grammar calculator;
+
+
+  #[start]
+  expression = sum
+
+  sum
+    = product ("+" product)* > add
+
+  product
+    = value ("*" value)* > mult
+
+  value
+    = ["0-9"]+ > to_digit
+    / "(" expression ")"
+
+  fn add(x: int, rest: Vec<int>) -> int {
+    rest.iter().fold(x, |x,y| x+y)
+  }
+
+  fn mult(x: int, rest: Vec<int>) -> int {
+    rest.iter().fold(x, |x,y| x*y)
+  }
+
+  fn to_digit(env: &Env<()>, n: str) -> int {
+    from_str::<int>(n).unwrap()
+  }
+)

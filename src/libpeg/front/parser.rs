@@ -39,8 +39,8 @@ impl<'a> Parser<'a>
   pub fn parse_grammar(&mut self) -> Grammar
   {
     let grammar_name = self.parse_grammar_decl();
-    let rules = self.parse_rules();
-    Grammar{name: grammar_name, rules: rules, attributes: self.inner_attrs.to_vec()}
+    let (rules, functions) = self.parse_blocks();
+    Grammar{name: grammar_name, rules: rules, functions: functions, attributes: self.inner_attrs.to_vec()}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident
@@ -73,15 +73,17 @@ impl<'a> Parser<'a>
     is_grammar_kw
   }
 
-  fn parse_rules(&mut self) -> Vec<Rule>
+  fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<rust::P<rust::Item>>)
   {
     let mut rules = vec![];
+    let mut functions = vec![];
     while self.rp.token != rust::Eof
     {
-      let rule = self.parse_rule();
-      rules.push(rule);
+      self.rp.parse_item(vec![]).map_or_else(
+        || rules.push(self.parse_rule()),
+        |fun| functions.push(fun))
     }
-    rules
+    (rules, functions)
   }
 
   fn parse_rule(&mut self) -> Rule
@@ -241,6 +243,7 @@ impl<'a> Parser<'a>
   fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
   {
     let token = self.rp.token.clone();
+    if token.is_keyword(rust::Keyword::Fn) { return None }
     match token {
       rust::Literal(rust::Lit::Str_(name),_) => {
         self.rp.bump();
