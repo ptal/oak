@@ -123,6 +123,9 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
     &CharacterClass(ref char_class) => {
       visitor.visit_character_class(sp, char_class)
     }
+    &SemanticAction(ref expr, _) => {
+      walk_expr(visitor, expr)
+    }
   }
 }
 

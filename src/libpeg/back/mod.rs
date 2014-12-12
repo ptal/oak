@@ -202,6 +202,9 @@ impl<'cx> PegCompiler<'cx>
       },
       &CharacterClass(ref e) => {
         self.compile_character_class(e)
+      },
+      &SemanticAction(ref e, _) => {
+        self.compile_expression(e)
       }
     }
   }

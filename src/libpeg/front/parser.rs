@@ -121,8 +121,9 @@ impl<'a> Parser<'a>
     let lo = self.rp.span.lo;
     let mut choices = Vec::new();
     loop{
-      choices.push(self.parse_rule_seq(rule_name));
-      self.parse_fun_redirection();
+      let seq = self.parse_rule_seq(rule_name);
+      let semantic_action = self.parse_semantic_action(seq);
+      choices.push(semantic_action);
       let token = self.rp.token.clone();
       match token {
         rust::BinOp(rust::Slash) => self.rp.bump(),
@@ -137,15 +138,16 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_fun_redirection(&mut self) -> ()
+  fn parse_semantic_action(&mut self, expr: Box<Expression>) -> Box<Expression>
   {
     let token = self.rp.token.clone();
     match token {
       rust::Gt => {
         self.rp.bump();
-        let _fun_name = self.rp.parse_ident();
+        let fun_name = self.rp.parse_ident();
+        self.last_respan(SemanticAction(expr, fun_name))
       }
-      _ => ()
+      _ => expr
     }
   }
 

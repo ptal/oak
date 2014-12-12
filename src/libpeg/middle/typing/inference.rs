@@ -52,7 +52,8 @@ fn infer_expr_type(cx: &ExtCtxt, expr: Box<AExpression>) -> Box<Expression>
     OneOrMore(sub) => infer_sub_expr(cx, sp, sub, |e| OneOrMore(e), |ty| Vector(ty)),
     Optional(sub) =>  infer_sub_expr(cx, sp, sub, |e| Optional(e), |ty| OptionalTy(ty)),
     Sequence(sub) => infer_tuple_expr(cx, sp, sub),
-    Choice(sub) => type_of_choice(cx, sp, sub)
+    Choice(sub) => type_of_choice(cx, sp, sub),
+    SemanticAction(expr, _) => infer_expr_type(cx, expr)
   }
 }
 
