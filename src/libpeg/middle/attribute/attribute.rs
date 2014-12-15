@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use front::ast::Grammar as FGrammar;
-pub use front::ast::Rule as FRule;
 pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
 pub use middle::attribute::rule_type::*;
-pub use rust;
 pub use rust::ExtCtxt;
 
 use attribute::model::*;
@@ -40,7 +37,7 @@ impl GrammarAttributes
     model
   }
 
-  pub fn new(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>, 
+  pub fn new(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>,
     grammar_attrs: AttributeArray) -> GrammarAttributes
   {
     GrammarAttributes {
@@ -74,7 +71,7 @@ impl GrammarAttributes
     let merger = AttributeMerger::new(cx, duplicate);
     let mut rules_iter = rules_attrs.into_iter().map(|(_, attr)| attr);
     let first = rules_iter.next().unwrap();
-    rules_iter.fold(start_by_name(first), 
+    rules_iter.fold(start_by_name(first),
       |accu, attr| merger.merge(accu, start_by_name(attr)));
   }
 

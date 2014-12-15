@@ -230,13 +230,13 @@ impl<'cx> PegCompiler<'cx>
     )
   }
 
-  fn map_foldr_expr<'a>(&mut self, seq: &'a [Box<Expression>],
-    f: |rust::P<rust::Expr>, rust::P<rust::Expr>| -> rust::P<rust::Expr>) -> rust::P<rust::Expr>
+  fn map_foldr_expr<'a, F: FnMut<(rust::P<rust::Expr>, rust::P<rust::Expr>), rust::P<rust::Expr>>>(
+    &mut self, seq: &'a [Box<Expression>], f: F) -> rust::P<rust::Expr>
   {
     assert!(seq.len() > 0);
     let mut seq_it = seq
       .iter()
-      .map(|e| { self.compile_expression(e) })
+      .map(|e| self.compile_expression(e))
       .rev();
 
     let head = seq_it.next().unwrap();

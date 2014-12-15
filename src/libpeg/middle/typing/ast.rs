@@ -16,11 +16,11 @@ pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassE
 pub use middle::attribute::ast::Expression_::*;
 
 pub use middle::attribute::attribute::*;
-
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
-pub use std::collections::HashMap;
 pub use identifier::*;
 
+pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
+
+pub use std::collections::HashMap;
 pub use std::rc::Rc;
 pub use std::cell::RefCell;
 

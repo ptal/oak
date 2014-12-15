@@ -12,23 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::{ExtCtxt, Span};
-use middle::visitor::Visitor;
-
-use middle::ast::*;
-pub use middle::attribute::ast::Grammar as AGrammar;
-pub use middle::attribute::ast::Rule as ARule;
+use rust::ExtCtxt;
+use middle::semantics::visitor::*;
+use middle::semantics::ast::*;
 
 pub struct UndeclaredRule<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  rules: &'a HashMap<Ident, ARule>,
+  rules: &'a HashMap<Ident, Rule>,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Option<AGrammar>
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Option<Grammar>
   {
     if UndeclaredRule::has_undeclared(cx, &grammar) {
       None
@@ -37,7 +34,7 @@ impl<'a> UndeclaredRule<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool
   {
     let mut analyser = UndeclaredRule {
       cx: cx,

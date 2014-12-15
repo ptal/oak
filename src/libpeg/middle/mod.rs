@@ -14,17 +14,16 @@
 
 use rust::ExtCtxt;
 use middle::lint::unused_rule::UnusedRule;
-use middle::semantics::undeclared_rule::UndeclaredRule;
-
 use middle::ast::*;
+
 pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
+pub use front::ast::Grammar as FGrammar;
 
+mod semantics;
 mod lint;
-mod visitor;
 mod attribute;
 mod typing;
-mod semantics;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
@@ -33,8 +32,10 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
     return None
   }
 
-  AGrammar::new(cx, fgrammar)
-    .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
+  // Some(fgrammar)
+  //   .and_then(|grammar| FilterItems::analyse(cx, grammar))
+  semantics::analyse(cx, fgrammar)
+    .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::grammar_typing(cx, grammar))
 }

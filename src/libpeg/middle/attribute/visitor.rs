@@ -14,6 +14,9 @@
 
 pub use rust::Span;
 pub use middle::attribute::ast::*;
+pub use identifier::*;
+
+use front::ast::Expression_::*;
 
 pub trait Visitor
 {
@@ -72,6 +75,11 @@ pub trait Visitor
   }
 
   fn visit_character_class(&mut self, _sp: Span, _expr: &CharacterClassExpr) {}
+
+  fn visit_semantic_action(&mut self, _sp: Span, expr: &Box<Expression>, _id: Ident)
+  {
+    walk_expr(self, expr);
+  }
 }
 
 pub fn walk_grammar<V: Visitor>(visitor: &mut V, grammar: &Grammar)
@@ -123,8 +131,8 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
     &CharacterClass(ref char_class) => {
       visitor.visit_character_class(sp, char_class)
     }
-    &SemanticAction(ref expr, _) => {
-      walk_expr(visitor, expr)
+    &SemanticAction(ref expr, id) => {
+      visitor.visit_semantic_action(sp, expr, id)
     }
   }
 }

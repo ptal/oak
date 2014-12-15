@@ -37,6 +37,7 @@ mod ntcc;
 mod type_name;
 mod calculator;
 
+#[deriving(Clone)]
 enum ExpectedResult {
   Match,
   Error
@@ -202,7 +203,7 @@ impl<'a> Test<'a>
       Ok(dir_entries) => {
         for entry in dir_entries.iter() {
           if entry.is_file() {
-            self.test_file(entry, expectation);
+            self.test_file(entry, expectation.clone());
           } else {
             self.display.warn(&format!("Entry ignored because it's not a file."));
             self.display.path(entry);
@@ -239,7 +240,7 @@ impl<'a> Test<'a>
 
   fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
   {
-    match (expectation, self.info.parser.parse(input)) {
+    match (expectation.clone(), self.info.parser.parse(input)) {
       (Match, Ok(None))
     | (Error, Ok(Some(_)))
     | (Error, Err(_)) => self.display.success(test_path),

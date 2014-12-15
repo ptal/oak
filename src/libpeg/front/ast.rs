@@ -19,10 +19,11 @@ pub use identifier::*;
 pub struct Grammar{
   pub name: Ident,
   pub rules: Vec<Rule>,
-  pub functions: Vec<rust::P<rust::Item>>,
+  pub rust_items: Vec<rust::P<rust::Item>>,
   pub attributes: Vec<Attribute>
 }
 
+#[deriving(Clone)]
 pub struct Rule{
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
@@ -63,6 +64,12 @@ pub struct Expression
   pub span: Span,
   pub node: ExpressionNode
 }
+
+// impl Grammar {
+//   pub fn find_fn_by_name(&self, id: Ident) -> Option<rust::P<rust::Item>> {
+//     self.functions.
+//   }
+// }
 
 pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
 {

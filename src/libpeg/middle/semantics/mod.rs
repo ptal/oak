@@ -12,4 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod undeclared_rule;
+use middle::semantics::ast::*;
+use middle::semantics::duplicate_rule::*;
+use middle::semantics::undeclared_rule::*;
+use front::ast::Grammar as FGrammar;
+
+mod duplicate_rule;
+mod undeclared_rule;
+pub mod ast;
+pub mod visitor;
+
+pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
+{
+  Grammar::new(&fgrammar)
+    .and_then(|grammar| DuplicateRule::analyse(cx, grammar, fgrammar.rules.clone()))
+    // .and_then(|grammar| DuplicateItems::analyse(grammar, fgrammar.rust_items))
+    .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
+}

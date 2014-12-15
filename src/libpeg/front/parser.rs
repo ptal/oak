@@ -39,8 +39,8 @@ impl<'a> Parser<'a>
   pub fn parse_grammar(&mut self) -> Grammar
   {
     let grammar_name = self.parse_grammar_decl();
-    let (rules, functions) = self.parse_blocks();
-    Grammar{name: grammar_name, rules: rules, functions: functions, attributes: self.inner_attrs.to_vec()}
+    let (rules, rust_items) = self.parse_blocks();
+    Grammar{name: grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()}
   }
 
   fn parse_grammar_decl(&mut self) -> Ident
@@ -76,14 +76,14 @@ impl<'a> Parser<'a>
   fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<rust::P<rust::Item>>)
   {
     let mut rules = vec![];
-    let mut functions = vec![];
+    let mut rust_items = vec![];
     while self.rp.token != rust::Eof
     {
       self.rp.parse_item(vec![]).map_or_else(
         || rules.push(self.parse_rule()),
-        |fun| functions.push(fun))
+        |item| rust_items.push(item))
     }
-    (rules, functions)
+    (rules, rust_items)
   }
 
   fn parse_rule(&mut self) -> Rule

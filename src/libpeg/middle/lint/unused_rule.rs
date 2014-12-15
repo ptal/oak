@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::visitor::*;
+use middle::attribute::visitor::*;
+pub use rust::ExtCtxt;
 
 pub struct UnusedRule<'a>
 {
