@@ -12,31 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-peg!(
-  grammar calculator;
-
-  #[start]
-  expression = sum
-
-  sum
-    = product ("+" product)* > add
-
-  product
-    = value ("*" value)* > mult
-
-  value
-    = ["0-9"]+ > to_digit
-    / "(" expression ")"
-
-  fn add(x: int, rest: Vec<int>) -> int {
-    rest.iter().fold(x, |x,y| x+y)
-  }
-
-  fn mult(x: int, rest: Vec<int>) -> int {
-    rest.iter().fold(x, |x,y| x*y)
-  }
-
-  fn to_digit(env: &Env<()>, n: str) -> int {
-    from_str::<int>(n).unwrap()
-  }
-)
+pub mod undeclared_rule;

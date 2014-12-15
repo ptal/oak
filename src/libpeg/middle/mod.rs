@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::{ExtCtxt, Span};
-use middle::visitor::Visitor;
+use rust::ExtCtxt;
 use middle::lint::unused_rule::UnusedRule;
+use middle::semantics::undeclared_rule::UndeclaredRule;
 
 use middle::ast::*;
 pub use middle::attribute::ast::Grammar as AGrammar;
@@ -24,6 +24,7 @@ mod lint;
 mod visitor;
 mod attribute;
 mod typing;
+mod semantics;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
@@ -46,46 +47,5 @@ fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
     false
   } else {
     true
-  }
-}
-
-struct UndeclaredRule<'a>
-{
-  cx: &'a ExtCtxt<'a>,
-  rules: &'a HashMap<Ident, ARule>,
-  has_undeclared: bool
-}
-
-impl<'a> UndeclaredRule<'a>
-{
-  fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Option<AGrammar>
-  {
-    if UndeclaredRule::has_undeclared(cx, &grammar) {
-      None
-    } else {
-      Some(grammar)
-    }
-  }
-
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool
-  {
-    let mut analyser = UndeclaredRule {
-      cx: cx,
-      rules: &grammar.rules,
-      has_undeclared: false
-    };
-    analyser.visit_grammar(grammar);
-    analyser.has_undeclared
-  }
-}
-
-impl<'a> Visitor for UndeclaredRule<'a>
-{
-  fn visit_non_terminal_symbol(&mut self, sp: Span, id: Ident)
-  {
-    if !self.rules.contains_key(&id) {
-      self.cx.span_err(sp, "Undeclared rule.");
-      self.has_undeclared = true;
-    }
   }
 }
