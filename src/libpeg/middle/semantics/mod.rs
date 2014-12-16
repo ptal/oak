@@ -14,10 +14,12 @@
 
 use middle::semantics::ast::*;
 use middle::semantics::duplicate_rule::*;
+use middle::semantics::duplicate_rust_item::*;
 use middle::semantics::undeclared_rule::*;
 use front::ast::Grammar as FGrammar;
 
 mod duplicate_rule;
+mod duplicate_rust_item;
 mod undeclared_rule;
 pub mod ast;
 pub mod visitor;
@@ -26,6 +28,6 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
 {
   Grammar::new(&fgrammar)
     .and_then(|grammar| DuplicateRule::analyse(cx, grammar, fgrammar.rules.clone()))
-    // .and_then(|grammar| DuplicateItems::analyse(grammar, fgrammar.rust_items))
+    .and_then(|grammar| DuplicateRustItem::analyse(cx, grammar, fgrammar.rust_items.clone()))
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
 }
