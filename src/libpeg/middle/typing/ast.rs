@@ -102,7 +102,8 @@ pub enum ExpressionType
   Vector(PTy),
   Tuple(Vec<PTy>),
   OptionalTy(PTy),
-  UnnamedSum(Vec<PTy>)
+  UnnamedSum(Vec<PTy>),
+  Action(rust::FunctionRetTy)
 }
 
 #[deriving(Clone)]

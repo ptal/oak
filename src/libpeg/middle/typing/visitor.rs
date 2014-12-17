@@ -15,6 +15,7 @@
 pub use middle::typing::ast::*;
 
 use middle::typing::ast::ExpressionType::*;
+use rust;
 
 pub trait Visitor
 {
@@ -68,6 +69,9 @@ pub trait Visitor
     walk_tys(self, inners);
   }
 
+  fn visit_action_ty(&mut self, _parent: &PTy, inner: &rust::FunctionRetTy)
+  {}
+
   // fn visit_struct(&mut self, _name: &String, fields: &Vec<(String, PTy)>)
   // {
   //   walk_named_tys(self, fields);
@@ -119,7 +123,8 @@ pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &PTy)
     &Vector(ref sub_ty) => visitor.visit_vector(ty, sub_ty),
     &Tuple(ref sub_tys) => visitor.visit_tuple(ty, sub_tys),
     &OptionalTy(ref sub_ty) => visitor.visit_optional(ty, sub_ty),
-    &UnnamedSum(ref sub_tys) => visitor.visit_unnamed_sum(ty, sub_tys)
+    &UnnamedSum(ref sub_tys) => visitor.visit_unnamed_sum(ty, sub_tys),
+    &Action(ref rust_ty) => visitor.visit_action_ty(ty, rust_ty)
   }
 }
 

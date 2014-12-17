@@ -19,104 +19,128 @@ pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
 use middle::typing::ast::ExpressionType::*;
+use rust;
 
-pub fn infer_rules_type(cx: &ExtCtxt, grammar: &mut Grammar, arules: HashMap<Ident, ARule>)
+pub struct InferenceEngine<'cx, 'r>
 {
-  for (id, rule) in arules.into_iter() {
-    let typed_rule = infer_rule_type(cx, rule);
-    grammar.rules.insert(id, typed_rule);
+  cx: &'cx ExtCtxt<'cx>,
+  grammar: &'r mut Grammar
+}
+
+impl<'cx, 'r> InferenceEngine<'cx, 'r>
+{
+  pub fn infer(cx: &'cx ExtCtxt, grammar: &'r mut Grammar, arules: HashMap<Ident, ARule>) {
+    let mut engine = InferenceEngine {
+      cx: cx,
+      grammar: grammar
+    };
+    engine.infer_rules_type(arules);
   }
-}
 
-fn infer_rule_type(cx: &ExtCtxt, rule: ARule) -> Rule
-{
-  let expr = infer_expr_type(cx, rule.def);
-  Rule{
-    name: rule.name,
-    def: expr,
-    attributes: rule.attributes
+  fn infer_rules_type(&mut self, arules: HashMap<Ident, ARule>)
+  {
+    for (id, rule) in arules.into_iter() {
+      let typed_rule = self.infer_rule_type(rule);
+      self.grammar.rules.insert(id, typed_rule);
+    }
   }
-}
 
-fn infer_expr_type(cx: &ExtCtxt, expr: Box<AExpression>) -> Box<Expression>
-{
-  let sp = expr.span.clone();
-  match expr.node {
-    AnySingleChar => infer_char_expr(sp, AnySingleChar),
-    CharacterClass(c) => infer_char_expr(sp, CharacterClass(c)),
-    StrLiteral(s) => infer_unit_expr(sp, StrLiteral(s)),
-    NotPredicate(sub) => infer_sub_unit_expr(cx, sp, sub, |e| NotPredicate(e)),
-    AndPredicate(sub) => infer_sub_unit_expr(cx, sp, sub, |e| AndPredicate(e)),
-    NonTerminalSymbol(ident) => infer_rule_type_ph(sp, ident),
-    ZeroOrMore(sub) => infer_sub_expr(cx, sp, sub, |e| ZeroOrMore(e), |ty| Vector(ty)),
-    OneOrMore(sub) => infer_sub_expr(cx, sp, sub, |e| OneOrMore(e), |ty| Vector(ty)),
-    Optional(sub) =>  infer_sub_expr(cx, sp, sub, |e| Optional(e), |ty| OptionalTy(ty)),
-    Sequence(sub) => infer_tuple_expr(cx, sp, sub),
-    Choice(sub) => type_of_choice(cx, sp, sub),
-    SemanticAction(expr, _) => infer_expr_type(cx, expr)
+  fn infer_rule_type(&self, rule: ARule) -> Rule
+  {
+    let expr = self.infer_expr_type(rule.def);
+    Rule{
+      name: rule.name,
+      def: expr,
+      attributes: rule.attributes
+    }
   }
-}
 
-fn infer_char_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
-{
-  box Expression::new(sp, node, make_pty(Character))
-}
-
-fn infer_unit_expr(sp: Span, node: ExpressionNode) -> Box<Expression>
-{
-  box Expression::new(sp, node, make_pty(Unit))
-}
-
-fn infer_sub_unit_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
-  make_node: |Box<Expression>| -> ExpressionNode) -> Box<Expression>
-{
-  infer_unit_expr(sp, make_node(infer_expr_type(cx, sub)))
-}
-
-fn infer_rule_type_ph(sp: Span, ident: Ident) -> Box<Expression>
-{
-  box Expression::new(sp,
-    NonTerminalSymbol(ident.clone()),
-    make_pty(RuleTypePlaceholder(ident)))
-}
-
-fn infer_sub_expr(cx: &ExtCtxt, sp: Span, sub: Box<AExpression>,
-  make_node: |Box<Expression>| -> ExpressionNode,
-  make_type: |PTy| -> ExpressionType) -> Box<Expression>
-{
-  let node = infer_expr_type(cx, sub);
-  let ty = node.ty.clone();
-  box Expression::new(sp, make_node(node), make_pty(make_type(ty)))
-}
-
-fn infer_list_expr(cx: &ExtCtxt, subs: Vec<Box<AExpression>>)
-  -> (Vec<Box<Expression>>, Vec<PTy>)
-{
-  let nodes : Vec<Box<Expression>> = subs.into_iter()
-    .map(|sub| infer_expr_type(cx, sub))
-    .collect();
-  let tys = nodes.iter()
-    .map(|node| node.ty.clone())
-    .collect();
-  (nodes, tys)
-}
-
-fn infer_tuple_expr(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
-{
-  let (nodes, tys) = infer_list_expr(cx, subs);
-  if nodes.len() == 1 {
-    nodes.into_iter().next().unwrap()
-  } else {
-    box Expression::new(sp, Sequence(nodes), make_pty(Tuple(tys)))
+  fn infer_expr_type(&self, expr: Box<AExpression>) -> Box<Expression>
+  {
+    let sp = expr.span.clone();
+    match expr.node {
+      AnySingleChar => self.infer_char_expr(sp, AnySingleChar),
+      CharacterClass(c) => self.infer_char_expr(sp, CharacterClass(c)),
+      StrLiteral(s) => self.infer_unit_expr(sp, StrLiteral(s)),
+      NotPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| NotPredicate(e)),
+      AndPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| AndPredicate(e)),
+      NonTerminalSymbol(ident) => self.infer_rule_type_ph(sp, ident),
+      ZeroOrMore(sub) => self.infer_sub_expr(sp, sub, |e| ZeroOrMore(e), |ty| Vector(ty)),
+      OneOrMore(sub) => self.infer_sub_expr(sp, sub, |e| OneOrMore(e), |ty| Vector(ty)),
+      Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), |ty| OptionalTy(ty)),
+      Sequence(sub) => self.infer_tuple_expr(sp, sub),
+      Choice(sub) => self.infer_choice_expr(sp, sub),
+      SemanticAction(ref expr, ref id) => self.infer_semantic_action(sp, expr.clone(), id.clone()) // weird bug without ref/clone...
+    }
   }
-}
 
-fn type_of_choice(cx: &ExtCtxt, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
-{
-  // cx.span_err(span, "Choice statement type required but the name of the type and constructors \
-  //   cannot be inferred from the context. Use the attribute `type_name` or move this expression in \
-  //   a dedicated rule.");
-  let (nodes, tys) = infer_list_expr(cx, subs);
+  fn infer_char_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
+  {
+    box Expression::new(sp, node, make_pty(Character))
+  }
 
-  box Expression::new(sp, Choice(nodes), make_pty(UnnamedSum(tys)))
+  fn infer_unit_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
+  {
+    box Expression::new(sp, node, make_pty(Unit))
+  }
+
+  fn infer_sub_unit_expr(&self, sp: Span, sub: Box<AExpression>,
+    make_node: |Box<Expression>| -> ExpressionNode) -> Box<Expression>
+  {
+    self.infer_unit_expr(sp, make_node(self.infer_expr_type(sub)))
+  }
+
+  fn infer_rule_type_ph(&self, sp: Span, ident: Ident) -> Box<Expression>
+  {
+    box Expression::new(sp,
+      NonTerminalSymbol(ident.clone()),
+      make_pty(RuleTypePlaceholder(ident)))
+  }
+
+  fn infer_sub_expr(&self, sp: Span, sub: Box<AExpression>,
+    make_node: |Box<Expression>| -> ExpressionNode,
+    make_type: |PTy| -> ExpressionType) -> Box<Expression>
+  {
+    let node = self.infer_expr_type(sub);
+    let ty = node.ty.clone();
+    box Expression::new(sp, make_node(node), make_pty(make_type(ty)))
+  }
+
+  fn infer_list_expr(&self, subs: Vec<Box<AExpression>>)
+    -> (Vec<Box<Expression>>, Vec<PTy>)
+  {
+    let nodes : Vec<Box<Expression>> = subs.into_iter()
+      .map(|sub| self.infer_expr_type(sub))
+      .collect();
+    let tys = nodes.iter()
+      .map(|node| node.ty.clone())
+      .collect();
+    (nodes, tys)
+  }
+
+  fn infer_tuple_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
+  {
+    let (nodes, tys) = self.infer_list_expr(subs);
+    if nodes.len() == 1 {
+      nodes.into_iter().next().unwrap()
+    } else {
+      box Expression::new(sp, Sequence(nodes), make_pty(Tuple(tys)))
+    }
+  }
+
+  fn infer_choice_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
+  {
+    let (nodes, tys) = self.infer_list_expr(subs);
+    box Expression::new(sp, Choice(nodes), make_pty(UnnamedSum(tys)))
+  }
+
+  fn infer_semantic_action(&self, sp: Span, expr: Box<AExpression>, action_name: Ident) -> Box<Expression>
+  {
+    let sub_expr = self.infer_expr_type(expr);
+    let action_ty = match &self.grammar.rust_items.get(&action_name).unwrap().node {
+      &rust::Item_::ItemFn(ref decl, _,_,_,_) => decl.output.clone(),
+      _ => panic!("Only function items are currently allowed.")
+    };
+    box Expression::new(sp, SemanticAction(sub_expr, action_name), make_pty(Action(action_ty)))
+  }
 }

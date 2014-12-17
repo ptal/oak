@@ -33,7 +33,7 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
     named_types: HashMap::with_capacity(agrammar.rules.len()),
     attributes: agrammar.attributes
   };
-  infer_rules_type(cx, &mut grammar, agrammar.rules);
+  InferenceEngine::infer(cx, &mut grammar, agrammar.rules);
   inlining_phase(cx, &mut grammar);
   propagation_phase(&mut grammar);
   Partial::Value(grammar)
