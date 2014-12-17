@@ -14,6 +14,7 @@
 
 use rust::ExtCtxt;
 use middle::lint::unused_rule::UnusedRule;
+use middle::lint::filter_rust_item::FilterRustItem;
 use middle::ast::*;
 use monad::partial::Partial;
 
@@ -33,10 +34,9 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
     return Partial::Nothing
   }
 
-  // Some(fgrammar)
-  //   .and_then(|grammar| FilterItems::analyse(cx, grammar))
-
-  semantics::analyse(cx, fgrammar)
+  Partial::Value(fgrammar)
+    .and_then(|grammar| FilterRustItem::analyse(cx, grammar))
+    .and_then(|grammar| semantics::analyse(cx, grammar))
     .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::grammar_typing(cx, grammar))
