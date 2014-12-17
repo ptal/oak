@@ -21,6 +21,7 @@ pub use identifier::*;
 pub use middle::semantics::ast::Grammar as SGrammar;
 pub use middle::semantics::ast::Rule as SRule;
 
+use rust;
 use attribute::model_checker;
 use attribute::model::*;
 use monad::partial::Partial;
@@ -31,6 +32,7 @@ pub use std::iter::FromIterator;
 pub struct Grammar{
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
+  pub rust_items: HashMap<Ident, rust::P<rust::Item>>,
   pub attributes: GrammarAttributes
 }
 
@@ -59,6 +61,7 @@ impl Grammar
     let grammar = Grammar{
       name: sgrammar.name,
       rules: rules,
+      rust_items: sgrammar.rust_items,
       attributes: attributes
     };
     Partial::Value(grammar)

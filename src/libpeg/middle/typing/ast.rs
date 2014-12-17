@@ -24,6 +24,7 @@ pub use std::collections::HashMap;
 pub use std::rc::Rc;
 pub use std::cell::RefCell;
 
+use rust;
 use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
 use middle::typing::ast::NamedExpressionType::*;
@@ -33,6 +34,7 @@ pub struct Grammar
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
   pub named_types: HashMap<Ident, NamedExpressionType>,
+  pub rust_items: HashMap<Ident, rust::P<rust::Item>>,
   pub attributes: GrammarAttributes
 }
 
