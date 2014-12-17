@@ -23,17 +23,17 @@ peg!(
 
   expression
     = sum
-    / par > make_par
-    / tell > make_tell
-    / next > make_next
-    / async > make_async
-    / rep > make_rep
-    / unless > make_unless
-    / let_in > make_letin
-    / skip_kw > make_skip
+    / par
+    / tell
+    / next
+    / async
+    / rep
+    / unless
+    / let_in
+    / skip_kw
 
   sum
-    = pick_kw or$ when sum_body* end_kw$ > make_sum
+    = pick_kw or$ when sum_body* end_kw$
 
   sum_body
     = or when
