@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use middle::attribute::visitor::*;
+use monad::partial::Partial;
 pub use rust::ExtCtxt;
 
 pub struct UnusedRule<'a>
@@ -23,7 +24,7 @@ pub struct UnusedRule<'a>
 
 impl<'a> UnusedRule<'a>
 {
-  pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Option<Grammar>
+  pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
   {
     let is_used = UnusedRule::launch(&grammar);
     UnusedRule::remove_unused(cx, grammar, is_used)
@@ -55,7 +56,7 @@ impl<'a> UnusedRule<'a>
   }
 
   fn remove_unused(cx: &ExtCtxt, grammar: Grammar,
-    is_used: HashMap<Ident, bool>) -> Option<Grammar>
+    is_used: HashMap<Ident, bool>) -> Partial<Grammar>
   {
     let mut grammar = grammar;
     for (id, &used) in is_used.iter() {
@@ -64,7 +65,7 @@ impl<'a> UnusedRule<'a>
         cx.span_warn(rule.name.span, "Unused rule.");
       }
     }
-    Some(grammar)
+    Partial::Value(grammar)
   }
 
   fn mark_rule(&mut self, id: Ident) -> bool

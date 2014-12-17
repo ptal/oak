@@ -23,7 +23,7 @@ pub use middle::semantics::ast::Rule as SRule;
 
 use attribute::model_checker;
 use attribute::model::*;
-
+use monad::partial::Partial;
 
 pub use std::collections::HashMap;
 pub use std::iter::FromIterator;
@@ -36,7 +36,7 @@ pub struct Grammar{
 
 impl Grammar
 {
-  pub fn new(cx: &ExtCtxt, sgrammar: SGrammar) -> Option<Grammar>
+  pub fn new(cx: &ExtCtxt, sgrammar: SGrammar) -> Partial<Grammar>
   {
     let grammar_model = GrammarAttributes::model();
     let grammar_model = model_checker::check_all(cx, grammar_model, sgrammar.attributes);
@@ -61,7 +61,7 @@ impl Grammar
       rules: rules,
       attributes: attributes
     };
-    Some(grammar)
+    Partial::Value(grammar)
   }
 
   fn make_rule_model(cx: &ExtCtxt, attrs: Vec<Attribute>) -> AttributeArray {

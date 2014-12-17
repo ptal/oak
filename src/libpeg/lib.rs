@@ -28,6 +28,7 @@ use rustc::plugin::Registry;
 
 pub use runtime::Parser;
 use front::parser;
+use monad::partial::Partial;
 
 pub mod runtime;
 mod front;
@@ -54,8 +55,8 @@ fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::
   let ast = parser.parse_grammar();
   let ast = middle::analyse(cx, ast);
   match ast {
-    Some(ast) => back::PegCompiler::compile(cx, ast),
-    None => {
+    Partial::Value(ast) => back::PegCompiler::compile(cx, ast),
+    Partial::Fake(_) | Partial::Nothing => {
       cx.parse_sess.span_diagnostic.handler.abort_if_errors();
       rust::DummyResult::any(rust::DUMMY_SP)
     }
