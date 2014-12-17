@@ -12,61 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use front::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
-pub use front::ast::Expression_::*;
+pub use rust::ExtCtxt;
 
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
-pub use identifier::*;
-pub use std::collections::HashMap;
-
-use front::ast::Rule as FRule;
 use middle::semantics::ast::*;
+use middle::semantics::duplicate::*;
 
-pub struct DuplicateRule<'a>
+pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
+  rules: Vec<Rule>) -> Partial<Grammar>
 {
-  cx: &'a ExtCtxt<'a>,
-  grammar: Grammar,
-  has_duplicate: bool
-}
-
-impl<'a> DuplicateRule<'a>
-{
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar, frules: Vec<FRule>) -> Option<Grammar>
-  {
-    DuplicateRule {
-      cx: cx,
-      grammar: grammar,
-      has_duplicate: false
-    }.populate(frules)
-     .make()
-  }
-
-  fn populate(mut self, frules: Vec<FRule>) -> DuplicateRule<'a>
-  {
-    for rule in frules.into_iter() {
-      let name = rule.name.node.clone();
-      if self.grammar.rules.contains_key(&name) {
-        self.duplicate_rules(self.grammar.rules.get(&name).unwrap(), &rule);
-        self.has_duplicate = true;
-      } else {
-        self.grammar.rules.insert(name, rule);
-      }
-    }
-    self
-  }
-
-  fn duplicate_rules(&self, pre: &FRule, current: &FRule)
-  {
-    self.cx.span_err(current.name.span, "Duplicate rule definition.");
-    self.cx.span_note(pre.name.span, "Previous declaration here.");
-  }
-
-  fn make(self) -> Option<Grammar>
-  {
-    if self.has_duplicate {
-      None
-    } else {
-      Some(self.grammar)
-    }
-  }
+  DuplicateItem::analyse(cx, rules.into_iter(), String::from_str("rule"))
+    .map(move |rules| grammar.with_rules(rules))
 }

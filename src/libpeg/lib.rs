@@ -35,14 +35,15 @@ mod middle;
 mod back;
 mod rust;
 mod identifier;
+mod monad;
 
 #[plugin_registrar]
-pub fn plugin_registrar(reg: &mut Registry) 
+pub fn plugin_registrar(reg: &mut Registry)
 {
   reg.register_macro("peg", expand)
 }
 
-fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx> 
+fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
 {
   parse(cx, tts)
 }

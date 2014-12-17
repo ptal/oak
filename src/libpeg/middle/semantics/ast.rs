@@ -20,6 +20,7 @@ pub use identifier::*;
 pub use std::collections::HashMap;
 pub use attribute::model::Attribute;
 pub use front::ast::Rule;
+pub use monad::partial::Partial;
 
 use front::ast::Grammar as FGrammar;
 
@@ -32,7 +33,7 @@ pub struct Grammar{
 
 impl Grammar
 {
-  pub fn new(fgrammar: &FGrammar) -> Option<Grammar>
+  pub fn new(fgrammar: &FGrammar) -> Partial<Grammar>
   {
     let rules_len = fgrammar.rules.len();
     let rust_items_len = fgrammar.rust_items.len();
@@ -42,6 +43,26 @@ impl Grammar
       rust_items: HashMap::with_capacity(rust_items_len),
       attributes: fgrammar.attributes.clone()
     };
-    Some(grammar)
+    Partial::Value(grammar)
+  }
+
+  pub fn with_rules(self, rules: HashMap<Ident, Rule>) -> Grammar
+  {
+    Grammar {
+      name: self.name,
+      rules: rules,
+      rust_items: self.rust_items,
+      attributes: self.attributes
+    }
+  }
+
+  pub fn with_rust_items(self, rust_items: HashMap<Ident, P<Item>>) -> Grammar
+  {
+    Grammar {
+      name: self.name,
+      rules: self.rules,
+      rust_items: rust_items,
+      attributes: self.attributes
+    }
   }
 }

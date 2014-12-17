@@ -12,9 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use monad::partial::Partial;
+
 use rust::ExtCtxt;
 use middle::semantics::visitor::*;
 use middle::semantics::ast::*;
+use monad::partial::Partial::*;
+
 
 pub struct UndeclaredRule<'a>
 {
@@ -25,12 +29,12 @@ pub struct UndeclaredRule<'a>
 
 impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Option<Grammar>
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar>
   {
     if UndeclaredRule::has_undeclared(cx, &grammar) {
-      None
+      Nothing
     } else {
-      Some(grammar)
+      Value(grammar)
     }
   }
 

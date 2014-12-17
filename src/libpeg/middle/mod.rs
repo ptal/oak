@@ -20,6 +20,8 @@ pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use front::ast::Grammar as FGrammar;
 
+use monad::partial::Partial::*;
+
 mod semantics;
 mod lint;
 mod attribute;
@@ -34,7 +36,12 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
 
   // Some(fgrammar)
   //   .and_then(|grammar| FilterItems::analyse(cx, grammar))
-  semantics::analyse(cx, fgrammar)
+  let res = match semantics::analyse(cx, fgrammar) {
+    Nothing => None,
+    Fake(_) => None,
+    Value(x) => Some(x)
+  };
+  res
     .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::grammar_typing(cx, grammar))

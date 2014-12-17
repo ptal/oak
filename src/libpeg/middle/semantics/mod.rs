@@ -18,16 +18,17 @@ use middle::semantics::duplicate_rust_item::*;
 use middle::semantics::undeclared_rule::*;
 use front::ast::Grammar as FGrammar;
 
+mod duplicate;
 mod duplicate_rule;
 mod duplicate_rust_item;
 mod undeclared_rule;
 pub mod ast;
 pub mod visitor;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Option<Grammar>
+pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
 {
   Grammar::new(&fgrammar)
-    .and_then(|grammar| DuplicateRule::analyse(cx, grammar, fgrammar.rules.clone()))
-    .and_then(|grammar| DuplicateRustItem::analyse(cx, grammar, fgrammar.rust_items.clone()))
+    .and_then(|grammar| rule_duplicate(cx, grammar, fgrammar.rules.clone()))
+    .and_then(|grammar| rust_item_duplicate(cx, grammar, fgrammar.rust_items.clone()))
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
 }
