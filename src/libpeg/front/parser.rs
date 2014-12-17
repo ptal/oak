@@ -331,7 +331,7 @@ impl<'a> Parser<'a>
     Some(respan_expr(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
   }
 
-  fn parse_char_range<'a>(&mut self, ranges: &mut Chars<'a>, rule_name: &str) -> Option<Vec<CharacterInterval>>
+  fn parse_char_range<'b>(&mut self, ranges: &mut Chars<'b>, rule_name: &str) -> Option<Vec<CharacterInterval>>
   {
     let mut res = vec![];
     let separator_err = format!(

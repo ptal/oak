@@ -45,7 +45,7 @@ pub struct PegCompiler<'cx>
 
 impl<'cx> PegCompiler<'cx>
 {
-  pub fn compile<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
+  pub fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
     let mut compiler = PegCompiler{
       top_level_items: Vec::new(),

@@ -12,4 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// It's a library, so it isn't a problem if code is not used.
+#![allow(dead_code)]
+
 pub mod partial;
