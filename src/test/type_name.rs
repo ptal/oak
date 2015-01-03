@@ -19,7 +19,7 @@ peg!(
   // #![disable_code(ast)]
 
   #[start]
-  composed_type_name = spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)$
+  composed_type_name = spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)?
 
   type_name = auto_infer_kw &(lparen / eof / comma)
             / ident

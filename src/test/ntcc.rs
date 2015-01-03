@@ -33,13 +33,13 @@ peg!(
     / skip_kw
 
   sum
-    = pick_kw or$ when sum_body* end_kw$
+    = pick_kw or? when sum_body* end_kw?
 
   sum_body
     = or when
 
   par
-    = par_kw oror$ expression par_body* end_kw$
+    = par_kw oror? expression par_body* end_kw?
 
   par_body
     = oror expression

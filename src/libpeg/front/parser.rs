@@ -227,7 +227,7 @@ impl<'a> Parser<'a>
         self.rp.bump();
         Some(spanned_expr(lo, hi, OneOrMore(expr)))
       },
-      rust::Dollar => {
+      rust::Question => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, Optional(expr)))
       },

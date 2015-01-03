@@ -117,7 +117,7 @@ impl<'a> InliningLoop<'a>
     }
     self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. Indirectly (or not), \
       the type of a rule must be inlined into itself, which is impossible. Break the cycle by removing \
-      one of the inlining annotations.");
+      one of the inlining annotation.");
     for cycle_node in trimmed_cycle.iter().rev() {
       self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span, "This rule is in the inlining loop.");
     }
