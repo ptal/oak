@@ -64,9 +64,8 @@ impl<'a> Propagator<'a>
     }
   }
 
-  fn check_and_propagate(&mut self, parent: &PTy, inner: &PTy)
+  fn propagate_from_inner(&mut self, parent: &PTy, inner: &PTy)
   {
-    walk_ty(self, inner);
     if inner.borrow().must_propagate() {
       *parent.borrow_mut() = Rc::new(UnitPropagate);
     }
@@ -79,17 +78,16 @@ impl<'a> Visitor for Propagator<'a>
 {
   fn visit_vector(&mut self, parent: &PTy, inner: &PTy)
   {
-    self.check_and_propagate(parent, inner);
+    self.propagate_from_inner(parent, inner);
   }
 
-  fn visit_optional(&mut self, parent: &PTy, inner: &PTy)
+  fn visit_optional_ty(&mut self, parent: &PTy, inner: &PTy)
   {
-    self.check_and_propagate(parent, inner);
+    self.propagate_from_inner(parent, inner);
   }
 
   fn visit_tuple(&mut self, parent: &PTy, inners: &Vec<PTy>)
   {
-    walk_tys(self, inners);
     // If all children are UnitPropagate, we propagate too.
     if inners.iter().all(|ty| ty.borrow().must_propagate()) {
       *parent.borrow_mut() = Rc::new(UnitPropagate);
@@ -115,7 +113,6 @@ impl<'a> Visitor for Propagator<'a>
   {
     assert!(inners.len() > 0, "PEG compiler bug: A sum type with only one branch \
       has been detected during propagation (it should be lifted up during parsing).");
-    walk_tys(self, inners);
   }
 
 

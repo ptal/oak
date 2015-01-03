@@ -22,6 +22,7 @@ pub mod ast;
 pub mod inference;
 mod visitor;
 mod inlining;
+mod inlining_loop;
 mod propagation;
 
 pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
