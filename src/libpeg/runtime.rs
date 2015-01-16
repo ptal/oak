@@ -17,7 +17,7 @@ pub trait Parser
   fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;
 }
 
-pub fn any_single_char(input: &str, pos: uint) -> Result<uint, String>
+pub fn any_single_char(input: &str, pos: usize) -> Result<usize, String>
 {
   if input.len() - pos > 0 {
     Ok(input.char_range_at(pos).next)
@@ -26,8 +26,8 @@ pub fn any_single_char(input: &str, pos: uint) -> Result<uint, String>
   }
 }
 
-pub fn match_literal(input: &str, pos: uint, lit: &str, lit_len: uint)
-  -> Result<uint, String>
+pub fn match_literal(input: &str, pos: usize, lit: &str, lit_len: usize)
+  -> Result<usize, String>
 {
   if input.len() - pos == 0 {
     Err(format!("End of input when matching the literal `{}`", lit))
@@ -38,14 +38,14 @@ pub fn match_literal(input: &str, pos: uint, lit: &str, lit_len: uint)
   }
 }
 
-pub fn make_result<'a>(input: &'a str, parsing_res: &Result<uint, String>) 
+pub fn make_result<'a>(input: &'a str, parsing_res: &Result<usize, String>)
  -> Result<Option<&'a str>, String>
 {
   match parsing_res {
     &Ok(pos) => {
-      assert!(pos <= input.len())
+      assert!(pos <= input.len());
       if pos == input.len() {
-        Ok(None) 
+        Ok(None)
       } else {
         Ok(Some(input.slice_from(pos)))
       }

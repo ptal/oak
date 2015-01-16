@@ -84,8 +84,8 @@ impl<'cx, 'r> InferenceEngine<'cx, 'r>
     box Expression::new(sp, node, make_pty(Unit))
   }
 
-  fn infer_sub_unit_expr(&self, sp: Span, sub: Box<AExpression>,
-    make_node: |Box<Expression>| -> ExpressionNode) -> Box<Expression>
+  fn infer_sub_unit_expr(&self, sp: Span, sub: Box<AExpression>, make_node: F) -> Box<Expression>
+    where F: Fn(Box<Expression>) -> ExpressionNode
   {
     self.infer_unit_expr(sp, make_node(self.infer_expr_type(sub)))
   }
@@ -98,8 +98,9 @@ impl<'cx, 'r> InferenceEngine<'cx, 'r>
   }
 
   fn infer_sub_expr(&self, sp: Span, sub: Box<AExpression>,
-    make_node: |Box<Expression>| -> ExpressionNode,
-    make_type: |PTy| -> ExpressionType) -> Box<Expression>
+    make_node: FNode, make_type: FType) -> Box<Expression>
+   where FNode: Fn(Box<Expression>) -> ExpressionNode,
+         FType: Fn(PTy) -> ExpressionType
   {
     let node = self.infer_expr_type(sub);
     let ty = node.ty.clone();

@@ -27,7 +27,7 @@ pub fn selection_phase(cx: &ExtCtxt, grammar: &mut Grammar)
   Selector::select(cx, &grammar.rules, grammar.attributes.starting_rule.clone());
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 enum TypingContext
 {
   CUnTyped,

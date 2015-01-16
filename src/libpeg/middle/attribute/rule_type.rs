@@ -19,7 +19,7 @@ use attribute::compile_error::CompileErrorLevel::*;
 use attribute::model::AttributeLitModel::*;
 use attribute::model::AttributeModel::*;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum RuleTypeStyle
 {
   New,

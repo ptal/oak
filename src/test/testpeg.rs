@@ -37,7 +37,7 @@ mod ntcc;
 mod type_name;
 mod calculator;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 enum ExpectedResult {
   Match,
   Error
@@ -46,15 +46,15 @@ enum ExpectedResult {
 struct TestDisplay
 {
   terminal: Box<Terminal<WriterWrapper>+'static>,
-  code_snippet_len: uint,
-  num_success: uint,
-  num_failure: uint,
-  num_system_failure: uint
+  code_snippet_len: u32,
+  num_success: u32,
+  num_failure: u32,
+  num_system_failure: u32
 }
 
 impl TestDisplay
 {
-  pub fn new(code_snippet_len: uint) -> TestDisplay
+  pub fn new(code_snippet_len: u32) -> TestDisplay
   {
     TestDisplay{
       terminal: term::stdout().unwrap(),

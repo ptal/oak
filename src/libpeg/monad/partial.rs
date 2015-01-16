@@ -25,7 +25,7 @@ use monad::partial::Partial::*;
 // not prevent the compilation of a second function to detect more errors in one run.
 // This intermediate state is represented by `Fake`.
 
-#[deriving(Clone, PartialEq, PartialOrd, Eq, Ord, Show)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Show)]
 pub enum Partial<T>
 {
   Value(T),
@@ -65,14 +65,14 @@ impl<T> Partial<T>
 
 #[test]
 fn partial() {
-  assert_eq!(Value(9i).unwrap(), 9i);
-  assert_eq!(Value(9i).map(|i|i*2), Value(18i));
-  assert_eq!(Fake(9i).map(|i|i*2), Fake(18i));
-  assert_eq!(Nothing.map(|i:int|i), Nothing);
-  assert_eq!(Value(9i).and_then(|i| Value(i*2)), Value(18i));
-  assert_eq!(Value(9i).and_then(|i| Fake(i*2)), Fake(18i));
-  assert_eq!(Fake(9i).and_then(|i| Fake(i*2)), Fake(18i));
+  assert_eq!(Value(9i32).unwrap(), 9i32);
+  assert_eq!(Value(9i32).map(|i|i*2), Value(18i32));
+  assert_eq!(Fake(9i32).map(|i|i*2), Fake(18i32));
+  assert_eq!(Nothing.map(|i:i32|i), Nothing);
+  assert_eq!(Value(9i32).and_then(|i| Value(i*2)), Value(18i32));
+  assert_eq!(Value(9i32).and_then(|i| Fake(i*2)), Fake(18i32));
+  assert_eq!(Fake(9i32).and_then(|i| Fake(i*2)), Fake(18i32));
   // Even if you return a Value, it automatically coerces to Fake.
-  assert_eq!(Fake(9i).and_then(|i| Value(i*2)), Fake(18i));
-  assert_eq!(Fake(9i).and_then(|_| -> Partial<int> Nothing), Nothing);
+  assert_eq!(Fake(9i32).and_then(|i| Value(i*2)), Fake(18i32));
+  assert_eq!(Fake(9i32).and_then(|_| -> Partial<i32> Nothing), Nothing);
 }

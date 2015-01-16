@@ -18,7 +18,7 @@
 #![license = "Apache v2"]
 #![crate_type = "dylib"]
 
-#![feature(plugin_registrar, quote, globs)]
+#![feature(plugin_registrar, quote, box_syntax)]
 
 extern crate rustc;
 extern crate syntax;

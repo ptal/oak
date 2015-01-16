@@ -39,7 +39,7 @@ pub struct PegCompiler<'cx>
 {
   top_level_items: Vec<rust::P<rust::Item>>,
   cx: &'cx ExtCtxt<'cx>,
-  unique_id: uint,
+  unique_id: u32,
   current_rule_name: Ident
 }
 
@@ -126,7 +126,7 @@ impl<'cx> PegCompiler<'cx>
       let rule_name = rule.name.node.clone();
       let rule_def = self.compile_expression(&rule.def);
       self.top_level_items.push(quote_item!(self.cx,
-        fn $rule_name (input: &str, pos: uint) -> Result<uint, String>
+        fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
         {
           $rule_def
         }
@@ -273,7 +273,7 @@ impl<'cx> PegCompiler<'cx>
     })
   }
 
-  fn gen_uid(&mut self) -> uint
+  fn gen_uid(&mut self) -> u32
   {
     self.unique_id += 1;
     self.unique_id - 1
@@ -298,7 +298,7 @@ impl<'cx> PegCompiler<'cx>
     let fun_name = self.gensym("star");
     let cx = self.cx;
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         let mut npos = pos;
         while npos < input.len() {
@@ -329,7 +329,7 @@ impl<'cx> PegCompiler<'cx>
     let fun_name = self.gensym("plus");
     let cx = self.cx;
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         match $expr {
           Ok(pos) => $star_fn,
@@ -387,7 +387,7 @@ impl<'cx> PegCompiler<'cx>
     );
 
     self.top_level_items.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: uint) -> Result<uint, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         let current = input.char_range_at(pos).ch;
         if $cond {

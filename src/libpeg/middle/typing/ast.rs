@@ -45,7 +45,7 @@ pub struct Rule
   pub attributes: RuleAttributes
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum ExpressionTypeVersion
 {
   Typed,
@@ -54,7 +54,7 @@ pub enum ExpressionTypeVersion
 }
 
 // Explicitly typed expression.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Expression
 {
   pub span: Span,
@@ -91,7 +91,7 @@ pub fn make_pty(expr: ExpressionType) -> PTy
   RefCell::new(Rc::new(expr))
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum ExpressionType
 {
   Character,
@@ -106,7 +106,7 @@ pub enum ExpressionType
   Action(rust::FunctionRetTy)
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum NamedExpressionType
 {
   Struct(String, Vec<(String, PTy)>),

@@ -187,8 +187,8 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_prefix(&mut self, rule_name: &str,
-    make_prefix: |Box<Expression>| -> ExpressionNode) -> Option<Box<Expression>>
+  fn parse_prefix(&mut self, rule_name: &str, make_prefix: F) -> Option<Box<Expression>>
+   where F: Fn(Box<Expression>) -> ExpressionNode
   {
     let lo = self.rp.span.lo;
     self.rp.bump();

@@ -23,14 +23,14 @@ pub struct Grammar{
   pub attributes: Vec<Attribute>
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Rule{
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
   pub def: Box<Expression>
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum Expression_<SubExpr>{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
@@ -46,19 +46,19 @@ pub enum Expression_<SubExpr>{
   SemanticAction(Box<SubExpr>, Ident) // rule > function
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct CharacterClassExpr {
   pub intervals: Vec<CharacterInterval>
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct CharacterInterval {
   pub lo: char,
   pub hi: char
 }
 
 // Implicitly typed expression.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Expression
 {
   pub span: Span,
