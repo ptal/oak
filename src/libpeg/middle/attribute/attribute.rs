@@ -16,9 +16,9 @@ pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
 pub use middle::attribute::rule_type::*;
-pub use rust::ExtCtxt;
 
-use attribute::model::*;
+use rust::ExtCtxt;
+use attribute::model::{AttributeArray, access, DuplicateAttribute, AttributeMerger, AttributeInfo};
 
 pub struct GrammarAttributes
 {

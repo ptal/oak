@@ -13,8 +13,6 @@
 // limitations under the License.
 
 use middle::typing::visitor::*;
-use middle::typing::ast::*;
-
 use middle::typing::ast::ExpressionType::*;
 
 pub struct InliningLoop<'a>

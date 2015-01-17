@@ -13,10 +13,7 @@
 // limitations under the License.
 
 use rust;
-use rust::ExtCtxt;
-use rust::P;
 use std::iter::*;
-use identifier::*;
 use middle::ast::*;
 
 struct ToTokensVec<'a, T: 'a>
@@ -85,9 +82,9 @@ impl<'cx> PegCompiler<'cx>
     ).unwrap();
 
     let peg_crate = rust::ViewItem {
-      node: rust::ViewItemExternCrate(rust::str_to_ident("peg"), None, rust::DUMMY_NODE_ID),
+      node: rust::ViewItem_::ViewItemExternCrate(rust::str_to_ident("peg"), None, rust::DUMMY_NODE_ID),
       attrs: vec![],
-      vis: rust::Inherited,
+      vis: rust::Visibility::Inherited,
       span: rust::DUMMY_SP
     };
 
@@ -95,7 +92,7 @@ impl<'cx> PegCompiler<'cx>
       &rust::ItemMod(ref module) => {
         let mut view_items = module.view_items.clone();
         view_items.push(peg_crate);
-        P(rust::Item {
+        rust::P(rust::Item {
           ident: code.ident,
           attrs: code.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
@@ -104,7 +101,7 @@ impl<'cx> PegCompiler<'cx>
             view_items: view_items,
             items: module.items.clone()
           }),
-          vis: rust::Public,
+          vis: rust::Visibility::Public,
           span: rust::DUMMY_SP
         })
       },
@@ -114,7 +111,6 @@ impl<'cx> PegCompiler<'cx>
     if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
         rust::item_to_string(&*code).as_slice());
-    } else {
     }
 
     rust::MacItems::new(Some(code).into_iter())
@@ -230,7 +226,7 @@ impl<'cx> PegCompiler<'cx>
     )
   }
 
-  fn map_foldr_expr<'a, F: FnMut<(rust::P<rust::Expr>, rust::P<rust::Expr>), rust::P<rust::Expr>>>(
+  fn map_foldr_expr<'a, F: FnMut(rust::P<rust::Expr>, rust::P<rust::Expr>) -> rust::P<rust::Expr>>(
     &mut self, seq: &'a [Box<Expression>], f: F) -> rust::P<rust::Expr>
   {
     assert!(seq.len() > 0);

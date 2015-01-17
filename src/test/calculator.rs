@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-peg!(
+peg!{
   grammar calculator;
 
   #[start]
@@ -39,4 +39,4 @@ peg!(
   fn to_digit(env: &Env<()>, n: str) -> int {
     from_str::<int>(n).unwrap()
   }
-)
+}

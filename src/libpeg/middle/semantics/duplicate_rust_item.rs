@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{ExtCtxt, P, Item};
+use rust::{ExtCtxt, P, Item};
 
 use middle::semantics::ast::Grammar;
 use middle::semantics::duplicate::*;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-peg!(
+peg!{
   grammar type_name;
 
   // #![print(all)]
@@ -39,4 +39,4 @@ peg!(
   eof = !.
   #[invisible_type]
   comma = "," spacing
-)
+}

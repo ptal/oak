@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::ExtCtxt;
 use middle::lint::unused_rule::UnusedRule;
 use middle::lint::filter_rust_item::FilterRustItem;
 use middle::ast::*;

@@ -12,17 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use syntax::ast;
+pub use syntax::ptr::P;
 pub use syntax::ast::*;
-pub use syntax::parse;
-pub use syntax::parse::*;
-pub use syntax::parse::token::*;
-// pub use syntax::parse::token::keywords::*;
+pub use syntax::print::pprust::item_to_string;
+pub use syntax::codemap::{DUMMY_SP, Span, Spanned, spanned, mk_sp, respan, BytePos};
+
+pub use syntax::ext::base::{ExtCtxt,MacResult,MacItems,DummyResult};
+pub use syntax::ext::quote::rt::ToTokens;
+
+pub use syntax::parse::str_lit;
 pub use syntax::parse::attr::ParserAttr;
 pub use syntax::parse::parser::Parser;
-pub use syntax::codemap::*;
-pub use syntax::print::pprust;
-pub use syntax::print::pprust::*;
-pub use syntax::ext::quote::rt::ToTokens;
-pub use syntax::ext::base::*;
-pub use syntax::ptr::*;
+pub use syntax::parse::ParseSess;
+pub use syntax::parse::new_parser_from_tts;
+pub use syntax::parse::token::str_to_ident;
+pub use syntax::parse::token::Token;
+pub use syntax::parse::token;
+pub use syntax::parse::token::keywords::Keyword;
+pub use syntax::parse::token::DelimToken;
+pub use syntax::parse::token::IdentStyle;
+pub use syntax::parse::token::BinOpToken;
+pub use syntax::parse::token::gensym_ident;
+pub use syntax::parse::token::get_ident;
+pub use syntax::parse::token::get_name;

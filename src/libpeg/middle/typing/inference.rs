@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::typing::visitor::*;
-use middle::typing::ast::*;
 pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
+
+use middle::typing::visitor::*;
 use middle::typing::ast::ExpressionType::*;
 use rust;
 
@@ -84,7 +84,7 @@ impl<'cx, 'r> InferenceEngine<'cx, 'r>
     box Expression::new(sp, node, make_pty(Unit))
   }
 
-  fn infer_sub_unit_expr(&self, sp: Span, sub: Box<AExpression>, make_node: F) -> Box<Expression>
+  fn infer_sub_unit_expr<F>(&self, sp: Span, sub: Box<AExpression>, make_node: F) -> Box<Expression>
     where F: Fn(Box<Expression>) -> ExpressionNode
   {
     self.infer_unit_expr(sp, make_node(self.infer_expr_type(sub)))
@@ -97,7 +97,7 @@ impl<'cx, 'r> InferenceEngine<'cx, 'r>
       make_pty(RuleTypePlaceholder(ident)))
   }
 
-  fn infer_sub_expr(&self, sp: Span, sub: Box<AExpression>,
+  fn infer_sub_expr<FNode, FType>(&self, sp: Span, sub: Box<AExpression>,
     make_node: FNode, make_type: FType) -> Box<Expression>
    where FNode: Fn(Box<Expression>) -> ExpressionNode,
          FType: Fn(PTy) -> ExpressionType

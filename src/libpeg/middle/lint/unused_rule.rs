@@ -14,7 +14,6 @@
 
 use middle::attribute::visitor::*;
 use monad::partial::Partial;
-pub use rust::ExtCtxt;
 
 pub struct UnusedRule<'a>
 {

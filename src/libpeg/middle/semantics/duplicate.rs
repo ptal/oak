@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{ExtCtxt,Span};
+pub use rust::Span;
 pub use rust;
-pub use identifier::*;
 pub use std::collections::HashMap;
-pub use monad::partial::Partial;
 
 use middle::semantics::ast::*;
 use monad::partial::Partial::*;
+use std::ops::Deref;
 
 pub trait ItemIdent {
   fn ident(&self) -> Ident;
@@ -75,7 +74,7 @@ pub struct DuplicateItem<'a, Item>
 
 impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
 {
-  pub fn analyse<ItemIter: Iterator<Item>>(cx: &'a ExtCtxt<'a>, iter: ItemIter, item_kind: String) -> Partial<HashMap<Ident, Item>>
+  pub fn analyse<ItemIter: Iterator<Item=Item>>(cx: &'a ExtCtxt<'a>, iter: ItemIter, item_kind: String) -> Partial<HashMap<Ident, Item>>
   {
     let (min_size, _) = iter.size_hint();
     DuplicateItem {
@@ -87,7 +86,7 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
      .make()
   }
 
-  fn populate<ItemIter: Iterator<Item>>(mut self, iter: ItemIter) -> DuplicateItem<'a, Item>
+  fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter) -> DuplicateItem<'a, Item>
   {
     let mut iter = iter;
     for item in iter {

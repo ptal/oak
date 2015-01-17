@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{ExtCtxt, Span};
 pub use middle::attribute::rule_type::RuleTypeStyle::*;
 use attribute::model::*;
 use attribute::compile_error::CompileErrorLevel::*;

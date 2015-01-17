@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use middle::typing::visitor::*;
-use middle::typing::ast::*;
 
 use middle::typing::ast::ExpressionType::*;
 use middle::typing::inlining_loop::InliningLoop;

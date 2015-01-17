@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use monad::partial::Partial;
 
-use rust::ExtCtxt;
 use middle::semantics::visitor::*;
-use middle::semantics::ast::*;
 use monad::partial::Partial::*;
-
+use std::collections::HashMap;
 
 pub struct UndeclaredRule<'a>
 {

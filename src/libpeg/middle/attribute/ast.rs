@@ -17,13 +17,12 @@ pub use front::ast::Expression_::*;
 
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
 pub use middle::attribute::attribute::*;
-pub use identifier::*;
 pub use middle::semantics::ast::Grammar as SGrammar;
 pub use middle::semantics::ast::Rule as SRule;
 
 use rust;
 use attribute::model_checker;
-use attribute::model::*;
+use attribute::model::{AttributeArray, Attribute};
 use monad::partial::Partial;
 
 pub use std::collections::HashMap;

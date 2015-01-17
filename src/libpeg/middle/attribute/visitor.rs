@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::Span;
 pub use middle::attribute::ast::*;
-pub use identifier::*;
-
-use front::ast::Expression_::*;
 
 pub trait Visitor
 {
@@ -82,19 +78,19 @@ pub trait Visitor
   }
 }
 
-pub fn walk_grammar<V: Visitor>(visitor: &mut V, grammar: &Grammar)
+pub fn walk_grammar<V: Visitor+?Sized>(visitor: &mut V, grammar: &Grammar)
 {
   for rule in grammar.rules.values() {
     visitor.visit_rule(rule);
   }
 }
 
-pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule)
+pub fn walk_rule<V: Visitor+?Sized>(visitor: &mut V, rule: &Rule)
 {
   visitor.visit_expr(&rule.def);
 }
 
-pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
+pub fn walk_expr<V: Visitor+?Sized>(visitor: &mut V, expr: &Box<Expression>)
 {
   let sp = expr.span;
   match &expr.node {
@@ -137,7 +133,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
   }
 }
 
-pub fn walk_exprs<V: Visitor>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
+pub fn walk_exprs<V: Visitor+?Sized>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
 {
   assert!(exprs.len() > 0);
   for expr in exprs.iter() {

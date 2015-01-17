@@ -92,25 +92,25 @@ pub trait Visitor
   fn visit_action_ty(&mut self, _parent: &PTy, _inner: &rust::FunctionRetTy) {}
 }
 
-pub fn walk_grammar<V: Visitor>(visitor: &mut V, grammar: &Grammar)
+pub fn walk_grammar<V: Visitor+?Sized>(visitor: &mut V, grammar: &Grammar)
 {
   for rule in grammar.rules.values() {
     visitor.visit_rule(rule);
   }
 }
 
-pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule)
+pub fn walk_rule<V: Visitor+?Sized>(visitor: &mut V, rule: &Rule)
 {
   visitor.visit_expr(&rule.def);
 }
 
-pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Box<Expression>)
+pub fn walk_expr<V: Visitor+?Sized>(visitor: &mut V, expr: &Box<Expression>)
 {
   walk_expr_node(visitor, &expr.node, expr.span.clone());
   walk_ty(visitor, &expr.ty);
 }
 
-pub fn walk_expr_node<V: Visitor>(visitor: &mut V, expr: &ExpressionNode, sp: Span)
+pub fn walk_expr_node<V: Visitor+?Sized>(visitor: &mut V, expr: &ExpressionNode, sp: Span)
 {
   match expr {
     &StrLiteral(ref lit) => {
@@ -152,7 +152,7 @@ pub fn walk_expr_node<V: Visitor>(visitor: &mut V, expr: &ExpressionNode, sp: Sp
   }
 }
 
-pub fn walk_exprs<V: Visitor>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
+pub fn walk_exprs<V: Visitor+?Sized>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
 {
   assert!(exprs.len() > 0);
   for expr in exprs.iter() {
@@ -160,7 +160,7 @@ pub fn walk_exprs<V: Visitor>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
   }
 }
 
-pub fn walk_ty<V: Visitor>(visitor: &mut V, ty: &PTy)
+pub fn walk_ty<V: Visitor+?Sized>(visitor: &mut V, ty: &PTy)
 {
   // We don't want to borrow for the entire exploration, it'd
   // prevent mutable borrow.

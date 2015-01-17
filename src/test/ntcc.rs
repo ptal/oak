@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-peg!(
+peg!{
   grammar ntcc;
 
   // #![print(all)]
@@ -136,4 +136,4 @@ peg!(
   left_arrow = "<-" spacing
   dotdot = ".." spacing
   eq_bind = "=" spacing
-)
+}

@@ -15,10 +15,9 @@
 #![crate_name = "testpeg"]
 #![experimental]
 #![crate_type = "bin"]
+#![feature(plugin, box_syntax)]
 
-#![feature(phase,globs)]
-
-#[phase(plugin, link)]
+#[plugin]
 extern crate peg;
 extern crate term;
 
@@ -128,7 +127,7 @@ impl TestDisplay
 
   fn code_snippet<'a>(&self, code: &'a str) -> &'a str
   {
-    code.slice_to(std::cmp::min(code.len()-1, self.code_snippet_len))
+    code.slice_to(std::cmp::min(code.len()-1, self.code_snippet_len as usize))
   }
 
   pub fn success(&mut self, path: &Path)

@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::ExtCtxt;
 use middle::semantics::visitor::*;
+use monad::partial::Partial::*;
+
 
 pub struct UndeclaredAction<'a>
 {

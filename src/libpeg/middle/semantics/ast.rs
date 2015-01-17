@@ -17,12 +17,12 @@ pub use front::ast::Expression_::*;
 
 pub use rust::{ExtCtxt,P,Item};
 pub use identifier::*;
-pub use std::collections::HashMap;
 pub use attribute::model::Attribute;
 pub use front::ast::Rule;
 pub use monad::partial::Partial;
 
 use front::ast::Grammar as FGrammar;
+use std::collections::HashMap;
 
 pub struct Grammar{
   pub name: Ident,

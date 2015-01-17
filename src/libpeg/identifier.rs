@@ -44,7 +44,7 @@ pub fn is_camel_case(ident: Ident) -> bool
 {
   let ident = rust::get_ident(ident);
   assert!(!ident.get().is_empty());
-  let ident = ident.get().trim_chars('_');
+  let ident = ident.get().trim_matches('_');
 
   // start with a non-lowercase letter rather than non-uppercase
   // ones (some scripts don't have a concept of upper/lowercase)
@@ -74,7 +74,7 @@ fn is_snake_case(ident: Ident) -> bool
 {
     let ident = rust::get_ident(ident);
     assert!(!ident.get().is_empty());
-    let ident = ident.get().trim_chars('_');
+    let ident = ident.get().trim_matches('_');
 
     let mut allow_underscore = true;
     ident.chars().all(|c| {

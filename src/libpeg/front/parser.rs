@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
-use rust::{mk_sp, respan, ParserAttr};
+use rust::{ParserAttr, respan};
+use rust::Token as rtok;
+use rust::BinOpToken as rbtok;
 use std::str::Chars;
 
 use front::ast::*;
@@ -59,14 +60,14 @@ impl<'a> Parser<'a>
           token_string).as_slice())
     }
     let grammar_name = self.rp.parse_ident();
-    self.rp.expect(&rust::Semi);
+    self.rp.expect(&rtok::Semi);
     grammar_name
   }
 
   fn eat_grammar_keyword(&mut self) -> bool
   {
     let is_grammar_kw = match self.rp.token {
-      rust::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_slice(),
+      rtok::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_slice(),
       _ => false
     };
     if is_grammar_kw { self.rp.bump() }
@@ -77,7 +78,7 @@ impl<'a> Parser<'a>
   {
     let mut rules = vec![];
     let mut rust_items = vec![];
-    while self.rp.token != rust::Eof
+    while self.rp.token != rtok::Eof
     {
       self.rp.parse_item(vec![]).map_or_else(
         || rules.push(self.parse_rule()),
@@ -90,7 +91,7 @@ impl<'a> Parser<'a>
   {
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
-    self.rp.expect(&rust::Eq);
+    self.rp.expect(&rtok::Eq);
     let body = self.parse_rule_rhs(id_to_string(name.node).as_slice());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
@@ -128,7 +129,7 @@ impl<'a> Parser<'a>
       choices.push(semantic_action);
       let token = self.rp.token.clone();
       match token {
-        rust::BinOp(rust::Slash) => self.rp.bump(),
+        rtok::BinOp(rbtok::Slash) => self.rp.bump(),
         _ => break
       }
     }
@@ -144,7 +145,7 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::Gt => {
+      rtok::Gt => {
         self.rp.bump();
         let fun_name = self.rp.parse_ident();
         self.last_respan(SemanticAction(expr, fun_name))
@@ -177,17 +178,17 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::Not => {
+      rtok::Not => {
         self.parse_prefix(rule_name, |e| NotPredicate(e))
       }
-      rust::BinOp(rust::And) => {
+      rtok::BinOp(rbtok::And) => {
         self.parse_prefix(rule_name, |e| AndPredicate(e))
       }
       _ => self.parse_rule_suffixed(rule_name)
     }
   }
 
-  fn parse_prefix(&mut self, rule_name: &str, make_prefix: F) -> Option<Box<Expression>>
+  fn parse_prefix<F>(&mut self, rule_name: &str, make_prefix: F) -> Option<Box<Expression>>
    where F: Fn(Box<Expression>) -> ExpressionNode
   {
     let lo = self.rp.span.lo;
@@ -219,15 +220,15 @@ impl<'a> Parser<'a>
     let hi = self.rp.span.hi;
     let token = self.rp.token.clone();
     match token {
-      rust::BinOp(rust::Star) => {
+      rtok::BinOp(rbtok::Star) => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, ZeroOrMore(expr)))
       },
-      rust::BinOp(rust::Plus) => {
+      rtok::BinOp(rbtok::Plus) => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, OneOrMore(expr)))
       },
-      rust::Question => {
+      rtok::Question => {
         self.rp.bump();
         Some(spanned_expr(lo, hi, Optional(expr)))
       },
@@ -245,32 +246,32 @@ impl<'a> Parser<'a>
     let token = self.rp.token.clone();
     if token.is_keyword(rust::Keyword::Fn) { return None }
     match token {
-      rust::Literal(rust::Lit::Str_(name),_) => {
+      rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.rp.bump();
         Some(self.last_respan(StrLiteral(name_to_string(name))))
       },
-      rust::Dot => {
+      rtok::Dot => {
         self.rp.bump();
         Some(self.last_respan(AnySingleChar))
       },
-      rust::OpenDelim(rust::Paren) => {
+      rtok::OpenDelim(rust::DelimToken::Paren) => {
         self.rp.bump();
         let res = self.parse_rule_rhs(rule_name);
-        self.rp.expect(&rust::CloseDelim(rust::Paren));
+        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren));
         Some(res)
       },
-      rust::Ident(id, _) => {
+      rtok::Ident(id, _) => {
         if self.is_rule_lhs() { None }
         else {
           self.rp.bump();
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
-      rust::OpenDelim(rust::Bracket) => {
+      rtok::OpenDelim(rust::DelimToken::Bracket) => {
         self.rp.bump();
         let res = self.parse_char_class(rule_name);
         match self.rp.token {
-          rust::CloseDelim(rust::Bracket) => {
+          rtok::CloseDelim(rust::DelimToken::Bracket) => {
             self.rp.bump();
             res
           },
@@ -293,7 +294,7 @@ impl<'a> Parser<'a>
   {
     let token = self.rp.token.clone();
     match token {
-      rust::Literal(rust::Lit::Str_(name),_) => {
+      rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.rp.bump();
         let cooked_lit = rust::str_lit(name_to_string(name).as_slice());
         self.parse_set_of_char_range(&cooked_lit, rule_name)
@@ -374,6 +375,6 @@ impl<'a> Parser<'a>
 
   fn is_rule_lhs(&mut self) -> bool
   {
-    self.rp.look_ahead(1, |t| match t { &rust::Eq => true, _ => false})
+    self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
   }
 }
