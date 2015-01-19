@@ -21,6 +21,7 @@ peg!{
   #[start]
   start = spacing expression
 
+  #[invisible_type]
   expression
     = sum
     / par

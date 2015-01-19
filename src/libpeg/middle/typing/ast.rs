@@ -78,8 +78,7 @@ pub type ExpressionNode = Expression_<Expression>;
 // Type pointer. The types are a DAG structure because type loops are guarded
 // by the RuleTypePlaceholder: types are indirectly referenced through a ident.
 // The type can be replaced during the inlining or propagation and that's why
-// we use a RefCell. Note that a RefCell has a unique owner or is guarded by
-// a Rc (proof by induction).
+// we use a RefCell.
 pub type PTy = RefCell<Rc<ExpressionType>>;
 
 pub fn make_pty(expr: ExpressionType) -> PTy
@@ -87,7 +86,7 @@ pub fn make_pty(expr: ExpressionType) -> PTy
   RefCell::new(Rc::new(expr))
 }
 
-#[derive(Clone)]
+#[derive(Clone, Show)]
 pub enum ExpressionType
 {
   Character,
@@ -128,22 +127,6 @@ impl ExpressionType
       &UnitPropagate => true,
       &Unit => true,
       _ => false
-    }
-  }
-
-  pub fn is_type_ph(&self) -> bool
-  {
-    match self {
-      &RuleTypePlaceholder(_) => true,
-      _ => false
-    }
-  }
-
-  pub fn ph_ident(&self) -> Ident
-  {
-    match self {
-      &RuleTypePlaceholder(ref ident) => ident.clone(),
-      _ => panic!("Cannot extract ident of `RuleTypePlaceholder` from `ExpressionType`.")
     }
   }
 }

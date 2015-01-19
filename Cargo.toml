@@ -15,6 +15,9 @@ crate_type = ["dylib"]
 name = "testpeg"
 path = "src/test/testpeg.rs"
 
+[dependencies]
+term = "^0.1.8"
+
 [dependencies.attribute]
 
 git = "https://github.com/ptal/Rust.attribute"

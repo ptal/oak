@@ -14,8 +14,8 @@
 
 #![crate_name = "peg"]
 #![experimental]
-#![comment = "Parsing Expression Grammar Library"]
-#![license = "Apache v2"]
+// #![comment = "Parsing Expression Grammar Library"]
+// #![license = "Apache v2"]
 #![crate_type = "dylib"]
 
 #![feature(plugin_registrar, quote, box_syntax)]

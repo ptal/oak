@@ -65,12 +65,6 @@ pub struct Expression
   pub node: ExpressionNode
 }
 
-// impl Grammar {
-//   pub fn find_fn_by_name(&self, id: Ident) -> Option<rust::P<rust::Item>> {
-//     self.functions.
-//   }
-// }
-
 pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
 {
   respan_expr(mk_sp(lo, hi), expr)

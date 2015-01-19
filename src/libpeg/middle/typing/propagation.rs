@@ -108,6 +108,11 @@ impl<'a> Visitor for Propagator<'a>
     }
   }
 
+  fn visit_rule(&mut self, rule: &Rule)
+  {
+    walk_rule(self, rule);
+  }
+
   fn visit_unnamed_sum(&mut self, _parent: &PTy, inners: &Vec<PTy>)
   {
     assert!(inners.len() > 0, "PEG compiler bug: A sum type with only one branch \
@@ -115,10 +120,10 @@ impl<'a> Visitor for Propagator<'a>
   }
 
 
-  fn visit_rule_type_ph(&mut self, _parent: &PTy, _ident: Ident)
+  fn visit_rule_type_ph(&mut self, _parent: &PTy, ident: Ident)
   {
-    assert!(false, "PEG compiler bug: Hit a type placeholder node while propagating, \
-      they should all be removed during the inlining phase.");
+    assert!(false, "PEG compiler bug: Hit a type placeholder node (`{}`, `{:?}`) while propagating, \
+      they should all be removed during the inlining phase.", ident, _parent);
   }
 }
 

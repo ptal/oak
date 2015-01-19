@@ -16,6 +16,7 @@
 #![experimental]
 #![crate_type = "bin"]
 #![feature(plugin, box_syntax)]
+#![allow(unstable)]
 
 #[plugin]
 extern crate peg;

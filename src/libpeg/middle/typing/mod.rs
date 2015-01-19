@@ -33,7 +33,7 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
     rust_items: agrammar.rust_items,
     attributes: agrammar.attributes
   };
-  InferenceEngine::infer(cx, &mut grammar, agrammar.rules);
+  InferenceEngine::infer(&mut grammar, agrammar.rules);
   inlining_phase(cx, &mut grammar);
   propagation_phase(&mut grammar);
   Partial::Value(grammar)

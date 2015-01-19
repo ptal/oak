@@ -55,15 +55,15 @@ impl<'a> Inliner<'a>
 
 impl<'a> Visitor for Inliner<'a>
 {
-  fn visit_rule_type_ph(&mut self, ty: &PTy, ident: Ident)
+  fn visit_rule_type_ph(&mut self, parent: &PTy, ident: Ident)
   {
     let rule = self.rules.get(&ident).unwrap();
     match &rule.attributes.ty.style {
       &RuleTypeStyle::Inline => {
         let this = self;
-        *ty.borrow_mut() = this.rules.get(&ident).unwrap().def.ty.borrow().clone();
+        *parent.borrow_mut() = this.rules.get(&ident).unwrap().def.ty.borrow().clone();
       },
-      &RuleTypeStyle::Invisible(_) => *ty.borrow_mut() = Rc::new(UnitPropagate)
+      &RuleTypeStyle::Invisible(_) => *parent.borrow_mut() = Rc::new(UnitPropagate)
     }
   }
 }

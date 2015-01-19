@@ -84,7 +84,6 @@ pub trait Visitor
   fn visit_unit(&mut self) {}
   fn visit_unit_propagate(&mut self, _parent: &PTy) {}
   fn visit_rule_type_ph(&mut self, _parent: &PTy, _ident: Ident) {}
-  fn visit_rule_type_name(&mut self, _parent: &PTy, _ident: Ident) {}
   fn visit_vector(&mut self, _parent: &PTy, _inner: &PTy) {}
   fn visit_tuple(&mut self, _parent: &PTy, _inners: &Vec<PTy>) {}
   fn visit_optional_ty(&mut self, _parent: &PTy, _inner: &PTy) {}

@@ -20,17 +20,15 @@ use middle::typing::visitor::*;
 use middle::typing::ast::ExpressionType::*;
 use rust;
 
-pub struct InferenceEngine<'cx, 'r>
+pub struct InferenceEngine<'r>
 {
-  cx: &'cx ExtCtxt<'cx>,
   grammar: &'r mut Grammar
 }
 
-impl<'cx, 'r> InferenceEngine<'cx, 'r>
+impl<'r> InferenceEngine<'r>
 {
-  pub fn infer(cx: &'cx ExtCtxt, grammar: &'r mut Grammar, arules: HashMap<Ident, ARule>) {
+  pub fn infer(grammar: &'r mut Grammar, arules: HashMap<Ident, ARule>) {
     let mut engine = InferenceEngine {
-      cx: cx,
       grammar: grammar
     };
     engine.infer_rules_type(arules);

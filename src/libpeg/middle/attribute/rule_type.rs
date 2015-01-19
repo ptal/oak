@@ -27,10 +27,9 @@ pub enum RuleTypeStyle
 
 impl RuleTypeStyle
 {
-  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
+  pub fn new(_: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
   {
     let invisible_type = access::plain_value(model, "invisible_type");
-    let invisible = invisible_type.has_value() || false;
     if invisible_type.has_value() {
       Invisible(invisible_type.span())
     } else {
