@@ -173,7 +173,6 @@ pub fn walk_ty<V: Visitor+?Sized>(visitor: &mut V, ty: &PTy)
     &Unit => visitor.visit_unit(),
     &UnitPropagate => visitor.visit_unit_propagate(ty),
     &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(ty, id.clone()),
-    &RuleTypeName(ref id) => visitor.visit_rule_type_name(ty, id.clone()),
     &Vector(ref sub_ty) => visitor.visit_vector(ty, sub_ty),
     &Tuple(ref sub_tys) => visitor.visit_tuple(ty, sub_tys),
     &OptionalTy(ref sub_ty) => visitor.visit_optional_ty(ty, sub_ty),

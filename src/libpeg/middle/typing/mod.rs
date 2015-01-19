@@ -31,7 +31,6 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
     name: agrammar.name,
     rules: HashMap::with_capacity(agrammar.rules.len()),
     rust_items: agrammar.rust_items,
-    named_types: HashMap::with_capacity(agrammar.rules.len()),
     attributes: agrammar.attributes
   };
   InferenceEngine::infer(cx, &mut grammar, agrammar.rules);

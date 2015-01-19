@@ -16,11 +16,11 @@ use middle::typing::visitor::*;
 
 use middle::typing::ast::ExpressionType::*;
 
-// The UnitPropagate (expressed with P in the following rules) nodes
+// The UnitPropagate nodes (expressed with P in the following rules)
 // are propagated following these rules:
 //  * Vector(P) -> P
 //  * OptionalTy(P) -> P
-//  * Tuple([e*]) -> P (with all e=P) // Tested before any other propagation, if there is a (), it doesn't propagate.
+//  * Tuple([e,..,e']) -> P (with all e=P) // Tested before any other propagation, if there is a (), it doesn't propagate.
 //  * Tuple([e, P, e']) -> Tuple([e, e'])
 //  * Tuple([e, (), e']) -> Tuple([e, e'])
 //  * UnnamedSum([e, P, e']) -> UnnamedSum([e, (), e'])

@@ -55,14 +55,16 @@ impl<'a> InliningLoop<'a>
     // Consider the smallest cycle.
     let mut trimmed_cycle = vec![in_cycle];
     for id in self.current_inline_path.iter().rev() {
-      trimmed_cycle.push(id.clone());
       if *id == in_cycle {
         break;
       }
+      trimmed_cycle.push(id.clone());
     }
-    self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. Indirectly (or not), \
-      the type of a rule must be inlined into itself, which is impossible. Break the cycle by removing \
-      one of the inlining annotation.");
+    self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. \
+      The type of a rule must be inlined into itself (indirectly or not), which is impossible.");
+    self.cx.span_note(self.rules.get(&in_cycle).unwrap().name.span, "Recursive data type are not handled automatically, \
+      you must create it yourself with a semantic action and a function. If you don't care about the value of this rule,
+      annotate it with #[invisible_type].");
     for cycle_node in trimmed_cycle.iter().rev() {
       self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span, "This rule is in the inlining loop.");
     }

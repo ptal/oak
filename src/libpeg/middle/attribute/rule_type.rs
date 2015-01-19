@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::attribute::rule_type::RuleTypeStyle::*;
+use middle::attribute::rule_type::RuleTypeStyle::*;
 use attribute::model::*;
 use attribute::compile_error::CompileErrorLevel::*;
 use attribute::model::AttributeLitModel::*;
@@ -21,8 +21,7 @@ use attribute::model::AttributeModel::*;
 #[derive(Clone)]
 pub enum RuleTypeStyle
 {
-  New,
-  Inline(Span),
+  Inline,
   Invisible(Span)
 }
 
@@ -30,32 +29,18 @@ impl RuleTypeStyle
 {
   pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
   {
-    let inline_type = access::plain_value(model, "inline_type");
     let invisible_type = access::plain_value(model, "invisible_type");
-    let inline = inline_type.has_value() || false;
     let invisible = invisible_type.has_value() || false;
-    if inline && invisible {
-      cx.span_err(inline_type.span(),
-        "Incoherent rule type specifiers, a rule can't be inlined and invisible.");
-      cx.span_note(invisible_type.span(),
-        "Previous declaration here.");
-      New
-    } else if inline {
-      Inline(inline_type.span())
-    } else if invisible {
+    if invisible_type.has_value() {
       Invisible(invisible_type.span())
     } else {
-      New
+      Inline
     }
   }
 
   pub fn model() -> AttributeArray
   {
     vec![
-      AttributeInfo::simple(
-        "inline_type",
-        "the type of the rule will be merged with the type of the calling site. No rule type will be created.",
-      ),
       AttributeInfo::simple(
         "invisible_type",
         "the calling site will ignore the type of this rule. The AST of the calling rule will not reference this rule.",

@@ -26,13 +26,11 @@ pub use std::cell::RefCell;
 use rust;
 use middle::typing::ast::ExpressionTypeVersion::*;
 use middle::typing::ast::ExpressionType::*;
-use middle::typing::ast::NamedExpressionType::*;
 
 pub struct Grammar
 {
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
-  pub named_types: HashMap<Ident, NamedExpressionType>,
   pub rust_items: HashMap<Ident, rust::P<rust::Item>>,
   pub attributes: GrammarAttributes
 }
@@ -78,8 +76,7 @@ impl Expression
 pub type ExpressionNode = Expression_<Expression>;
 
 // Type pointer. The types are a DAG structure because type loops are guarded
-// by the RuleTypePlaceholder or RuleTypeName constructors: types are indirectly
-// referenced through a ident.
+// by the RuleTypePlaceholder: types are indirectly referenced through a ident.
 // The type can be replaced during the inlining or propagation and that's why
 // we use a RefCell. Note that a RefCell has a unique owner or is guarded by
 // a Rc (proof by induction).
@@ -97,7 +94,6 @@ pub enum ExpressionType
   Unit,
   UnitPropagate,
   RuleTypePlaceholder(Ident),
-  RuleTypeName(Ident),
   Vector(PTy),
   Tuple(Vec<PTy>),
   OptionalTy(PTy),
@@ -105,21 +101,12 @@ pub enum ExpressionType
   Action(rust::FunctionRetTy)
 }
 
-#[derive(Clone)]
-pub enum NamedExpressionType
-{
-  Struct(String, Vec<(String, PTy)>),
-  StructTuple(String, Vec<PTy>),
-  Sum(String, Vec<(String, PTy)>),
-  TypeAlias(String, PTy)
-}
-
 impl Rule
 {
   pub fn is_inline(&self) -> bool
   {
     match self.attributes.ty.style {
-      Inline(_) => true,
+      RuleTypeStyle::Inline => true,
       _ => false
     }
   }

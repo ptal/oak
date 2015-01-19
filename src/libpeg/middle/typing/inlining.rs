@@ -20,7 +20,6 @@ use middle::typing::inlining_loop::InliningLoop;
 // The RuleTypePlaceholder(ident) are replaced following these rules:
 //  * if rules[ident].inline --> rules[ident].type
 //  * if rules[ident].invisible --> UnitPropagate
-//  * if rules[ident].new --> RuleTypeName(ident)
 // No loop can arise thanks to the InliningLoop analysis.
 
 pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
@@ -60,12 +59,11 @@ impl<'a> Visitor for Inliner<'a>
   {
     let rule = self.rules.get(&ident).unwrap();
     match &rule.attributes.ty.style {
-      &New => *ty.borrow_mut() = Rc::new(RuleTypeName(ident)),
-      &Inline(_) => {
+      &RuleTypeStyle::Inline => {
         let this = self;
         *ty.borrow_mut() = this.rules.get(&ident).unwrap().def.ty.borrow().clone();
       },
-      &Invisible(_) => *ty.borrow_mut() = Rc::new(UnitPropagate)
+      &RuleTypeStyle::Invisible(_) => *ty.borrow_mut() = Rc::new(UnitPropagate)
     }
   }
 }
