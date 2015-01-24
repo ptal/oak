@@ -17,8 +17,9 @@ pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
 use middle::typing::visitor::*;
-use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::ExprTy::*;
 use rust;
+use std::iter::{FromIterator, range};
 
 pub struct InferenceEngine<'r>
 {
@@ -62,23 +63,23 @@ impl<'r> InferenceEngine<'r>
       NotPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| NotPredicate(e)),
       AndPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| AndPredicate(e)),
       NonTerminalSymbol(ident) => self.infer_rule_type_ph(sp, ident),
-      ZeroOrMore(sub) => self.infer_sub_expr(sp, sub, |e| ZeroOrMore(e), |ty| Vector(ty)),
-      OneOrMore(sub) => self.infer_sub_expr(sp, sub, |e| OneOrMore(e), |ty| Vector(ty)),
-      Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), |ty| OptionalTy(ty)),
+      ZeroOrMore(sub) => self.infer_sub_expr(sp, sub, |e| ZeroOrMore(e), Vector),
+      OneOrMore(sub) => self.infer_sub_expr(sp, sub, |e| OneOrMore(e), Vector),
+      Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), OptionalTy),
       Sequence(sub) => self.infer_tuple_expr(sp, sub),
       Choice(sub) => self.infer_choice_expr(sp, sub),
-      SemanticAction(ref expr, ref id) => self.infer_semantic_action(sp, expr.clone(), id.clone()) // weird bug without ref/clone...
+      SemanticAction(sub, ident) => self.infer_semantic_action(sp, sub, ident)
     }
   }
 
   fn infer_char_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
   {
-    box Expression::new(sp, node, make_pty(Character))
+    box Expression::new(sp, node, Character)
   }
 
   fn infer_unit_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
   {
-    box Expression::new(sp, node, make_pty(Unit))
+    box Expression::new(sp, node, Unit)
   }
 
   fn infer_sub_unit_expr<F>(&self, sp: Span, sub: Box<AExpression>, make_node: F) -> Box<Expression>
@@ -91,45 +92,40 @@ impl<'r> InferenceEngine<'r>
   {
     box Expression::new(sp,
       NonTerminalSymbol(ident.clone()),
-      make_pty(RuleTypePlaceholder(ident)))
+      TypeOf(ident))
   }
 
-  fn infer_sub_expr<FNode, FType>(&self, sp: Span, sub: Box<AExpression>,
-    make_node: FNode, make_type: FType) -> Box<Expression>
-   where FNode: Fn(Box<Expression>) -> ExpressionNode,
-         FType: Fn(PTy) -> ExpressionType
+  fn infer_sub_expr<FNode>(&self, sp: Span, sub: Box<AExpression>,
+    make_node: FNode, ty: ExprTy) -> Box<Expression>
+   where FNode: Fn(Box<Expression>) -> ExpressionNode
   {
     let node = self.infer_expr_type(sub);
-    let ty = node.ty.clone();
-    box Expression::new(sp, make_node(node), make_pty(make_type(ty)))
+    box Expression::new(sp, make_node(node), ty)
   }
 
   fn infer_list_expr(&self, subs: Vec<Box<AExpression>>)
-    -> (Vec<Box<Expression>>, Vec<PTy>)
+    -> Vec<Box<Expression>>
   {
     let nodes : Vec<Box<Expression>> = subs.into_iter()
       .map(|sub| self.infer_expr_type(sub))
       .collect();
-    let tys = nodes.iter()
-      .map(|node| node.ty.clone())
-      .collect();
-    (nodes, tys)
   }
 
   fn infer_tuple_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
   {
-    let (nodes, tys) = self.infer_list_expr(subs);
+    let nodes = self.infer_list_expr(subs);
     if nodes.len() == 1 {
       nodes.into_iter().next().unwrap()
     } else {
-      box Expression::new(sp, Sequence(nodes), make_pty(Tuple(tys)))
+      let tys:Vec<usize> = FromIterator::from_iter(range(0,nodes.len()));
+      box Expression::new(sp, Sequence(nodes), Tuple(tys))
     }
   }
 
   fn infer_choice_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
   {
-    let (nodes, tys) = self.infer_list_expr(subs);
-    box Expression::new(sp, Choice(nodes), make_pty(UnnamedSum(tys)))
+    let nodes = self.infer_list_expr(subs);
+    box Expression::new(sp, Choice(nodes), Sum)
   }
 
   fn infer_semantic_action(&self, sp: Span, expr: Box<AExpression>, action_name: Ident) -> Box<Expression>
@@ -139,6 +135,6 @@ impl<'r> InferenceEngine<'r>
       &rust::Item_::ItemFn(ref decl, _,_,_,_) => decl.output.clone(),
       _ => panic!("Only function items are currently allowed.")
     };
-    box Expression::new(sp, SemanticAction(sub_expr, action_name), make_pty(Action(action_ty)))
+    box Expression::new(sp, SemanticAction(sub_expr, action_name), Action(action_ty))
   }
 }

@@ -20,12 +20,11 @@ pub use middle::attribute::attribute::*;
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
 
 pub use std::collections::HashMap;
-pub use std::rc::Rc;
 pub use std::cell::RefCell;
 
 use rust;
 use middle::typing::ast::ExpressionTypeVersion::*;
-use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::ExprTy::*;
 
 pub struct Grammar
 {
@@ -42,6 +41,17 @@ pub struct Rule
   pub attributes: RuleAttributes
 }
 
+impl Rule
+{
+  pub fn is_inline(&self) -> bool
+  {
+    match self.attributes.ty.style {
+      RuleTypeStyle::Inline => true,
+      _ => false
+    }
+  }
+}
+
 #[derive(Clone)]
 pub enum ExpressionTypeVersion
 {
@@ -56,76 +66,64 @@ pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
-  pub ty: PTy,
+  pub ty: RefCell<ExprTy>,
   pub version: ExpressionTypeVersion
 }
 
 impl Expression
 {
-  pub fn new(sp: Span, node: ExpressionNode, ty: PTy) -> Expression
+  pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression
   {
     Expression {
       span: sp,
       node: node,
-      ty: ty,
+      ty: RefCell::new(ty),
       version: Both
+    }
+  }
+
+  pub fn deref_type(&self, rules: &HashMap<Ident, Rule>) -> ExprTy {
+    if let TypeOf(rule_name) = self.ty.borrow().clone() {
+      rules.get(&rule_name).def.deref_type(rules)
+    } else {
+      self.ty.borrow().clone()
     }
   }
 }
 
 pub type ExpressionNode = Expression_<Expression>;
 
-// Type pointer. The types are a DAG structure because type loops are guarded
-// by the RuleTypePlaceholder: types are indirectly referenced through a ident.
-// The type can be replaced during the inlining or propagation and that's why
-// we use a RefCell.
-pub type PTy = RefCell<Rc<ExpressionType>>;
-
-pub fn make_pty(expr: ExpressionType) -> PTy
-{
-  RefCell::new(Rc::new(expr))
-}
-
 #[derive(Clone, Show)]
-pub enum ExpressionType
+pub enum ExprTy
 {
   Character,
   Unit,
   UnitPropagate,
-  RuleTypePlaceholder(Ident),
-  Vector(PTy),
-  Tuple(Vec<PTy>),
-  OptionalTy(PTy),
-  UnnamedSum(Vec<PTy>),
+  TypeOf(Ident),
+  Vector,
+  Tuple(Vec<usize>),
+  OptionalTy,
+  Sum,
   Action(rust::FunctionRetTy)
 }
 
-impl Rule
+impl ExprTy
 {
-  pub fn is_inline(&self) -> bool
-  {
-    match self.attributes.ty.style {
-      RuleTypeStyle::Inline => true,
-      _ => false
-    }
+  pub fn must_propagate(&self) -> bool {
+    *self == UnitPropagate
   }
-}
 
-impl ExpressionType
-{
-  pub fn must_propagate(&self) -> bool
-  {
-    match self {
-      &UnitPropagate => true,
+  pub fn is_unit(&self) -> bool {
+    match *self {
+      UnitPropagate | Unit => true,
       _ => false
     }
   }
 
-  pub fn is_unit(&self) -> bool
-  {
-    match self {
-      &UnitPropagate => true,
-      &Unit => true,
+  pub fn is_leaf(&self) -> bool {
+    match *self {
+        UnitPropagate | Unit
+      | Character | Action(_) => true,
       _ => false
     }
   }

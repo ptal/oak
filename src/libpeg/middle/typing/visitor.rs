@@ -14,7 +14,6 @@
 
 pub use middle::typing::ast::*;
 
-use middle::typing::ast::ExpressionType::*;
 use rust;
 
 pub trait Visitor
@@ -79,16 +78,6 @@ pub trait Visitor
   {
     walk_expr(self, expr);
   }
-
-  fn visit_character(&mut self) {}
-  fn visit_unit(&mut self) {}
-  fn visit_unit_propagate(&mut self, _parent: &PTy) {}
-  fn visit_rule_type_ph(&mut self, _parent: &PTy, _ident: Ident) {}
-  fn visit_vector(&mut self, _parent: &PTy, _inner: &PTy) {}
-  fn visit_tuple(&mut self, _parent: &PTy, _inners: &Vec<PTy>) {}
-  fn visit_optional_ty(&mut self, _parent: &PTy, _inner: &PTy) {}
-  fn visit_unnamed_sum(&mut self, _parent: &PTy, _inners: &Vec<PTy>) {}
-  fn visit_action_ty(&mut self, _parent: &PTy, _inner: &rust::FunctionRetTy) {}
 }
 
 pub fn walk_grammar<V: Visitor+?Sized>(visitor: &mut V, grammar: &Grammar)
@@ -106,7 +95,6 @@ pub fn walk_rule<V: Visitor+?Sized>(visitor: &mut V, rule: &Rule)
 pub fn walk_expr<V: Visitor+?Sized>(visitor: &mut V, expr: &Box<Expression>)
 {
   walk_expr_node(visitor, &expr.node, expr.span.clone());
-  walk_ty(visitor, &expr.ty);
 }
 
 pub fn walk_expr_node<V: Visitor+?Sized>(visitor: &mut V, expr: &ExpressionNode, sp: Span)
@@ -156,26 +144,5 @@ pub fn walk_exprs<V: Visitor+?Sized>(visitor: &mut V, exprs: &Vec<Box<Expression
   assert!(exprs.len() > 0);
   for expr in exprs.iter() {
     visitor.visit_expr(expr);
-  }
-}
-
-pub fn walk_ty<V: Visitor+?Sized>(visitor: &mut V, ty: &PTy)
-{
-  // We don't want to borrow for the entire exploration, it'd
-  // prevent mutable borrow.
-  let ty_rc = {
-    let ty_ref = ty.borrow();
-    ty_ref.clone()
-  };
-  match &*ty_rc {
-    &Character => visitor.visit_character(),
-    &Unit => visitor.visit_unit(),
-    &UnitPropagate => visitor.visit_unit_propagate(ty),
-    &RuleTypePlaceholder(ref id) => visitor.visit_rule_type_ph(ty, id.clone()),
-    &Vector(ref sub_ty) => visitor.visit_vector(ty, sub_ty),
-    &Tuple(ref sub_tys) => visitor.visit_tuple(ty, sub_tys),
-    &OptionalTy(ref sub_ty) => visitor.visit_optional_ty(ty, sub_ty),
-    &UnnamedSum(ref sub_tys) => visitor.visit_unnamed_sum(ty, sub_tys),
-    &Action(ref rust_ty) => visitor.visit_action_ty(ty, rust_ty)
   }
 }

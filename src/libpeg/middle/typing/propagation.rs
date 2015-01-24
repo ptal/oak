@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use middle::typing::visitor::*;
-
-use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::ExprTy::*;
 
 // The UnitPropagate nodes (expressed with P in the following rules)
 // are propagated following these rules:
@@ -23,121 +22,194 @@ use middle::typing::ast::ExpressionType::*;
 //  * Tuple([e,..,e']) -> P (with all e=P) // Tested before any other propagation, if there is a (), it doesn't propagate.
 //  * Tuple([e, P, e']) -> Tuple([e, e'])
 //  * Tuple([e, (), e']) -> Tuple([e, e'])
-//  * UnnamedSum([e, P, e']) -> UnnamedSum([e, (), e'])
-// The sum stops the propagation (as well as rules).
+//  * Sum([e,...,e']) -> P (with all e=P)
+// Semantic actions stop propagation.
 
 // There are automatic propagation rules:
 //  * Tuple([e]) -> e
 //  * Tuple([]) -> ()
 
 // The parser already lifted up this expression:
-//  * UnnamedSum([e]) -> e
-
-// There is no propagation loops since it stops propagating at rule level.
+//  * Sum([e]) -> e
 
 pub fn propagation_phase(grammar: &mut Grammar)
 {
-  Propagator::propagate(&grammar.rules);
-  PropagatorCleaner::clean(&grammar.rules);
+  InterRulePropagation::propagate(&grammar.rules);
+  IntraRulePropagation::propagate(&grammar.rules);
+  UnitPropagateCleaner::clean(&grammar.rules);
 }
 
-struct Propagator<'a>
+trait Propagator
 {
-  rules: &'a HashMap<Ident, Rule>
+  fn visit_expr(&mut self, expr: &Box<Expression>) -> ExprTy;
+
+  fn propagate_from_inner(&mut self, parent: &Box<Expression>, expr: &Box<Expression>)
+  {
+    if self.visit_expr(expr) == UnitPropagate {
+      *parent.ty.borrow_mut() = UnitPropagate;
+    }
+  }
+
+  fn visit_choice(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
+  {
+    let sub_tys = self.visit_exprs(exprs);
+    if sub_tys.iter().all(|ty| ty == UnitPropagate) {
+      *parent.ty.borrow_mut() = UnitPropagate;
+    }
+  }
+
+  fn visit_sequence(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
+  {
+    let sub_tys = self.visit_exprs(exprs);
+    if let Tuple(inners) = parent.ty.borrow().clone() {
+      // If all children are UnitPropagate, we propagate too.
+      if inners.iter().all(|idx| sub_tys[idx] == UnitPropagate) {
+        *parent.ty.borrow_mut() = UnitPropagate;
+      } else {
+        // Remove Unit and UnitPropagate.
+        let mut inners: Vec<usize> = inners.into_iter()
+          .filter(|idx| sub_tys[idx].is_unit())
+          .collect();
+
+        *parent.ty.borrow_mut() =
+          if inners.is_empty() {
+            Unit
+          } else if inners.len() == 1 {
+            sub_tys[inners[0]]
+          } else {
+            Tuple(inners)
+          };
+      }
+    }
+  }
+
+  fn visit_exprs(&mut self, exprs: &Vec<Box<Expression>>) -> Vec<ExprTy>
+  {
+    exprs.iter().map(|e| self.visit_expr(e)).collect()
+  }
 }
 
-impl<'a> Propagator<'a>
+// No risk of loop because we stop at leaf types and
+// the inline loop analysis ensures there is no recursive
+// types.
+struct InterRulePropagation<'a>
+{
+  rules: &'a HashMap<Ident, Rule>,
+  visited: HashMap<Ident, bool>
+}
+
+impl<'a> InterRulePropagation<'a>
 {
   pub fn propagate(rules: &'a HashMap<Ident, Rule>)
   {
-    let mut propagator = Propagator {
-      rules: rules
+    let mut visited = HashMap::with_capacity(rules.len());
+    for id in rules.keys() {
+      visited.insert(id.clone(), false);
+    }
+    let mut propagator = InterRulePropagation {
+      rules: rules,
+      visited: visited
     };
-    propagator.propagate_rules();
+    propagator.visit_rules();
   }
 
-  fn propagate_rules(&mut self)
+  fn visit_rules(&mut self)
   {
     for rule in self.rules.values() {
       self.visit_rule(rule);
     }
   }
 
-  fn propagate_from_inner(&mut self, parent: &PTy, inner: &PTy)
+  fn visit_rule(&mut self, rule: &Rule) -> ExprTy {
+    let ident = &rule.node.ident;
+    if !*self.visited.get(ident).unwrap() {
+      *self.visited.get_mut(ident).unwrap() = true;
+      self.visit_expr(&rule.def);
+    }
+    rule.def.ty.borrow().clone()
+  }
+
+  fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident)
   {
-    if inner.borrow().must_propagate() {
-      *parent.borrow_mut() = Rc::new(UnitPropagate);
+    if self.visit_rule(self.rules.get(&id).unwrap()) == UnitPropagate {
+      *parent.ty.borrow_mut() = UnitPropagate;
     }
   }
 }
 
-// Post-order traversal of the tree, we propagate the children to know
-// if the current type needs to be lifted up.
-impl<'a> Visitor for Propagator<'a>
+impl<'a> Propagator for InterRulePropagation<'a>
 {
-  fn visit_vector(&mut self, parent: &PTy, inner: &PTy)
+  fn visit_expr(&mut self, expr: &Box<Expression>) -> ExprTy
   {
-    self.propagate_from_inner(parent, inner);
-  }
-
-  fn visit_optional_ty(&mut self, parent: &PTy, inner: &PTy)
-  {
-    self.propagate_from_inner(parent, inner);
-  }
-
-  fn visit_tuple(&mut self, parent: &PTy, inners: &Vec<PTy>)
-  {
-    // If all children are UnitPropagate, we propagate too.
-    if inners.iter().all(|ty| ty.borrow().must_propagate()) {
-      *parent.borrow_mut() = Rc::new(UnitPropagate);
-    } else {
-      // Remove Unit and UnitPropagate.
-      let mut inners: Vec<PTy> = inners.iter()
-        .filter(|ty| !ty.borrow().is_unit())
-        .map(|ty| RefCell::new(ty.borrow().clone()))
-        .collect();
-
-      *parent.borrow_mut() =
-        if inners.is_empty() {
-          Rc::new(Unit)
-        } else if inners.len() == 1 {
-          inners.pop().unwrap().borrow().clone()
-        } else {
-          Rc::new(Tuple(inners))
-        };
+    if !expr.ty.borrow().is_leaf() {
+      match &expr.node {
+        &NonTerminalSymbol(id) => self.visit_non_terminal(expr, id),
+        &Sequence(ref subs) => self.visit_sequence(expr, subs),
+        &Choice(ref subs) => self.visit_choice(expr, subs),
+          &ZeroOrMore(ref sub)
+        | &OneOrMore(ref sub)
+        | &Optional(ref sub) => self.propagate_from_inner(expr, sub),
+        _ => ()
+      }
     }
-  }
-
-  fn visit_rule(&mut self, rule: &Rule)
-  {
-    walk_rule(self, rule);
-  }
-
-  fn visit_unnamed_sum(&mut self, _parent: &PTy, inners: &Vec<PTy>)
-  {
-    assert!(inners.len() > 0, "PEG compiler bug: A sum type with only one branch \
-      has been detected during propagation (it should be lifted up during parsing).");
-  }
-
-
-  fn visit_rule_type_ph(&mut self, _parent: &PTy, ident: Ident)
-  {
-    assert!(false, "PEG compiler bug: Hit a type placeholder node (`{}`, `{:?}`) while propagating, \
-      they should all be removed during the inlining phase.", ident, _parent);
+    expr.ty.borrow().clone()
   }
 }
 
-// Remove UnitPropagate nodes.
-struct PropagatorCleaner<'a>
+struct IntraRulePropagation<'a>
 {
   rules: &'a HashMap<Ident, Rule>
 }
 
-impl<'a> PropagatorCleaner<'a>
+impl<'a> IntraRulePropagation<'a>
+{
+  pub fn propagate(rules: &'a HashMap<Ident, Rule>)
+  {
+    let mut propagator = IntraRulePropagation {
+      rules: rules
+    };
+    propagator.visit_rules();
+  }
+
+  fn visit_rules(&mut self)
+  {
+    for rule in self.rules.values() {
+      self.visit_expr(&rule.def);
+    }
+  }
+}
+
+impl<'a> Propagator for IntraRulePropagation<'a>
+{
+  fn visit_expr(&mut self, expr: &Box<Expression>) -> ExprTy
+  {
+    match &expr.node {
+      &NonTerminalSymbol(id) => (),
+      &Sequence(ref subs) => self.visit_sequence(expr, subs),
+      &Choice(ref subs) => self.visit_choice(expr, subs),
+        &ZeroOrMore(ref sub)
+      | &OneOrMore(ref sub)
+      | &Optional(ref sub) => self.propagate_from_inner(expr, sub),
+        &NotPredicate(ref sub)
+      | &AndPredicate(ref sub)
+      | &SemanticAction(ref sub, _) => self.visit_expr(sub),
+      _ => ()
+    }
+    expr.ty.borrow().clone()
+  }
+}
+
+// Remove UnitPropagate nodes.
+struct UnitPropagateCleaner<'a>
+{
+  rules: &'a HashMap<Ident, Rule>
+}
+
+impl<'a> UnitPropagateCleaner<'a>
 {
   pub fn clean(rules: &'a HashMap<Ident, Rule>)
   {
-    let mut cleaner = PropagatorCleaner {
+    let mut cleaner = UnitPropagateCleaner {
       rules: rules
     };
     cleaner.clean_rules();
@@ -151,10 +223,12 @@ impl<'a> PropagatorCleaner<'a>
   }
 }
 
-impl<'a> Visitor for PropagatorCleaner<'a>
+impl<'a> Visitor for UnitPropagateCleaner<'a>
 {
-  fn visit_unit_propagate(&mut self, parent: &PTy)
+  fn visit_expr(&mut self, expr: &Box<Expression>)
   {
-    *parent.borrow_mut() = Rc::new(Unit);
+    if expr.ty.borrow() == UnitPropagate {
+      *expr.ty.borrow_mut() = Unit;
+    }
   }
 }

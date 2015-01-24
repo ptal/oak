@@ -14,6 +14,10 @@
 
 use middle::typing::visitor::*;
 
+// The main goal of InliningLoop is to ensure that expr.deref_type_of(..)
+// will not loop with infinite deref. It also ensures that all rules are
+// typables (untypables rules on purpose must be annotated with #[invisible_type]).
+
 pub struct InliningLoop<'a>
 {
   cx: &'a ExtCtxt<'a>,
@@ -70,28 +74,25 @@ impl<'a> InliningLoop<'a>
   }
 }
 
-// We don't visit the expression but instead only its type.
 impl<'a> Visitor for InliningLoop<'a>
 {
-  // On the rule vertex.
   fn visit_rule(&mut self, rule: &Rule)
   {
     let ident = rule.name.node.clone();
     *self.visited.get_mut(&ident).unwrap() = true;
     if rule.is_inline() {
       self.current_inline_path.push(ident);
-      walk_rule_ty(self, rule);
+      walk_rule(self, rule);
       self.current_inline_path.pop();
     } else {
       let current_inline_path = self.current_inline_path.clone();
       self.current_inline_path.clear();
-      walk_rule_ty(self, rule);
+      walk_rule(self, rule);
       self.current_inline_path = current_inline_path;
     }
   }
 
-  // On the (inline) edge.
-  fn visit_rule_type_ph(&mut self, _ty: &PTy, ident: Ident)
+  fn visit_non_terminal_symbol(&mut self, _sp: Span, ident: Ident)
   {
     if !self.cycle_detected {
       let rule = self.rules.get(&ident).unwrap();
@@ -106,34 +107,12 @@ impl<'a> Visitor for InliningLoop<'a>
     }
   }
 
-  // Sum type breaks the potential cycles since it cannot be unnamed.
-  // Semantic action also break them because the action is already typed by the user.
+  // Semantic action breaks cycles because the action is already typed by the user.
   // character, unit and unit_propagate don't generate loops (trivial cases).
-
-  fn visit_vector(&mut self, _parent: &PTy, inner: &PTy)
+  fn visit_expr(&mut self, expr: &Box<Expression>)
   {
-    walk_ty(self, inner);
-  }
-
-  fn visit_tuple(&mut self, _parent: &PTy, inners: &Vec<PTy>)
-  {
-    walk_tys(self, inners);
-  }
-
-  fn visit_optional_ty(&mut self, _parent: &PTy, inner: &PTy)
-  {
-    walk_ty(self, inner);
-  }
-}
-
-pub fn walk_rule_ty<V: Visitor>(visitor: &mut V, rule: &Rule)
-{
-  walk_ty(visitor, &rule.def.ty);
-}
-
-fn walk_tys<V: Visitor>(visitor: &mut V, tys: &Vec<PTy>)
-{
-  for ty in tys.iter() {
-    walk_ty(visitor, ty);
+    if !expr.ty.is_leaf() {
+      walk_expr(self, expr);
+    }
   }
 }

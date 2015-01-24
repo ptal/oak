@@ -14,11 +14,13 @@
 
 use middle::typing::visitor::*;
 
-use middle::typing::ast::ExpressionType::*;
+use middle::typing::ast::ExprTy::*;
 use middle::typing::inlining_loop::InliningLoop;
 
-// The RuleTypePlaceholder(ident) are replaced following these rules:
-//  * if rules[ident].inline --> rules[ident].type
+// The RuleTypeOf(ident) are replaced following these rules:
+//  * if rules[ident].inline ->
+//    * if the type is a leaf (see is_leaf), it won't change so we take that type.
+//    * otherwise we keep RuleTypeOf(ident)
 //  * if rules[ident].invisible --> UnitPropagate
 // No loop can arise thanks to the InliningLoop analysis.
 
@@ -32,38 +34,55 @@ pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 
 struct Inliner<'a>
 {
-  rules: &'a HashMap<Ident, Rule>
+  rules: &'a HashMap<Ident, Rule>,
+  visited: HashMap<Ident, bool>,
 }
 
 impl<'a> Inliner<'a>
 {
-  pub fn inline(rules: &'a HashMap<Ident, Rule>)
+  pub fn inline(start_rule: Ident, rules: &'a HashMap<Ident, Rule>)
   {
+    let mut visited = HashMap::with_capacity(rules.len());
+    for id in rules.keys() {
+      visited.insert(id.clone(), false);
+    }
     let mut inliner = Inliner {
-      rules: rules
+      rules: rules,
+      visited: visited
     };
-    inliner.inline_rules();
+    inliner.visit_rule(rules.get(&start_rule).unwrap());
   }
 
-  fn inline_rules(&mut self)
-  {
-    for rule in self.rules.values() {
-      self.visit_rule(rule);
-    }
+  fn inline_ty(&self, rule: &Rule, expr: &Box<Expression>) {
+    *expr.ty.borrow_mut() =
+      match &rule.attributes.ty.style {
+        &RuleTypeStyle::Inline => rule.def.ty.deref_type(&self.rules),
+        &RuleTypeStyle::Invisible(_) => UnitPropagate
+      };
   }
 }
 
 impl<'a> Visitor for Inliner<'a>
 {
-  fn visit_rule_type_ph(&mut self, parent: &PTy, ident: Ident)
+  fn visit_rule(&mut self, rule: &Rule)
   {
-    let rule = self.rules.get(&ident).unwrap();
-    match &rule.attributes.ty.style {
-      &RuleTypeStyle::Inline => {
-        let this = self;
-        *parent.borrow_mut() = this.rules.get(&ident).unwrap().def.ty.borrow().clone();
-      },
-      &RuleTypeStyle::Invisible(_) => *parent.borrow_mut() = Rc::new(UnitPropagate)
+    let ident = rule.name.node.clone();
+    *self.visited.get_mut(&ident).unwrap() = true;
+    walk_rule(self, rule);
+  }
+
+  fn visit_expr(&mut self, expr: &Box<Expression>)
+  {
+    if let NonTerminalSymbol(ident) = expr.node {
+      let this = self;
+      let rule = this.rules.get(&ident).unwrap();
+      if !*this.visited.get(&ident).unwrap() {
+        self.visit_rule(rule);
+      }
+      (&*self).inline_ty(&rule, expr);
+    }
+    else {
+      walk_expr(self, expr);
     }
   }
 }
