@@ -19,7 +19,7 @@ use middle::typing::ast::*;
 use monad::partial::Partial;
 
 pub mod ast;
-pub mod inference;
+mod inference;
 mod visitor;
 mod inlining;
 mod inlining_loop;

@@ -25,7 +25,7 @@ use monad::partial::Partial::*;
 // not prevent the compilation of a second function to detect more errors in one run.
 // This intermediate state is represented by `Fake`.
 
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Show)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub enum Partial<T>
 {
   Value(T),

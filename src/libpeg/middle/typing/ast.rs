@@ -93,7 +93,7 @@ impl Expression
 
 pub type ExpressionNode = Expression_<Expression>;
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub enum ExprTy
 {
   Character,
