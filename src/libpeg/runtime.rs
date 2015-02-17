@@ -31,7 +31,7 @@ pub fn match_literal(input: &str, pos: usize, lit: &str, lit_len: usize)
 {
   if input.len() - pos == 0 {
     Err(format!("End of input when matching the literal `{}`", lit))
-  } else if input.slice_from(pos).starts_with(lit) {
+  } else if input[pos..].starts_with(lit) {
     Ok(pos + lit_len)
   } else {
     Err(format!("Expected `{}` but got `{}`", lit, input.slice_from(pos)))
@@ -47,7 +47,7 @@ pub fn make_result<'a>(input: &'a str, parsing_res: &Result<usize, String>)
       if pos == input.len() {
         Ok(None)
       } else {
-        Ok(Some(input.slice_from(pos)))
+        Ok(Some(&input[pos..]))
       }
     },
     &Err(ref msg) => Err(msg.clone())

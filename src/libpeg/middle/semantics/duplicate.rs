@@ -88,7 +88,6 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
 
   fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter) -> DuplicateItem<'a, Item>
   {
-    let mut iter = iter;
     for item in iter {
       let ident = item.ident();
       if self.items.contains_key(&ident) {

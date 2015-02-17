@@ -14,8 +14,6 @@
 
 pub use middle::typing::ast::*;
 
-use rust;
-
 pub trait Visitor
 {
   fn visit_grammar(&mut self, grammar: &Grammar)

@@ -13,20 +13,20 @@
 // limitations under the License.
 
 #![crate_name = "testpeg"]
-#![experimental]
+#![unstable]
 #![crate_type = "bin"]
-#![feature(plugin, box_syntax)]
+#![feature(plugin, box_syntax, rustc_private, io, path, core, collections, env)]
 
 #![plugin(peg)]
 
 extern crate peg;
 extern crate term;
 
-use std::os;
 use std::old_io::File;
 use std::old_io::fs::PathExtensions;
 use std::old_io::fs;
 use std::old_io as io;
+use std::iter::FromIterator;
 
 use peg::Parser;
 
@@ -128,7 +128,8 @@ impl TestDisplay
 
   fn code_snippet<'a>(&self, code: &'a str) -> &'a str
   {
-    code.slice_to(std::cmp::min(code.len()-1, self.code_snippet_len as usize))
+    let len = std::cmp::min(code.len()-1, self.code_snippet_len as usize);
+    &code[..len]
   }
 
   pub fn success(&mut self, path: &Path)
@@ -299,11 +300,11 @@ impl TestEngine
 
 fn main()
 {
-  let args = os::args();
+  let args: Vec<String> = FromIterator::from_iter(std::env::args());
   if args.len() != 2 {
-    panic!(format!("usage: {} <data-dir>", args.as_slice()[0]));
+    panic!(format!("usage: {} <data-dir>", args[0]));
   }
-  let data_path = Path::new(args.as_slice()[1].clone());
+  let data_path = Path::new(args[1].clone());
   if !data_path.is_dir() {
     panic!(format!("`{}` is not a valid data directory.", data_path.display()));
   }

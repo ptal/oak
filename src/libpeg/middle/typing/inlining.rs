@@ -16,7 +16,6 @@ use middle::typing::visitor::*;
 
 use middle::typing::ast::ExprTy::*;
 use middle::typing::inlining_loop::InliningLoop;
-use std::ops::Deref;
 
 // The RuleTypeOf(ident) are replaced following these rules:
 //  * if rules[ident].inline ->

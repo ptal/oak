@@ -68,7 +68,7 @@ trait Propagator
         *parent.ty.borrow_mut() = UnitPropagate;
       } else {
         // Remove Unit and UnitPropagate.
-        let mut inners: Vec<usize> = inners.into_iter()
+        let inners: Vec<usize> = inners.into_iter()
           .filter(|&idx| sub_tys[idx].is_unit())
           .collect();
 
@@ -185,7 +185,7 @@ impl<'a> Propagator for IntraRulePropagation<'a>
   fn visit_expr(&mut self, expr: &Box<Expression>) -> ExprTy
   {
     match &expr.node {
-      &NonTerminalSymbol(id) => (),
+      &NonTerminalSymbol(_) => (),
       &Sequence(ref subs) => self.visit_sequence(expr, subs),
       &Choice(ref subs) => self.visit_choice(expr, subs),
         &ZeroOrMore(ref sub)
