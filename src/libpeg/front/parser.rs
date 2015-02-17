@@ -16,6 +16,7 @@ use rust::{ParserAttr, respan};
 use rust::Token as rtok;
 use rust::BinOpToken as rbtok;
 use std::str::Chars;
+use std::iter::Peekable;
 
 use front::ast::*;
 use front::ast::Expression_::*;
@@ -314,9 +315,9 @@ impl<'a> Parser<'a>
   fn parse_set_of_char_range(&mut self, ranges: &String, rule_name: &str) -> Option<Box<Expression>>
   {
     let ranges = ranges.as_slice();
-    let mut ranges = ranges.chars();
+    let mut ranges = ranges.chars().peekable();
     let mut intervals = vec![];
-    match ranges.peekable().peek() {
+    match ranges.peek() {
       Some(&sep) if sep == '-' => {
         intervals.push(CharacterInterval{lo: '-', hi: '-'});
         ranges.next();
@@ -332,7 +333,7 @@ impl<'a> Parser<'a>
     Some(respan_expr(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
   }
 
-  fn parse_char_range<'b>(&mut self, ranges: &mut Chars<'b>, rule_name: &str) -> Option<Vec<CharacterInterval>>
+  fn parse_char_range<'b>(&mut self, ranges: &mut Peekable<Chars<'b>>, rule_name: &str) -> Option<Vec<CharacterInterval>>
   {
     let mut res = vec![];
     let separator_err = format!(
@@ -342,34 +343,36 @@ impl<'a> Parser<'a>
       rule_name);
     let span = self.rp.span;
     let lo = ranges.next();
-    let mut peekable = ranges.peekable();
-    let next = peekable.peek();
-    match (lo, next) {
-      (Some('-'), Some(_)) => {
-        self.rp.span_err(span, separator_err.as_slice());
-        None
-      },
-      (Some(lo), Some(&sep)) if sep == '-' => {
-        ranges.next();
-        match ranges.next() {
-          Some('-') => { self.rp.span_err(span, separator_err.as_slice()); None }
-          Some(hi) => {
-            res.push(CharacterInterval{lo: lo, hi: hi});
-            Some(res)
-          }
-          None => {
-            res.push(CharacterInterval{lo:lo, hi:lo});
-            res.push(CharacterInterval{lo:'-', hi: '-'});
-            Some(res)
-          }
+    // Twisted logic due to the fact that `peek` borrows the ranges...
+    let lo = {
+      let next = ranges.peek();
+      match (lo, next) {
+        (Some('-'), Some(_)) => {
+          self.rp.span_err(span, separator_err.as_slice());
+          return None
+        },
+        (Some(lo), Some(&sep)) if sep == '-' => {
+          lo
+        },
+        (Some(lo), _) => {
+          res.push(CharacterInterval{lo: lo, hi: lo}); // If lo == '-', it ends the class, allowed.
+          return Some(res)
         }
-
-      },
-      (Some(lo), _) => {
-        res.push(CharacterInterval{lo: lo, hi: lo}); // If lo == '-', it ends the class, allowed.
+        (None, _) => return None
+      }
+    };
+    ranges.next();
+    match ranges.next() {
+      Some('-') => { self.rp.span_err(span, separator_err.as_slice()); None }
+      Some(hi) => {
+        res.push(CharacterInterval{lo: lo, hi: hi});
         Some(res)
       }
-      (None, _) => None
+      None => {
+        res.push(CharacterInterval{lo:lo, hi:lo});
+        res.push(CharacterInterval{lo:'-', hi: '-'});
+        Some(res)
+      }
     }
   }
 

@@ -45,7 +45,7 @@ trait Propagator
 
   fn propagate_from_inner(&mut self, parent: &Box<Expression>, expr: &Box<Expression>)
   {
-    if self.visit_expr(expr) == UnitPropagate {
+    if self.visit_expr(expr).must_propagate() {
       *parent.ty.borrow_mut() = UnitPropagate;
     }
   }
@@ -53,7 +53,7 @@ trait Propagator
   fn visit_choice(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
   {
     let sub_tys = self.visit_exprs(exprs);
-    if sub_tys.iter().all(|ty| ty == UnitPropagate) {
+    if sub_tys.iter().all(|ty| ty.must_propagate()) {
       *parent.ty.borrow_mut() = UnitPropagate;
     }
   }
@@ -61,21 +61,22 @@ trait Propagator
   fn visit_sequence(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
   {
     let sub_tys = self.visit_exprs(exprs);
-    if let Tuple(inners) = parent.ty.borrow().clone() {
+    let parent_ty = parent.ty.borrow().clone();
+    if let Tuple(inners) = parent_ty {
       // If all children are UnitPropagate, we propagate too.
-      if inners.iter().all(|idx| sub_tys[idx] == UnitPropagate) {
+      if inners.clone().into_iter().all(|idx| sub_tys[idx].must_propagate()) {
         *parent.ty.borrow_mut() = UnitPropagate;
       } else {
         // Remove Unit and UnitPropagate.
         let mut inners: Vec<usize> = inners.into_iter()
-          .filter(|idx| sub_tys[idx].is_unit())
+          .filter(|&idx| sub_tys[idx].is_unit())
           .collect();
 
         *parent.ty.borrow_mut() =
           if inners.is_empty() {
             Unit
           } else if inners.len() == 1 {
-            sub_tys[inners[0]]
+            sub_tys[inners[0]].clone()
           } else {
             Tuple(inners)
           };
@@ -121,7 +122,7 @@ impl<'a> InterRulePropagation<'a>
   }
 
   fn visit_rule(&mut self, rule: &Rule) -> ExprTy {
-    let ident = &rule.node.ident;
+    let ident = &rule.name.node;
     if !*self.visited.get(ident).unwrap() {
       *self.visited.get_mut(ident).unwrap() = true;
       self.visit_expr(&rule.def);
@@ -131,7 +132,7 @@ impl<'a> InterRulePropagation<'a>
 
   fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident)
   {
-    if self.visit_rule(self.rules.get(&id).unwrap()) == UnitPropagate {
+    if self.visit_rule(self.rules.get(&id).unwrap()).must_propagate() {
       *parent.ty.borrow_mut() = UnitPropagate;
     }
   }
@@ -192,7 +193,7 @@ impl<'a> Propagator for IntraRulePropagation<'a>
       | &Optional(ref sub) => self.propagate_from_inner(expr, sub),
         &NotPredicate(ref sub)
       | &AndPredicate(ref sub)
-      | &SemanticAction(ref sub, _) => self.visit_expr(sub),
+      | &SemanticAction(ref sub, _) => { self.visit_expr(sub); },
       _ => ()
     }
     expr.ty.borrow().clone()
@@ -227,7 +228,7 @@ impl<'a> Visitor for UnitPropagateCleaner<'a>
 {
   fn visit_expr(&mut self, expr: &Box<Expression>)
   {
-    if expr.ty.borrow() == UnitPropagate {
+    if expr.ty.borrow().must_propagate() {
       *expr.ty.borrow_mut() = Unit;
     }
   }

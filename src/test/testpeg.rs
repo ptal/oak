@@ -16,17 +16,17 @@
 #![experimental]
 #![crate_type = "bin"]
 #![feature(plugin, box_syntax)]
-#![allow(unstable)]
 
-#[plugin]
+#![plugin(peg)]
+
 extern crate peg;
 extern crate term;
 
 use std::os;
-use std::io::File;
-use std::io::fs::PathExtensions;
-use std::io::fs;
-use std::io;
+use std::old_io::File;
+use std::old_io::fs::PathExtensions;
+use std::old_io::fs;
+use std::old_io as io;
 
 use peg::Parser;
 

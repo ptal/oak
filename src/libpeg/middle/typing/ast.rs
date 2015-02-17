@@ -84,7 +84,7 @@ impl Expression
 
   pub fn deref_type(&self, rules: &HashMap<Ident, Rule>) -> ExprTy {
     if let TypeOf(rule_name) = self.ty.borrow().clone() {
-      rules.get(&rule_name).def.deref_type(rules)
+      rules.get(&rule_name).unwrap().def.deref_type(rules)
     } else {
       self.ty.borrow().clone()
     }
@@ -93,7 +93,7 @@ impl Expression
 
 pub type ExpressionNode = Expression_<Expression>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ExprTy
 {
   Character,

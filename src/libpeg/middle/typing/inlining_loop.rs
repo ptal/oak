@@ -111,7 +111,7 @@ impl<'a> Visitor for InliningLoop<'a>
   // character, unit and unit_propagate don't generate loops (trivial cases).
   fn visit_expr(&mut self, expr: &Box<Expression>)
   {
-    if !expr.ty.is_leaf() {
+    if !expr.ty.borrow().is_leaf() {
       walk_expr(self, expr);
     }
   }

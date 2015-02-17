@@ -68,7 +68,13 @@ impl<'r> InferenceEngine<'r>
       Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), OptionalTy),
       Sequence(sub) => self.infer_tuple_expr(sp, sub),
       Choice(sub) => self.infer_choice_expr(sp, sub),
-      SemanticAction(sub, ident) => self.infer_semantic_action(sp, sub, ident)
+      workaround => { // Waiting for Rust FIX: collaterally moved values.
+        if let SemanticAction(sub, ident) = workaround {
+          self.infer_semantic_action(sp, sub, ident)
+        } else {
+          panic!("impossible to reach.");
+        }
+      }
     }
   }
 
@@ -106,9 +112,9 @@ impl<'r> InferenceEngine<'r>
   fn infer_list_expr(&self, subs: Vec<Box<AExpression>>)
     -> Vec<Box<Expression>>
   {
-    let nodes : Vec<Box<Expression>> = subs.into_iter()
+    subs.into_iter()
       .map(|sub| self.infer_expr_type(sub))
-      .collect();
+      .collect()
   }
 
   fn infer_tuple_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>

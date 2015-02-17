@@ -71,7 +71,6 @@ impl<'cx> PegCompiler<'cx>
 
     let grammar_name = grammar.name;
     let code = quote_item!(self.cx,
-      extern crate peg;
       pub mod $grammar_name
       {
         #![allow(dead_code)]
@@ -81,6 +80,29 @@ impl<'cx> PegCompiler<'cx>
         $parser
       }
     ).unwrap();
+
+    let peg_crate = quote_item!(self.cx,
+      extern crate peg;
+    ).unwrap();
+
+    let code = match &code.node {
+      &rust::ItemMod(ref module) => {
+        let mut items = vec![peg_crate];
+        items.push_all(module.items.clone().as_slice());
+        rust::P(rust::Item {
+          ident: code.ident,
+          attrs: code.attrs.clone(),
+          id: rust::DUMMY_NODE_ID,
+          node: rust::ItemMod(rust::Mod{
+            inner: rust::DUMMY_SP,
+            items: items
+          }),
+          vis: rust::Visibility::Public,
+          span: rust::DUMMY_SP
+        })
+      },
+      _ => panic!("Bug")
+    };
 
     if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(

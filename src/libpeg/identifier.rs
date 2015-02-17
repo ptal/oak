@@ -15,17 +15,18 @@
 extern crate unicode;
 
 use rust;
+use std::ops::Deref;
 pub use std::string::String;
 pub use rust::{Ident, Name};
 
 pub fn id_to_string(id: Ident) -> String
 {
-  String::from_str(rust::get_ident(id).get())
+  String::from_str(rust::get_ident(id).deref())
 }
 
 pub fn name_to_string(name: Name) -> String
 {
-  String::from_str(rust::get_name(name).get())
+  String::from_str(rust::get_name(name).deref())
 }
 
 pub fn string_to_lowercase(s: &String) -> String
