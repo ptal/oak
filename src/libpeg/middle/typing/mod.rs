@@ -15,6 +15,7 @@
 use middle::typing::inference::*;
 use middle::typing::inlining::*;
 use middle::typing::propagation::*;
+use middle::typing::selection::*;
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
@@ -24,6 +25,7 @@ mod visitor;
 mod inlining;
 mod inlining_loop;
 mod propagation;
+mod selection;
 
 pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
 {
@@ -36,5 +38,6 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
   InferenceEngine::infer(&mut grammar, agrammar.rules);
   inlining_phase(cx, &mut grammar);
   propagation_phase(&mut grammar);
+  selection_phase(&mut grammar);
   Partial::Value(grammar)
 }

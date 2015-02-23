@@ -52,7 +52,7 @@ impl Rule
   }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ExpressionTypeVersion
 {
   Typed,
@@ -60,8 +60,15 @@ pub enum ExpressionTypeVersion
   Both
 }
 
+impl ExpressionTypeVersion
+{
+  pub fn merge(self, other: ExpressionTypeVersion) -> ExpressionTypeVersion {
+    if self != other { Both }
+    else { self }
+  }
+}
+
 // Explicitly typed expression.
-#[derive(Clone)]
 pub struct Expression
 {
   pub span: Span,
