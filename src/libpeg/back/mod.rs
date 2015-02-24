@@ -68,6 +68,7 @@ impl<'cx> PegCompiler<'cx>
       {
         #![allow(dead_code)]
         #![allow(unused_parens)]
+        #![allow(plugin_as_library)] // for the runtime.
 
         $parser
       }
