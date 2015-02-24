@@ -104,7 +104,7 @@ impl Selector
     if self.mark_if_not_visited(rule_id, context) {
       let rule = rules.get_mut(&rule_id).unwrap();
       let to_visit = ExpressionVisitor::visit(&mut rule.def, context, first_visit);
-      self.to_visit.push_all(&to_visit[]);
+      self.to_visit.push_all(&to_visit[..]);
     }
   }
 }

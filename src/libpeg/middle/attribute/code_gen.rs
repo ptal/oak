@@ -17,7 +17,6 @@ use attribute::model::AttributeModel::*;
 
 pub struct CodeGeneration
 {
-  pub ast: bool,
   pub parser: bool
 }
 
@@ -27,7 +26,6 @@ impl CodeGeneration
   {
     let model = access::sub_model(model, "disable_code");
     CodeGeneration {
-      ast: !access::plain_value_or(model, "ast", false),
       parser: !access::plain_value_or(model, "parser", false)
     }
   }
@@ -41,10 +39,6 @@ impl CodeGeneration
         AttributeInfo::simple(
           "parser",
           "do not generate the parser code."
-        ),
-        AttributeInfo::simple(
-          "ast",
-          "do not generate the abstract syntax tree code."
         )
       ])
     )]

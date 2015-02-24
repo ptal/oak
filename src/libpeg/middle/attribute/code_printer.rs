@@ -18,7 +18,6 @@ use attribute::model::AttributeModel::*;
 pub struct CodePrinter
 {
   pub info: bool,
-  pub ast: bool,
   pub parser: bool
 }
 
@@ -27,14 +26,11 @@ impl CodePrinter
   pub fn new(model: &AttributeArray) -> CodePrinter
   {
     let model = access::sub_model(model, "print");
-    let ast = access::plain_value_or(model, "ast", false);
     let parser = access::plain_value_or(model, "parser", false);
     let info = access::plain_value_or(model, "info", false);
-    let code = access::plain_value_or(model, "code", false);
     let all = access::plain_value_or(model, "all", false);
     CodePrinter {
-      ast: ast || code || all,
-      parser: parser || code || all,
+      parser: parser || all,
       info: info || all
     }
   }
@@ -50,16 +46,8 @@ impl CodePrinter
           "output the parser code."
         ),
         AttributeInfo::simple(
-          "ast",
-          "output the abstract syntax tree code."
-        ),
-        AttributeInfo::simple(
           "info",
           "output a header comment with the library version and license."
-        ),
-        AttributeInfo::simple(
-          "code",
-          "output all the code generated, equivalent to `#![print(ast, parser)]`."
         ),
         AttributeInfo::simple(
           "all",

@@ -55,13 +55,6 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
   {
-    let ast =
-      if grammar.attributes.code_gen.ast {
-        Some(self.compile_ast(grammar))
-      } else {
-        None
-      };
-
     let parser =
       if grammar.attributes.code_gen.parser {
         Some(self.compile_parser(grammar))
@@ -76,7 +69,6 @@ impl<'cx> PegCompiler<'cx>
         #![allow(dead_code)]
         #![allow(unused_parens)]
 
-        $ast
         $parser
       }
     ).unwrap();
@@ -390,15 +382,5 @@ impl<'cx> PegCompiler<'cx>
       }
     ).unwrap());
     quote_expr!(self.cx, Parser::$fun_name(input, pos))
-  }
-
-  fn compile_ast(&mut self, _grammar: &Grammar) -> rust::P<rust::Item>
-  {
-    let ast = quote_item!(self.cx,
-      pub mod ast
-      {
-      }
-    ).unwrap();
-    ast
   }
 }

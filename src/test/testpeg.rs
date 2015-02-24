@@ -15,7 +15,7 @@
 #![crate_name = "testpeg"]
 #![unstable]
 #![crate_type = "bin"]
-#![feature(plugin, box_syntax, rustc_private, io, path, core, collections, env)]
+#![feature(plugin, box_syntax, rustc_private, core, collections, env, old_io, old_path)]
 
 #![plugin(peg)]
 
