@@ -20,6 +20,8 @@ use middle::typing::ast::ExpressionTypeVersion::*;
 // parsing functions.
 //
 // It can be untyped, typed or both depending on the calling contexts.
+// The calling context of the start rule is `UnTyped` if its type is unit and
+// is `Typed` otherwise.
 //
 // Semantics actions in an untyped context won't be called.
 
@@ -73,10 +75,21 @@ impl Selector
 
   fn rules_dfs(&mut self, rules: &mut HashMap<Ident, Rule>, start: Ident)
   {
-    self.to_visit.push((start, Typed));
+    self.to_visit.push((start, Selector::context_of_start_rule(rules, start.clone())));
     while !self.to_visit.is_empty() {
       let (rule_id, context) = self.to_visit.pop().unwrap();
       self.visit_rule(rules, rule_id, context);
+    }
+  }
+
+  fn context_of_start_rule(rules: &HashMap<Ident, Rule>, start: Ident)
+    -> ExpressionTypeVersion
+  {
+    if rules[start].def.ty.borrow().is_unit() {
+      UnTyped
+    }
+    else {
+      Typed
     }
   }
 
