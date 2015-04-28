@@ -20,7 +20,7 @@ pub trait Parser
 pub fn any_single_char(input: &str, pos: usize) -> Result<usize, String>
 {
   if input.len() - pos > 0 {
-    Ok(input.char_range_at(pos).next)
+    Ok(pos + input.char_at(pos).len_utf8())
   } else {
     Err(format!("End of input when matching `.`"))
   }
@@ -34,7 +34,7 @@ pub fn match_literal(input: &str, pos: usize, lit: &str, lit_len: usize)
   } else if input[pos..].starts_with(lit) {
     Ok(pos + lit_len)
   } else {
-    Err(format!("Expected `{}` but got `{}`", lit, input.slice_from(pos)))
+    Err(format!("Expected `{}` but got `{}`", lit, &input[pos..]))
   }
 }
 

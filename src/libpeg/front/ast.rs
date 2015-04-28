@@ -13,8 +13,8 @@
 // limitations under the License.
 
 pub use rust::{SpannedIdent, Spanned, Span, Attribute, BytePos, mk_sp};
-pub use rust;
 pub use identifier::*;
+use rust;
 
 pub struct Grammar{
   pub name: Ident,

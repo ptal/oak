@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate unicode;
-
 use rust;
 use std::ops::Deref;
 pub use std::string::String;
@@ -31,11 +29,5 @@ pub fn name_to_string(name: Name) -> String
 
 pub fn string_to_lowercase(s: &String) -> String
 {
-  let mut res = String::new();
-  for c in s.as_slice().chars()
-    .map(|c|c.to_lowercase())
-  {
-    res.push(c);
-  }
-  res
+  s.chars().flat_map(char::to_lowercase).collect()
 }

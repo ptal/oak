@@ -99,10 +99,10 @@ impl<'cx> PegCompiler<'cx>
 
     if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
-        rust::item_to_string(&*code).as_slice());
+        rust::item_to_string(&*code).as_str());
     }
 
-    rust::MacItems::new(Some(code).into_iter())
+    rust::MacEager::items(rust::SmallVector::one(code))
   }
 
   fn compile_parser(&mut self, grammar: &Grammar) -> Vec<rust::P<rust::Item>>
@@ -208,7 +208,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_str_literal(&mut self, lit_str: &String) -> rust::P<rust::Expr>
   {
-    let lit_str = lit_str.as_slice();
+    let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
     quote_expr!(self.cx,
       peg::runtime::match_literal(input, pos, $lit_str, $lit_len)
@@ -275,7 +275,7 @@ impl<'cx> PegCompiler<'cx>
     rust::gensym_ident(format!(
       "{}_{}_{}", prefix,
         self.current_lc_rule_name(),
-        self.gen_uid()).as_slice())
+        self.gen_uid()).as_str())
   }
 
   fn compile_star(&mut self, expr: &rust::P<rust::Expr>) -> rust::P<rust::Expr>

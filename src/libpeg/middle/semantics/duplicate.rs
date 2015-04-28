@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use rust::Span;
-pub use rust;
+use rust;
 pub use std::collections::HashMap;
 
 use middle::semantics::ast::*;
@@ -104,10 +104,10 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
   {
     self.cx.span_err(current.span(), format!(
       "duplicate definition of {} `{}`",
-      self.what_is_duplicate, current.ident()).as_slice());
+      self.what_is_duplicate, current.ident()).as_str());
     self.cx.span_note(pre.span(), format!(
       "previous definition of {} `{}` here",
-      self.what_is_duplicate, pre.ident()).as_slice());
+      self.what_is_duplicate, pre.ident()).as_str());
   }
 
   fn make(self) -> Partial<HashMap<Ident, Item>>

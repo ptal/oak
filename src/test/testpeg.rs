@@ -13,19 +13,19 @@
 // limitations under the License.
 
 #![crate_name = "testpeg"]
-#![unstable]
 #![crate_type = "bin"]
-#![feature(plugin, box_syntax, rustc_private, core, collections, env, old_io, old_path)]
+#![feature(plugin, str_char, convert, path_ext, box_syntax, rustc_private, collections)]
 
 #![plugin(peg)]
 
+#[allow(plugin_as_library)]
 extern crate peg;
 extern crate term;
 
-use std::old_io::File;
-use std::old_io::fs::PathExtensions;
-use std::old_io::fs;
-use std::old_io as io;
+use std::path::{PathBuf, Path};
+use std::fs::{File, read_dir, PathExt};
+use std::io;
+use std::io::Read;
 use std::iter::FromIterator;
 
 use peg::Parser;
@@ -100,7 +100,7 @@ impl TestDisplay
     result: &Result<Option<&'a str>, String>)
   {
     self.num_failure += 1;
-    let test_name = self.filestem(path);
+    let test_name = self.file_stem(path);
     self.write_line(term::color::RED, "[ failed ] ", &test_name);
     self.path(path);
     self.expected(expectation);
@@ -135,13 +135,13 @@ impl TestDisplay
   pub fn success(&mut self, path: &Path)
   {
     self.num_success += 1;
-    let test_name = self.filestem(path);
+    let test_name = self.file_stem(path);
     self.write_line(term::color::GREEN, "[ passed ] ", &test_name);
   }
 
-  fn filestem(&self, path: &Path) -> String
+  fn file_stem(&self, path: &Path) -> String
   {
-    format!("{}", path.filestem_str().unwrap())
+    format!("{}", path.file_stem().unwrap().to_str().unwrap())
   }
 
   pub fn warn(&mut self, msg: &String)
@@ -149,7 +149,7 @@ impl TestDisplay
     self.write_line(term::color::YELLOW, "  [ warning ] ", msg);
   }
 
-  pub fn fs_error(&mut self, msg: &str, path: &Path, io_err: &io::IoError)
+  pub fn fs_error(&mut self, msg: &str, path: &Path, io_err: &io::Error)
   {
     self.system_failure(&format!("{}", msg));
     self.path(path);
@@ -165,7 +165,7 @@ impl TestDisplay
   fn write_line(&mut self, color: color::Color, header: &str, msg: &String)
   {
     self.write_header(color, header);
-    self.write_msg(msg.as_slice());
+    self.write_msg(msg.as_str());
     self.write_msg("\n");
   }
 
@@ -200,14 +200,14 @@ impl<'a> Test<'a>
   {
     self.display.info(start_msg);
 
-    match fs::readdir(directory) {
+    match read_dir(directory) {
       Ok(dir_entries) => {
-        for entry in dir_entries.iter() {
+        for entry in dir_entries.map(Result::unwrap).map(|entry| entry.path()) {
           if entry.is_file() {
-            self.test_file(entry, expectation.clone());
+            self.test_file(entry.as_path(), expectation.clone());
           } else {
             self.display.warn(&format!("Entry ignored because it's not a file."));
-            self.display.path(entry);
+            self.display.path(entry.as_path());
           }
         }
       }
@@ -222,10 +222,11 @@ impl<'a> Test<'a>
     let mut file = File::open(filepath);
     match file {
       Ok(ref mut file) => {
-        let contents = file.read_to_end();
+        let mut buf_contents = vec![];
+        let contents = file.read_to_end(&mut buf_contents);
         match contents {
-          Ok(contents) => {
-            let utf8_contents = std::str::from_utf8(contents.as_slice());
+          Ok(_) => {
+            let utf8_contents = std::str::from_utf8(buf_contents.as_slice());
             self.test_input(utf8_contents.unwrap(), expectation, filepath);
           },
           Err(ref io_err) => {
@@ -254,22 +255,22 @@ impl<'a> Test<'a>
 
 struct TestEngine
 {
-  test_path : Path,
-  grammars : Vec<GrammarInfo>,
-  display : TestDisplay
+  test_path: PathBuf,
+  grammars: Vec<GrammarInfo>,
+  display: TestDisplay
 }
 
 impl TestEngine
 {
-  fn new(test_path: Path) -> TestEngine
+  fn new(test_path: PathBuf) -> TestEngine
   {
     if !test_path.is_dir() {
       panic!(format!("`{}` is not a valid grammar directory.", test_path.display()));
     }
     TestEngine{
-      test_path: test_path.clone(),
-      grammars : Vec::new(),
-      display : TestDisplay::new(20)
+      test_path: test_path,
+      grammars: Vec::new(),
+      display: TestDisplay::new(20)
     }
   }
 
@@ -282,7 +283,7 @@ impl TestEngine
   {
     self.display.title("    PEG library tests suite");
     for grammar in self.grammars.iter() {
-      let grammar_path = self.test_path.join(Path::new(grammar.name.clone()));
+      let grammar_path = self.test_path.join(Path::new(grammar.name.as_str()));
       self.display.info(&format!("Start tests of the grammar `{}`", grammar.name));
       self.display.path(&grammar_path);
       let mut test = Test{
@@ -304,12 +305,13 @@ fn main()
   if args.len() != 2 {
     panic!(format!("usage: {} <data-dir>", args[0]));
   }
-  let data_path = Path::new(args[1].clone());
+  let data_path = Path::new(args[1].as_str());
   if !data_path.is_dir() {
     panic!(format!("`{}` is not a valid data directory.", data_path.display()));
   }
-  let mut test_path = data_path.clone();
-  test_path.push("test");
+  let mut test_path = PathBuf::new();
+  test_path.push(data_path);
+  test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
   test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
   test_engine.register("type_name", box type_name::type_name::Parser::new());

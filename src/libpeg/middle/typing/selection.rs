@@ -85,7 +85,7 @@ impl Selector
   fn context_of_start_rule(rules: &HashMap<Ident, Rule>, start: Ident)
     -> ExpressionTypeVersion
   {
-    if rules[start].def.ty.borrow().is_unit() {
+    if rules[&start].def.ty.borrow().is_unit() {
       UnTyped
     }
     else {
@@ -95,7 +95,7 @@ impl Selector
 
   fn mark_if_not_visited(&mut self, rule_id: Ident, context: ExpressionTypeVersion) -> bool
   {
-    let visited = self.visited[rule_id];
+    let visited = self.visited[&rule_id];
     let new_visited = Some(visited.flat_merge(context));
     if new_visited != visited {
       *self.visited.get_mut(&rule_id).unwrap() = new_visited;
@@ -107,7 +107,7 @@ impl Selector
 
   fn first_visit(&mut self, rule_id: Ident) -> bool
   {
-    self.visited[rule_id].is_none()
+    self.visited[&rule_id].is_none()
   }
 
   fn visit_rule(&mut self, rules: &mut HashMap<Ident, Rule>,

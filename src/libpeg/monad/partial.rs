@@ -74,5 +74,5 @@ fn partial() {
   assert_eq!(Fake(9i32).and_then(|i| Fake(i*2)), Fake(18i32));
   // Even if you return a Value, it automatically coerces to Fake.
   assert_eq!(Fake(9i32).and_then(|i| Value(i*2)), Fake(18i32));
-  assert_eq!(Fake(9i32).and_then(|_| -> Partial<i32> Nothing), Nothing);
+  assert_eq!(Fake(9i32).and_then(|_| -> Partial<i32> { Nothing }), Nothing);
 }

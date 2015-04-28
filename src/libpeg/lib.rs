@@ -13,12 +13,9 @@
 // limitations under the License.
 
 #![crate_name = "peg"]
-#![unstable]
-// #![comment = "Parsing Expression Grammar Library"]
-// #![license = "Apache v2"]
 #![crate_type = "dylib"]
 
-#![feature(unicode, collections, core, rustc_private, plugin_registrar, quote, box_syntax)]
+#![feature(convert, str_char, collections, rustc_private, plugin_registrar, quote, box_syntax)]
 
 extern crate rustc;
 extern crate syntax;

@@ -19,7 +19,7 @@ pub use middle::attribute::ast::Expression as AExpression;
 use middle::typing::visitor::*;
 use middle::typing::ast::ExprTy::*;
 use rust;
-use std::iter::{FromIterator, range};
+use std::iter::FromIterator;
 
 pub struct InferenceEngine<'r>
 {
@@ -72,7 +72,7 @@ impl<'r> InferenceEngine<'r>
         if let SemanticAction(sub, ident) = workaround {
           self.infer_semantic_action(sp, sub, ident)
         } else {
-          panic!("impossible to reach.");
+          unreachable!();
         }
       }
     }
@@ -123,7 +123,7 @@ impl<'r> InferenceEngine<'r>
     if nodes.len() == 1 {
       nodes.into_iter().next().unwrap()
     } else {
-      let tys:Vec<usize> = FromIterator::from_iter(range(0,nodes.len()));
+      let tys:Vec<usize> = FromIterator::from_iter(0..nodes.len());
       box Expression::new(sp, Sequence(nodes), Tuple(tys))
     }
   }

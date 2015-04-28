@@ -15,6 +15,7 @@
 use rust::{ParserAttr, respan};
 use rust::Token as rtok;
 use rust::BinOpToken as rbtok;
+use rust;
 use std::str::Chars;
 use std::iter::Peekable;
 
@@ -55,24 +56,28 @@ impl<'a> Parser<'a>
     if !self.eat_grammar_keyword() {
       let token_string = self.rp.this_token_to_string();
       let span = self.rp.span;
-      self.rp.span_fatal(span,
+      panic!(self.rp.span_fatal(span,
         format!("Expected grammar declaration (of the form: `grammar <grammar-name>;`), \
                 but found `{}`",
-          token_string).as_slice())
+          token_string).as_str()))
     }
-    let grammar_name = self.rp.parse_ident();
-    self.rp.expect(&rtok::Semi);
+    let grammar_name = self.rp.parse_ident().unwrap();
+    self.rp.expect(&rtok::Semi).unwrap();
     grammar_name
   }
 
   fn eat_grammar_keyword(&mut self) -> bool
   {
     let is_grammar_kw = match self.rp.token {
-      rtok::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_slice(),
+      rtok::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_str(),
       _ => false
     };
-    if is_grammar_kw { self.rp.bump() }
+    if is_grammar_kw { self.bump() }
     is_grammar_kw
+  }
+
+  fn bump(&mut self) {
+    self.rp.bump().unwrap()
   }
 
   fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<rust::P<rust::Item>>)
@@ -81,9 +86,15 @@ impl<'a> Parser<'a>
     let mut rust_items = vec![];
     while self.rp.token != rtok::Eof
     {
-      self.rp.parse_item(vec![]).map_or_else(
-        || rules.push(self.parse_rule()),
-        |item| rust_items.push(item))
+      // FIXME: #45
+      if self.rp.token == rust::token::Pound {
+        rules.push(self.parse_rule())
+      }
+      else {
+        self.rp.parse_item().map_or_else(
+          || rules.push(self.parse_rule()),
+          |item| rust_items.push(item))
+      }
     }
     (rules, rust_items)
   }
@@ -92,8 +103,8 @@ impl<'a> Parser<'a>
   {
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
-    self.rp.expect(&rtok::Eq);
-    let body = self.parse_rule_rhs(id_to_string(name.node).as_slice());
+    self.rp.expect(&rtok::Eq).unwrap();
+    let body = self.parse_rule_rhs(id_to_string(name.node).as_str());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
 
@@ -101,18 +112,15 @@ impl<'a> Parser<'a>
   // Inner attributes are attached to the englobing item.
   fn parse_attributes(&mut self) -> Vec<rust::Attribute>
   {
-    let (inners, mut outers) = self.rp.parse_inner_attrs_and_next();
+    let inners = self.rp.parse_inner_attributes();
     self.inner_attrs.push_all(inners.as_slice());
-    if !outers.is_empty() {
-      outers.push_all(self.rp.parse_outer_attributes().as_slice());
-    }
-    outers
+    self.rp.parse_outer_attributes()
   }
 
   fn parse_rule_decl(&mut self) -> rust::SpannedIdent
   {
     let sp = self.rp.span;
-    respan(sp, self.rp.parse_ident())
+    respan(sp, self.rp.parse_ident().unwrap())
   }
 
   fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression>
@@ -130,7 +138,7 @@ impl<'a> Parser<'a>
       choices.push(semantic_action);
       let token = self.rp.token.clone();
       match token {
-        rtok::BinOp(rbtok::Slash) => self.rp.bump(),
+        rtok::BinOp(rbtok::Slash) => self.bump(),
         _ => break
       }
     }
@@ -147,8 +155,8 @@ impl<'a> Parser<'a>
     let token = self.rp.token.clone();
     match token {
       rtok::Gt => {
-        self.rp.bump();
-        let fun_name = self.rp.parse_ident();
+        self.bump();
+        let fun_name = self.rp.parse_ident().unwrap();
         self.last_respan(SemanticAction(expr, fun_name))
       }
       _ => expr
@@ -170,7 +178,7 @@ impl<'a> Parser<'a>
       self.rp.span_err(
         mk_sp(lo, hi),
         format!("In rule {}: must defined at least one expression.",
-          rule_name).as_slice());
+          rule_name).as_str());
     }
     spanned_expr(lo, hi, Sequence(seq))
   }
@@ -193,7 +201,7 @@ impl<'a> Parser<'a>
    where F: Fn(Box<Expression>) -> ExpressionNode
   {
     let lo = self.rp.span.lo;
-    self.rp.bump();
+    self.bump();
     let expr = match self.parse_rule_suffixed(rule_name) {
       Some(expr) => expr,
       None => {
@@ -202,7 +210,7 @@ impl<'a> Parser<'a>
           span,
           format!("In rule {}: A not predicate (`!expr`) is not followed by a \
             valid expression. Do not forget it must be in front of the expression.",
-            rule_name).as_slice()
+            rule_name).as_str()
         );
         return None
       }
@@ -222,15 +230,15 @@ impl<'a> Parser<'a>
     let token = self.rp.token.clone();
     match token {
       rtok::BinOp(rbtok::Star) => {
-        self.rp.bump();
+        self.bump();
         Some(spanned_expr(lo, hi, ZeroOrMore(expr)))
       },
       rtok::BinOp(rbtok::Plus) => {
-        self.rp.bump();
+        self.bump();
         Some(spanned_expr(lo, hi, OneOrMore(expr)))
       },
       rtok::Question => {
-        self.rp.bump();
+        self.bump();
         Some(spanned_expr(lo, hi, Optional(expr)))
       },
       _ => Some(expr)
@@ -248,42 +256,42 @@ impl<'a> Parser<'a>
     if token.is_keyword(rust::Keyword::Fn) { return None }
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
-        self.rp.bump();
+        self.bump();
         Some(self.last_respan(StrLiteral(name_to_string(name))))
       },
       rtok::Dot => {
-        self.rp.bump();
+        self.bump();
         Some(self.last_respan(AnySingleChar))
       },
       rtok::OpenDelim(rust::DelimToken::Paren) => {
-        self.rp.bump();
+        self.bump();
         let res = self.parse_rule_rhs(rule_name);
-        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren));
+        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)).unwrap();
         Some(res)
       },
       rtok::Ident(id, _) => {
         if self.is_rule_lhs() { None }
         else {
-          self.rp.bump();
+          self.bump();
           Some(self.last_respan(NonTerminalSymbol(id)))
         }
       },
       rtok::OpenDelim(rust::DelimToken::Bracket) => {
-        self.rp.bump();
+        self.bump();
         let res = self.parse_char_class(rule_name);
         match self.rp.token {
           rtok::CloseDelim(rust::DelimToken::Bracket) => {
-            self.rp.bump();
+            self.bump();
             res
           },
           _ => {
             let span = self.rp.span;
-            self.rp.span_fatal(
+            panic!(self.rp.span_fatal(
               span,
               format!("In rule {}: A character class must always be terminated by `]` \
                 and can only contain a string literal (such as in `[\"a-z\"]`",
-                rule_name).as_slice()
-            );
+                rule_name).as_str()
+            ));
           }
         }
       },
@@ -296,25 +304,24 @@ impl<'a> Parser<'a>
     let token = self.rp.token.clone();
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
-        self.rp.bump();
-        let cooked_lit = rust::str_lit(name_to_string(name).as_slice());
+        self.bump();
+        let cooked_lit = rust::str_lit(name_to_string(name).as_str());
         self.parse_set_of_char_range(&cooked_lit, rule_name)
       },
       _ => {
         let span = self.rp.span;
-        self.rp.span_fatal(
+        panic!(self.rp.span_fatal(
           span,
           format!("In rule {}: An expected character occurred in this character class. \
             `[` must only be followed by a string literal (such as in `[\"a-z\"]`",
-            rule_name).as_slice()
-        );
+            rule_name).as_str()
+        ));
       }
     }
   }
 
   fn parse_set_of_char_range(&mut self, ranges: &String, rule_name: &str) -> Option<Box<Expression>>
   {
-    let ranges = ranges.as_slice();
     let mut ranges = ranges.chars().peekable();
     let mut intervals = vec![];
     match ranges.peek() {
@@ -348,7 +355,7 @@ impl<'a> Parser<'a>
       let next = ranges.peek();
       match (lo, next) {
         (Some('-'), Some(_)) => {
-          self.rp.span_err(span, separator_err.as_slice());
+          self.rp.span_err(span, separator_err.as_str());
           return None
         },
         (Some(lo), Some(&sep)) if sep == '-' => {
@@ -363,7 +370,7 @@ impl<'a> Parser<'a>
     };
     ranges.next();
     match ranges.next() {
-      Some('-') => { self.rp.span_err(span, separator_err.as_slice()); None }
+      Some('-') => { self.rp.span_err(span, separator_err.as_str()); None }
       Some(hi) => {
         res.push(CharacterInterval{lo: lo, hi: hi});
         Some(res)
