@@ -16,22 +16,6 @@ use rust;
 use std::iter::*;
 use middle::ast::*;
 
-struct ToTokensVec<'a, T: 'a>
-{
-  v: &'a Vec<T>
-}
-
-impl<'a, T: 'a + rust::ToTokens> rust::ToTokens for ToTokensVec<'a, T>
-{
-  fn to_tokens(&self, cx: &ExtCtxt) -> Vec<rust::TokenTree> {
-    let mut tts = Vec::new();
-    for e in self.v.iter() {
-      tts.extend(e.to_tokens(cx).into_iter());
-    }
-    tts
-  }
-}
-
 pub struct PegCompiler<'cx>
 {
   top_level_items: Vec<rust::P<rust::Item>>,
@@ -94,7 +78,7 @@ impl<'cx> PegCompiler<'cx>
           span: rust::DUMMY_SP
         })
       },
-      _ => panic!("Bug")
+      _ => unreachable!()
     };
 
     if grammar.attributes.code_printer.parser {
@@ -121,7 +105,7 @@ impl<'cx> PegCompiler<'cx>
 
     let parser_impl = self.compile_entry_point(grammar);
 
-    let items = ToTokensVec{v: &self.top_level_items};
+    let items = &self.top_level_items;
 
     let mut parser = vec![];
     parser.push(quote_item!(self.cx, pub struct Parser;).unwrap());
