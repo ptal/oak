@@ -21,6 +21,6 @@ use monad::partial::Partial;
 pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
   items: Vec<P<Item>>) -> Partial<Grammar>
 {
-  DuplicateItem::analyse(cx, items.into_iter(), String::from_str("rust item"))
+  DuplicateItem::analyse(cx, items.into_iter(), String::from("rust item"))
     .map(move |rust_items| grammar.with_rust_items(rust_items))
 }

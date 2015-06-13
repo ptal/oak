@@ -125,7 +125,7 @@ impl<'cx> PegCompiler<'cx>
   fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
   {
     let start_rule_name = grammar.attributes.starting_rule;
-    (quote_item!(self.cx,
+    quote_item!(self.cx,
       impl peg::Parser for Parser
       {
         fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
@@ -133,7 +133,7 @@ impl<'cx> PegCompiler<'cx>
           peg::runtime::make_result(input,
             &Parser::$start_rule_name(input, 0))
         }
-      })).unwrap()
+      }).unwrap()
   }
 
   fn compile_expression(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>

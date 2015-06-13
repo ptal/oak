@@ -15,15 +15,14 @@
 use front::ast::*;
 use monad::partial::Partial;
 use rust::{P, Item, ExtCtxt};
-use syntax::ast_map::blocks::MaybeFnLike;
+use rustc::ast_map::blocks::MaybeFnLike;
 
 pub struct FilterRustItem;
 
 impl FilterRustItem
 {
-  pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
+  pub fn analyse(cx: &ExtCtxt, mut grammar: Grammar) -> Partial<Grammar>
   {
-    let mut grammar = grammar;
     grammar.rust_items = grammar
       .rust_items.into_iter()
       .filter(|item| FilterRustItem::filter(cx, item))

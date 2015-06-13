@@ -138,7 +138,7 @@ impl<'r> InferenceEngine<'r>
   {
     let sub_expr = self.infer_expr_type(expr);
     let action_ty = match &self.grammar.rust_items.get(&action_name).unwrap().node {
-      &rust::Item_::ItemFn(ref decl, _,_,_,_) => decl.output.clone(),
+      &rust::Item_::ItemFn(ref decl, _,_,_,_,_) => decl.output.clone(),
       _ => panic!("Only function items are currently allowed.")
     };
     box Expression::new(sp, SemanticAction(sub_expr, action_name), Action(action_ty))

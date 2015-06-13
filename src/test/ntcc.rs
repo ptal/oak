@@ -15,7 +15,7 @@
 peg!{
   grammar ntcc;
 
-  // #![print(all)]
+  #![print(all)]
   // #![disable_code(ast)]
 
   #[start]

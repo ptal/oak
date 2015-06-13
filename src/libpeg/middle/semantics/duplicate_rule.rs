@@ -18,6 +18,6 @@ use middle::semantics::duplicate::*;
 pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
   rules: Vec<Rule>) -> Partial<Grammar>
 {
-  DuplicateItem::analyse(cx, rules.into_iter(), String::from_str("rule"))
+  DuplicateItem::analyse(cx, rules.into_iter(), String::from("rule"))
     .map(move |rules| grammar.with_rules(rules))
 }
