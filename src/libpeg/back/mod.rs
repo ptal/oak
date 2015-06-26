@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use rust;
-use std::iter::*;
 use middle::ast::*;
+
+use std::iter::*;
+use std::ops::RangeFull;
 
 pub struct PegCompiler<'cx>
 {
@@ -105,8 +107,6 @@ impl<'cx> PegCompiler<'cx>
 
     let parser_impl = self.compile_entry_point(grammar);
 
-    let items = &self.top_level_items;
-
     let mut parser = vec![];
     parser.push(quote_item!(self.cx, pub struct Parser;).unwrap());
     parser.push(quote_item!(self.cx,
@@ -116,8 +116,8 @@ impl<'cx> PegCompiler<'cx>
           {
             Parser
           }
-          $items;
         }).unwrap());
+    parser.extend(self.top_level_items.drain(RangeFull));
     parser.push(parser_impl);
     parser
   }
@@ -131,7 +131,7 @@ impl<'cx> PegCompiler<'cx>
         fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
         {
           peg::runtime::make_result(input,
-            &Parser::$start_rule_name(input, 0))
+            &$start_rule_name(input, 0))
         }
       })).unwrap()
   }
@@ -181,7 +181,7 @@ impl<'cx> PegCompiler<'cx>
   fn compile_non_terminal_symbol(&mut self, id: Ident) -> rust::P<rust::Expr>
   {
     quote_expr!(self.cx,
-      Parser::$id(input, pos)
+      $id(input, pos)
     )
   }
 
@@ -282,7 +282,7 @@ impl<'cx> PegCompiler<'cx>
         Ok(npos)
       }
     ).unwrap());
-    quote_expr!(self.cx, Parser::$fun_name(input, pos))
+    quote_expr!(self.cx, $fun_name(input, pos))
   }
 
   fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
@@ -306,7 +306,7 @@ impl<'cx> PegCompiler<'cx>
         }
       }
     ).unwrap());
-    quote_expr!(self.cx, Parser::$fun_name(input, pos))
+    quote_expr!(self.cx, $fun_name(input, pos))
   }
 
   fn compile_optional(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
@@ -366,6 +366,6 @@ impl<'cx> PegCompiler<'cx>
         }
       }
     ).unwrap());
-    quote_expr!(self.cx, Parser::$fun_name(input, pos))
+    quote_expr!(self.cx, $fun_name(input, pos))
   }
 }

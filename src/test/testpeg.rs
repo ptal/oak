@@ -14,7 +14,7 @@
 
 #![crate_name = "testpeg"]
 #![crate_type = "bin"]
-#![feature(plugin, str_char, convert, path_ext, box_syntax, rustc_private, collections)]
+#![feature(plugin, str_char, convert, path_ext, box_syntax, rustc_private)]
 
 #![plugin(peg)]
 
@@ -276,7 +276,7 @@ impl TestEngine
 
   fn register(&mut self, name: &str, parser: Box<Parser+'static>)
   {
-    self.grammars.push(GrammarInfo{name: String::from_str(name), parser: parser});
+    self.grammars.push(GrammarInfo{name: String::from(name), parser: parser});
   }
 
   fn run(&mut self)

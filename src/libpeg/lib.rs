@@ -15,7 +15,7 @@
 #![crate_name = "peg"]
 #![crate_type = "dylib"]
 
-#![feature(convert, str_char, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all)]
+#![feature(convert, str_char, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all, drain)]
 
 extern crate rustc;
 extern crate syntax;

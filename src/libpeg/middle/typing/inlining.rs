@@ -21,8 +21,8 @@ use middle::typing::inlining_loop::InliningLoop;
 //  * if rules[ident].inline ->
 //    * if the type is a leaf (see is_leaf), it won't change so we take that type.
 //    * otherwise we keep RuleTypeOf(ident)
-//  * if rules[ident].invisible --> UnitPropagate
-// No loop can arise thanks to the InliningLoop analysis.
+//  * if rules[ident].invisible -> UnitPropagate
+// No loop can arise due to the InliningLoop analysis.
 
 pub fn inlining_phase(cx: &ExtCtxt, grammar: &mut Grammar)
 {
