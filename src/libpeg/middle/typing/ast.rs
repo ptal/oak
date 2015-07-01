@@ -23,7 +23,7 @@ pub use std::collections::HashMap;
 pub use std::cell::RefCell;
 
 use rust;
-use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::TypingContext::*;
 use middle::typing::ast::ExprTy::*;
 
 pub struct Grammar
@@ -53,16 +53,16 @@ impl Rule
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum ExpressionTypeVersion
+pub enum TypingContext
 {
   Typed,
   UnTyped,
   Both
 }
 
-impl ExpressionTypeVersion
+impl TypingContext
 {
-  pub fn merge(self, other: ExpressionTypeVersion) -> ExpressionTypeVersion {
+  pub fn merge(self, other: TypingContext) -> TypingContext {
     if self != other { Both }
     else { self }
   }
@@ -74,7 +74,7 @@ pub struct Expression
   pub span: Span,
   pub node: ExpressionNode,
   pub ty: RefCell<ExprTy>,
-  pub version: ExpressionTypeVersion
+  pub ty_context: TypingContext
 }
 
 impl Expression
@@ -85,7 +85,7 @@ impl Expression
       span: sp,
       node: node,
       ty: RefCell::new(ty),
-      version: Both
+      ty_context: Both
     }
   }
 

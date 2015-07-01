@@ -14,7 +14,7 @@
 
 use middle::typing::visitor::*;
 
-use middle::typing::ast::ExpressionTypeVersion::*;
+use middle::typing::ast::TypingContext::*;
 
 // The selection phase is used to select the type versions of the future
 // parsing functions.
@@ -35,9 +35,9 @@ trait FlatMerge<T>
   fn flat_merge(self, a: T) -> T;
 }
 
-impl FlatMerge<ExpressionTypeVersion> for Option<ExpressionTypeVersion>
+impl FlatMerge<TypingContext> for Option<TypingContext>
 {
-  fn flat_merge(self, context: ExpressionTypeVersion) -> ExpressionTypeVersion
+  fn flat_merge(self, context: TypingContext) -> TypingContext
   {
     match self {
       None => context,
@@ -49,8 +49,8 @@ impl FlatMerge<ExpressionTypeVersion> for Option<ExpressionTypeVersion>
 
 struct Selector
 {
-  visited: HashMap<Ident, Option<ExpressionTypeVersion>>,
-  to_visit: Vec<(Ident, ExpressionTypeVersion)>
+  visited: HashMap<Ident, Option<TypingContext>>,
+  to_visit: Vec<(Ident, TypingContext)>
 }
 
 impl Selector
@@ -83,7 +83,7 @@ impl Selector
   }
 
   fn context_of_start_rule(rules: &HashMap<Ident, Rule>, start: Ident)
-    -> ExpressionTypeVersion
+    -> TypingContext
   {
     if rules[&start].def.ty.borrow().is_unit() {
       UnTyped
@@ -93,7 +93,7 @@ impl Selector
     }
   }
 
-  fn mark_if_not_visited(&mut self, rule_id: Ident, context: ExpressionTypeVersion) -> bool
+  fn mark_if_not_visited(&mut self, rule_id: Ident, context: TypingContext) -> bool
   {
     let visited = self.visited[&rule_id];
     let new_visited = Some(visited.flat_merge(context));
@@ -111,7 +111,7 @@ impl Selector
   }
 
   fn visit_rule(&mut self, rules: &mut HashMap<Ident, Rule>,
-    rule_id: Ident, context: ExpressionTypeVersion)
+    rule_id: Ident, context: TypingContext)
   {
     let first_visit = self.first_visit(rule_id);
     if self.mark_if_not_visited(rule_id, context) {
@@ -124,14 +124,14 @@ impl Selector
 
 struct ExpressionVisitor
 {
-  to_visit: Vec<(Ident, ExpressionTypeVersion)>,
+  to_visit: Vec<(Ident, TypingContext)>,
   first_visit: bool
 }
 
 impl ExpressionVisitor
 {
-  fn visit(expr: &mut Expression, context: ExpressionTypeVersion, first_visit: bool)
-    -> Vec<(Ident, ExpressionTypeVersion)>
+  fn visit(expr: &mut Expression, context: TypingContext, first_visit: bool)
+    -> Vec<(Ident, TypingContext)>
   {
     let mut visitor = ExpressionVisitor {
       to_visit: vec![],
@@ -141,7 +141,7 @@ impl ExpressionVisitor
     visitor.to_visit
   }
 
-  fn visit_expr(&mut self, expr: &mut Expression, mut context: ExpressionTypeVersion)
+  fn visit_expr(&mut self, expr: &mut Expression, mut context: TypingContext)
   {
     // The context of a () type doesn't change, so it's safe to return.
     if expr.ty.borrow().is_unit() {
@@ -152,16 +152,16 @@ impl ExpressionVisitor
         return ();
       }
     }
-    expr.version = expr.version.merge(context);
+    expr.ty_context = expr.ty_context.merge(context);
     self.visit_expr_node(&mut expr.node, context);
   }
 
-  fn visit_non_terminal_symbol(&mut self, ident: Ident, context: ExpressionTypeVersion)
+  fn visit_non_terminal_symbol(&mut self, ident: Ident, context: TypingContext)
   {
     self.to_visit.push((ident, context));
   }
 
-  fn visit_expr_node(&mut self, expr: &mut ExpressionNode, context: ExpressionTypeVersion)
+  fn visit_expr_node(&mut self, expr: &mut ExpressionNode, context: TypingContext)
   {
     match expr {
       &mut NonTerminalSymbol(id) => {
@@ -187,7 +187,7 @@ impl ExpressionVisitor
     }
   }
 
-  fn visit_exprs(&mut self, exprs: &mut Vec<Box<Expression>>, context: ExpressionTypeVersion)
+  fn visit_exprs(&mut self, exprs: &mut Vec<Box<Expression>>, context: TypingContext)
   {
     assert!(exprs.len() > 0);
     for expr in exprs.iter_mut() {
