@@ -20,7 +20,7 @@ use std::ops::RangeFull;
 
 pub struct PegCompiler<'cx>
 {
-  top_level_items: Vec<rust::P<rust::Item>>,
+  parsing_functions: Vec<rust::P<rust::Item>>,
   cx: &'cx ExtCtxt<'cx>,
   unique_id: u32,
   current_rule_name: Ident
@@ -31,7 +31,7 @@ impl<'cx> PegCompiler<'cx>
   pub fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
     let mut compiler = PegCompiler{
-      top_level_items: Vec::new(),
+      parsing_functions: Vec::new(),
       cx: cx,
       unique_id: 0,
       current_rule_name: grammar.rules.keys().next().unwrap().clone()
@@ -48,8 +48,21 @@ impl<'cx> PegCompiler<'cx>
         None
       };
 
+    let grammar_module = self.compile_grammar_module(grammar, parser);
+
+    if grammar.attributes.code_printer.parser {
+      self.cx.parse_sess.span_diagnostic.handler.note(
+        rust::item_to_string(&*grammar_module).as_str());
+    }
+
+    rust::MacEager::items(rust::SmallVector::one(grammar_module))
+  }
+
+  fn compile_grammar_module(&self, grammar: &Grammar, parser: Option<Vec<rust::P<rust::Item>>>)
+    -> rust::P<rust::Item>
+  {
     let grammar_name = grammar.name;
-    let code = quote_item!(self.cx,
+    let grammar_module = quote_item!(self.cx,
       pub mod $grammar_name
       {
         #![allow(dead_code)]
@@ -58,19 +71,27 @@ impl<'cx> PegCompiler<'cx>
 
         $parser
       }
-    ).unwrap();
+    ).expect("Quote the grammar module.");
 
+    self.insert_peg_crate(grammar_module)
+  }
+
+  // RUST BUG: We cannot quote `extern crate peg;` before the grammar module, so we use this workaround
+  // for adding the external crate after the creation of the module.
+  fn insert_peg_crate(&self, grammar_module: rust::P<rust::Item>)
+    -> rust::P<rust::Item>
+  {
     let peg_crate = quote_item!(self.cx,
       extern crate peg;
-    ).unwrap();
+    ).expect("Quote the extern PEG crate.");
 
-    let code = match &code.node {
-      &rust::ItemMod(ref module) => {
+    match &grammar_module.node {
+      &rust::ItemMod(ref module_code) => {
         let mut items = vec![peg_crate];
-        items.push_all(module.items.clone().as_slice());
+        items.push_all(module_code.items.clone().as_slice());
         rust::P(rust::Item {
-          ident: code.ident,
-          attrs: code.attrs.clone(),
+          ident: grammar_module.ident,
+          attrs: grammar_module.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
           node: rust::ItemMod(rust::Mod{
             inner: rust::DUMMY_SP,
@@ -81,34 +102,18 @@ impl<'cx> PegCompiler<'cx>
         })
       },
       _ => unreachable!()
-    };
-
-    if grammar.attributes.code_printer.parser {
-      self.cx.parse_sess.span_diagnostic.handler.note(
-        rust::item_to_string(&*code).as_str());
     }
-
-    rust::MacEager::items(rust::SmallVector::one(code))
   }
 
   fn compile_parser(&mut self, grammar: &Grammar) -> Vec<rust::P<rust::Item>>
   {
-    for rule in grammar.rules.values() {
-      let rule_name = rule.name.node.clone();
-      let rule_def = self.compile_expression(&rule.def);
-      self.top_level_items.push(quote_item!(self.cx,
-        fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
-        {
-          $rule_def
-        }
-      ).unwrap());
-      self.current_rule_name = rule_name;
-    }
+    self.compile_rules(grammar);
 
     let parser_impl = self.compile_entry_point(grammar);
 
     let mut parser = vec![];
-    parser.push(quote_item!(self.cx, pub struct Parser;).unwrap());
+    parser.push(quote_item!(self.cx, pub struct Parser;).
+      expect("Quote the `Parser` declaration."));
     parser.push(quote_item!(self.cx,
         impl Parser
         {
@@ -116,10 +121,24 @@ impl<'cx> PegCompiler<'cx>
           {
             Parser
           }
-        }).unwrap());
-    parser.extend(self.top_level_items.drain(RangeFull));
+        }).expect("Quote the `Parser` implementation."));
+    parser.extend(self.parsing_functions.drain(RangeFull));
     parser.push(parser_impl);
     parser
+  }
+
+  fn compile_rules(&mut self, grammar: &Grammar) {
+    for rule in grammar.rules.values() {
+      let rule_name = rule.name.node.clone();
+      let rule_def = self.compile_expression(&rule.def);
+      self.parsing_functions.push(quote_item!(self.cx,
+        fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
+        {
+          $rule_def
+        }
+      ).expect(format!("Quote the rule `{}`.", rule.name.node.clone()).as_str()));
+      self.current_rule_name = rule_name;
+    }
   }
 
   fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
@@ -133,7 +152,7 @@ impl<'cx> PegCompiler<'cx>
           peg::runtime::make_result(input,
             &$start_rule_name(input, 0))
         }
-      })).unwrap()
+      })).expect("Quote the implementation of `peg::Parser` for Parser.")
   }
 
   fn compile_expression(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
@@ -266,7 +285,7 @@ impl<'cx> PegCompiler<'cx>
   {
     let fun_name = self.gensym("star");
     let cx = self.cx;
-    self.top_level_items.push(quote_item!(cx,
+    self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         let mut npos = pos;
@@ -281,7 +300,7 @@ impl<'cx> PegCompiler<'cx>
         }
         Ok(npos)
       }
-    ).unwrap());
+    ).expect("Quote the parsing function of `expr*`."));
     quote_expr!(self.cx, $fun_name(input, pos))
   }
 
@@ -297,7 +316,7 @@ impl<'cx> PegCompiler<'cx>
     let star_fn = self.compile_star(&expr);
     let fun_name = self.gensym("plus");
     let cx = self.cx;
-    self.top_level_items.push(quote_item!(cx,
+    self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         match $expr {
@@ -305,7 +324,7 @@ impl<'cx> PegCompiler<'cx>
           x => x
         }
       }
-    ).unwrap());
+    ).expect("Quote the parsing function of `expr+`."));
     quote_expr!(self.cx, $fun_name(input, pos))
   }
 
@@ -348,14 +367,15 @@ impl<'cx> PegCompiler<'cx>
 
     let mut seq_it = expr.intervals.iter();
 
-    let CharacterInterval{lo, hi} = *seq_it.next().unwrap();
+    let CharacterInterval{lo, hi} = *seq_it.next()
+      .expect("Empty character intervals should be forbidden at the parsing stage.");
     let cond = seq_it.fold(quote_expr!(cx, (current >= $lo && current <= $hi)),
       |accu, &CharacterInterval{lo, hi}| {
         quote_expr!(cx, $accu || (current >= $lo && current <= $hi))
       }
     );
 
-    self.top_level_items.push(quote_item!(cx,
+    self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
         let current = input.char_range_at(pos).ch;
@@ -365,7 +385,7 @@ impl<'cx> PegCompiler<'cx>
           Err(format!("It doesn't match the character class."))
         }
       }
-    ).unwrap());
+    ).expect("Quote of the character class (e.g. `[0-9]`)."));
     quote_expr!(self.cx, $fun_name(input, pos))
   }
 }

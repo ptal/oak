@@ -39,7 +39,7 @@ pub enum Expression_<SubExpr>{
   Choice(Vec<Box<SubExpr>>), // try_this / or_try_this_one
   ZeroOrMore(Box<SubExpr>), // space*
   OneOrMore(Box<SubExpr>), // space+
-  Optional(Box<SubExpr>), // space? - `?` replaced by `$`
+  Optional(Box<SubExpr>), // space?
   NotPredicate(Box<SubExpr>), // !space
   AndPredicate(Box<SubExpr>), // &space
   CharacterClass(CharacterClassExpr), // [0-9]
