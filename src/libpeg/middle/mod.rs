@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This module performs analysis on the PEG and transforms the `front::ast` into the typed AST `middle::ast`. Submodules are specifics to each step of the analysis, the ultimate goal being that the AST passed to the `back` module only generates valid Rust code.
+
 use middle::lint::unused_rule::UnusedRule;
 use middle::lint::filter_rust_item::FilterRustItem;
 use middle::ast::*;

@@ -12,5 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This module is the first phase of the PEG compilation. The Rust compiler tokenizes the PEG into *rust tokens* and we build an internal Abstract Syntax Tree (AST) from this input.
+//!
+//! Note that some part of the AST is generic and will be reused in others modules.
+
 pub mod ast;
 pub mod parser;
