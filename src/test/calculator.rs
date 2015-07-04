@@ -15,6 +15,8 @@
 peg!{
   grammar calculator;
 
+  // #![print(all)]
+
   #[start]
   expression = sum
 

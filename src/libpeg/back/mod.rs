@@ -17,6 +17,9 @@ use middle::ast::*;
 
 use std::iter::*;
 use std::ops::RangeFull;
+use std::ops::Deref;
+
+type RExpr = rust::P<rust::Expr>;
 
 pub struct PegCompiler<'cx>
 {
@@ -130,11 +133,11 @@ impl<'cx> PegCompiler<'cx>
   fn compile_rules(&mut self, grammar: &Grammar) {
     for rule in grammar.rules.values() {
       let rule_name = rule.name.node.clone();
-      let rule_def = self.compile_expression(&rule.def);
+      let rule_def_fn = self.compile_expression(&rule.def);
       self.parsing_functions.push(quote_item!(self.cx,
         fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
         {
-          $rule_def
+          $rule_def_fn(input, pos)
         }
       ).expect(format!("Quote the rule `{}`.", rule.name.node.clone()).as_str()));
       self.current_rule_name = rule_name;
@@ -155,14 +158,67 @@ impl<'cx> PegCompiler<'cx>
       })).expect("Quote the implementation of `peg::Parser` for Parser.")
   }
 
-  fn compile_expression(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_parse_fn(&mut self, prefix: &str, body: RExpr) -> Ident {
+    let fun_name = self.gensym(prefix);
+    self.parsing_functions.push(quote_item!(self.cx,
+      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
+      {
+        $body
+      }
+    ).expect(format!("Quotation of a parsing function ({}).", prefix).as_str()));
+    fun_name
+  }
+
+  fn compile_parse_expr_fn<F>(&mut self, expr: &Box<Expression>, prefix: &str, make_body: F) -> Ident where
+    F: Fn(&ExtCtxt<'cx>, RExpr) -> RExpr
+  {
+    let expr_fn_ident = self.compile_expression(expr);
+    let body = make_body(self.cx, quote_expr!(self.cx, $expr_fn_ident(input, pos)));
+    self.compile_parse_fn(prefix, body)
+  }
+
+  fn gen_uid(&mut self) -> u32
+  {
+    self.unique_id += 1;
+    self.unique_id - 1
+  }
+
+  fn current_lc_rule_name(&self) -> String
+  {
+    let rule_name = id_to_string(self.current_rule_name);
+    string_to_lowercase(&rule_name)
+  }
+
+  fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
+  {
+    rust::gensym_ident(format!(
+      "{}_in_rule_{}_{}", prefix,
+        self.current_lc_rule_name(),
+        self.gen_uid()).as_str())
+  }
+
+  fn map_foldr_expr<'a, F>(&mut self, seq: &'a [Box<Expression>], f: F) -> RExpr where
+    F: FnMut(RExpr, RExpr) -> RExpr
+  {
+    let cx = self.cx;
+    let mut seq_it = seq
+      .iter()
+      .map(|e| self.compile_expression(e))
+      .map(|fn_ident| quote_expr!(cx, $fn_ident(input, pos)))
+      .rev();
+
+    let block = seq_it.next().expect("Can not right fold an empty sequence.");
+    seq_it.fold(quote_expr!(self.cx, $block), f)
+  }
+
+  fn compile_expression(&mut self, expr: &Box<Expression>) -> Ident
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
         self.compile_str_literal(lit_str)
       },
       &AnySingleChar => {
-        self.compile_any_single_char()
+        self.compile_any_single_char(expr.ty.borrow().deref(), expr.ty_context)
       },
       &NonTerminalSymbol(id) => {
         self.compile_non_terminal_symbol(id)
@@ -197,91 +253,51 @@ impl<'cx> PegCompiler<'cx>
     }
   }
 
-  fn compile_non_terminal_symbol(&mut self, id: Ident) -> rust::P<rust::Expr>
+  fn compile_non_terminal_symbol(&mut self, fn_name: Ident) -> Ident
   {
-    quote_expr!(self.cx,
-      $id(input, pos)
-    )
+    fn_name
   }
 
-  fn compile_any_single_char(&mut self) -> rust::P<rust::Expr>
+  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: TypingContext) -> Ident
   {
-    quote_expr!(self.cx, peg::runtime::any_single_char(input, pos))
+    self.compile_parse_fn("any_single_char", quote_expr!(self.cx,
+      peg::runtime::any_single_char(input, pos)
+    ))
   }
 
-  fn compile_str_literal(&mut self, lit_str: &String) -> rust::P<rust::Expr>
+  fn compile_str_literal(&mut self, lit_str: &String) -> Ident
   {
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
-    quote_expr!(self.cx,
+
+    self.compile_parse_fn("str_literal", quote_expr!(self.cx,
       peg::runtime::match_literal(input, pos, $lit_str, $lit_len)
-    )
+    ))
   }
 
-  fn map_foldr_expr<'a, F: FnMut(rust::P<rust::Expr>, rust::P<rust::Expr>) -> rust::P<rust::Expr>>(
-    &mut self, seq: &'a [Box<Expression>], f: F) -> rust::P<rust::Expr>
-  {
-    assert!(seq.len() > 0);
-    let mut seq_it = seq
-      .iter()
-      .map(|e| self.compile_expression(e))
-      .rev();
-
-    let head = seq_it.next().unwrap();
-    seq_it.fold(head, f)
-  }
-
-  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> rust::P<rust::Expr>
+  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> Ident
   {
     let cx = self.cx;
-    self.map_foldr_expr(seq, |tail, head| {
+    let expr = self.map_foldr_expr(seq, |block, expr| {
       quote_expr!(cx,
-        match $head {
-          Ok(pos) => {
-            $tail
-          }
-          x => x
-        }
+        $expr.and_then(|pos| $block)
       )
-    })
+    });
+    self.compile_parse_fn("sequence", expr)
   }
 
-  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> rust::P<rust::Expr>
+  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> Ident
   {
     let cx = self.cx;
-    self.map_foldr_expr(choices, |tail, head| {
+    let expr = self.map_foldr_expr(choices, |block, expr| {
       quote_expr!(cx,
-        match $head {
-          Err(_) => {
-            $tail
-          }
-          x => x
-        }
+        $expr.or_else(|_| $block)
       )
-    })
+    });
+    self.compile_parse_fn("choice", expr)
   }
 
-  fn gen_uid(&mut self) -> u32
-  {
-    self.unique_id += 1;
-    self.unique_id - 1
-  }
-
-  fn current_lc_rule_name(&self) -> String
-  {
-    let rule_name = id_to_string(self.current_rule_name);
-    string_to_lowercase(&rule_name)
-  }
-
-  fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
-  {
-    rust::gensym_ident(format!(
-      "{}_{}_{}", prefix,
-        self.current_lc_rule_name(),
-        self.gen_uid()).as_str())
-  }
-
-  fn compile_star(&mut self, expr: &rust::P<rust::Expr>) -> rust::P<rust::Expr>
+  fn compile_star(&mut self, expr_fn: Ident) -> Ident
   {
     let fun_name = self.gensym("star");
     let cx = self.cx;
@@ -291,79 +307,66 @@ impl<'cx> PegCompiler<'cx>
         let mut npos = pos;
         while npos < input.len() {
           let pos = npos;
-          match $expr {
-            Ok(pos) => {
-              npos = pos;
-            },
+          match $expr_fn(input, pos) {
+            Ok(pos) => { npos = pos; }
             _ => break
           }
         }
         Ok(npos)
       }
     ).expect("Quote the parsing function of `expr*`."));
-    quote_expr!(self.cx, $fun_name(input, pos))
+    fun_name
   }
 
-  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> Ident
   {
-    let expr = self.compile_expression(expr);
-    self.compile_star(&expr)
+    let expr_fn = self.compile_expression(expr);
+    self.compile_star(expr_fn)
   }
 
-  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> Ident
   {
-    let expr = self.compile_expression(expr);
-    let star_fn = self.compile_star(&expr);
+    let expr_fn = self.compile_expression(expr);
+    let star_fn = self.compile_star(expr_fn);
     let fun_name = self.gensym("plus");
     let cx = self.cx;
     self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
-        match $expr {
-          Ok(pos) => $star_fn,
-          x => x
-        }
+        $expr_fn(input, pos).and_then(|pos| $star_fn(input, pos))
       }
     ).expect("Quote the parsing function of `expr+`."));
-    quote_expr!(self.cx, $fun_name(input, pos))
+    fun_name
   }
 
-  fn compile_optional(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_optional(&mut self, expr: &Box<Expression>) -> Ident
   {
-    let expr = self.compile_expression(expr);
-    quote_expr!(self.cx,
-      match $expr {
-        Ok(pos) => Ok(pos),
-        _ => Ok(pos)
-      }
-    )
+    self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
+      $inner_call.or_else(|_| Ok(pos))
+    ))
   }
 
-  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> Ident
   {
-    let expr = self.compile_expression(expr);
-    quote_expr!(self.cx,
-      match $expr {
+    self.compile_parse_expr_fn(expr, "not_predicate", |cx, inner_call| quote_expr!(cx,
+      match $inner_call {
         Ok(_) => Err(format!("An `!expr` failed.")),
         _ => Ok(pos)
-    })
+      }
+    ))
   }
 
-  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> rust::P<rust::Expr>
+  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> Ident
   {
-    let expr = self.compile_expression(expr);
-    quote_expr!(self.cx,
-      match $expr {
-        Ok(_) => Ok(pos),
-        x => x
-    })
+    self.compile_parse_expr_fn(expr, "and_predicate", |cx, inner_call| quote_expr!(cx,
+      $inner_call.map(|_| pos)
+    ))
   }
 
-  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> rust::P<rust::Expr>
+  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> Ident
   {
     let fun_name = self.gensym("class_char");
     let cx = self.cx;
-    assert!(expr.intervals.len() > 0);
 
     let mut seq_it = expr.intervals.iter();
 
@@ -385,7 +388,7 @@ impl<'cx> PegCompiler<'cx>
           Err(format!("It doesn't match the character class."))
         }
       }
-    ).expect("Quote of the character class (e.g. `[0-9]`)."));
-    quote_expr!(self.cx, $fun_name(input, pos))
+    ).expect("Quotation of a character class (e.g. `[0-9]`)."));
+    fun_name
   }
 }
