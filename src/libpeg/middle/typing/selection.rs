@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! The selection phase is used to identify the typing contexts of the future
+//! parsing functions.
+//!
+//! It can be untyped, typed or both depending on the calling contexts.
+//! The calling context of the start rule is `UnTyped` if its type is unit and
+//! is `Typed` otherwise.
+//!
+//! Semantics actions in an untyped context won't be called.
+
 use middle::typing::visitor::*;
-
 use middle::typing::ast::TypingContext::*;
-
-// The selection phase is used to select the type versions of the future
-// parsing functions.
-//
-// It can be untyped, typed or both depending on the calling contexts.
-// The calling context of the start rule is `UnTyped` if its type is unit and
-// is `Typed` otherwise.
-//
-// Semantics actions in an untyped context won't be called.
 
 pub fn selection_phase(grammar: &mut Grammar)
 {
