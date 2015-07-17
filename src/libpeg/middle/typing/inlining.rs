@@ -58,6 +58,7 @@ impl<'a> Inliner<'a>
     *expr.ty.borrow_mut() =
       match &rule.attributes.ty.style {
         &RuleTypeStyle::Inline => rule.def.deref_type(&self.rules),
+        &RuleTypeStyle::Unit(_) => Unit,
         &RuleTypeStyle::Invisible(_) => UnitPropagate
       };
   }

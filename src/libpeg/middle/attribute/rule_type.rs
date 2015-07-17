@@ -19,16 +19,26 @@ use attribute::model::*;
 pub enum RuleTypeStyle
 {
   Inline,
-  Invisible(Span)
+  Invisible(Span),
+  Unit(Span)
 }
 
 impl RuleTypeStyle
 {
-  pub fn new(_: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
+  pub fn new(cx: &ExtCtxt, model: &AttributeArray) -> RuleTypeStyle
   {
     let invisible_type = access::plain_value(model, "invisible_type");
-    if invisible_type.has_value() {
+    let unit_type = access::plain_value(model, "unit_type");
+    if invisible_type.has_value() && unit_type.has_value() {
+      cx.span_err(unit_type.span(),
+        "Incoherent rule type specifiers: `()` is not propagated with `unit_type` but is with `invisible_type`.");
+      cx.span_note(invisible_type.span(),
+        "Previous declaration here.");
+      Unit(unit_type.span())
+    } else if invisible_type.has_value() {
       Invisible(invisible_type.span())
+    } else if unit_type.has_value() {
+      Unit(unit_type.span())
     } else {
       Inline
     }
@@ -39,7 +49,11 @@ impl RuleTypeStyle
     vec![
       AttributeInfo::simple(
         "invisible_type",
-        "the calling site will ignore the type of this rule. The AST of the calling rule will not reference this rule.",
+        "force the type of the rule to be unit (`()`). The unit type is invisible in the AST and propagated in the calling site, for example, for an invisible `rule`, `rule?` has type `()`.",
+      ),
+      AttributeInfo::simple(
+        "unit_type",
+        "force the type of the rule to be unit (`()`). The unit type is visible in the AST, for example, for an annotated unit `rule`, `rule?` has type `Option<()>`."
       )
     ]
   }
