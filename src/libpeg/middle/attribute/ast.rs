@@ -17,8 +17,8 @@ pub use front::ast::Expression_::*;
 
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
 pub use middle::attribute::attribute::*;
-pub use middle::semantics::ast::Grammar as SGrammar;
-pub use middle::semantics::ast::Rule as SRule;
+pub use middle::analysis::ast::Grammar as SGrammar;
+pub use middle::analysis::ast::Rule as SRule;
 
 use rust;
 use attribute::model_checker;

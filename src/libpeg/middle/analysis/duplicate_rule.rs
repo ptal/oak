@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::semantics::ast::*;
-use middle::semantics::duplicate::*;
+use middle::analysis::ast::*;
+use middle::analysis::duplicate::*;
 
 pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
   rules: Vec<Rule>) -> Partial<Grammar>

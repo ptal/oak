@@ -23,7 +23,7 @@ pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use front::ast::Grammar as FGrammar;
 
-mod semantics;
+mod analysis;
 mod lint;
 mod attribute;
 mod typing;
@@ -37,7 +37,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
 
   Partial::Value(fgrammar)
     .and_then(|grammar| FilterRustItem::analyse(cx, grammar))
-    .and_then(|grammar| semantics::analyse(cx, grammar))
+    .and_then(|grammar| analysis::analyse(cx, grammar))
     .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::grammar_typing(cx, grammar))

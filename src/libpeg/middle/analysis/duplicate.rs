@@ -16,7 +16,7 @@ pub use rust::Span;
 use rust;
 pub use std::collections::HashMap;
 
-use middle::semantics::ast::*;
+use middle::analysis::ast::*;
 use monad::partial::Partial::*;
 use std::ops::Deref;
 

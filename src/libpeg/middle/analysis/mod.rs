@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::semantics::ast::*;
-use middle::semantics::duplicate_rule::*;
-use middle::semantics::duplicate_rust_item::*;
-use middle::semantics::undeclared_rule::*;
-use middle::semantics::undeclared_action::*;
+use middle::analysis::ast::*;
+use middle::analysis::duplicate_rule::*;
+use middle::analysis::duplicate_rust_item::*;
+use middle::analysis::undeclared_rule::*;
+use middle::analysis::undeclared_action::*;
 use front::ast::Grammar as FGrammar;
 
 mod duplicate;

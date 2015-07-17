@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-use middle::semantics::visitor::*;
+use middle::analysis::visitor::*;
 use monad::partial::Partial::*;
 use std::collections::HashMap;
 

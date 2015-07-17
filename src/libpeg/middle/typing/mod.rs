@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use middle::typing::inference::*;
-use middle::typing::inlining::*;
+// use middle::typing::inlining::*;
 use middle::typing::propagation::*;
 use middle::typing::selection::*;
 use middle::typing::ast::*;
@@ -22,8 +22,8 @@ use monad::partial::Partial;
 pub mod ast;
 mod inference;
 mod visitor;
-mod inlining;
-mod inlining_loop;
+// mod inlining;
+// mod inlining_loop;
 mod propagation;
 mod selection;
 
@@ -36,7 +36,7 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
     attributes: agrammar.attributes
   };
   InferenceEngine::infer(&mut grammar, agrammar.rules);
-  inlining_phase(cx, &mut grammar);
+  // inlining_phase(cx, &mut grammar);
   propagation_phase(&mut grammar);
   selection_phase(&mut grammar);
   Partial::Value(grammar)

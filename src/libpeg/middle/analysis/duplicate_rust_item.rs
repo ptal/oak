@@ -14,8 +14,8 @@
 
 use rust::{ExtCtxt, P, Item};
 
-use middle::semantics::ast::Grammar;
-use middle::semantics::duplicate::*;
+use middle::analysis::ast::Grammar;
+use middle::analysis::duplicate::*;
 use monad::partial::Partial;
 
 pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
