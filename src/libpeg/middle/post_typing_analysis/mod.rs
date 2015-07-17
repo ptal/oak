@@ -12,28 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::typing::inference::*;
-use middle::typing::propagation::*;
-use middle::typing::selection::*;
+mod inlining;
+mod inlining_loop;
+
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
-pub mod ast;
-pub mod visitor;
-mod inference;
-mod propagation;
-mod selection;
-
-pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
+pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
 {
-  let mut grammar = Grammar {
-    name: agrammar.name,
-    rules: HashMap::with_capacity(agrammar.rules.len()),
-    rust_items: agrammar.rust_items,
-    attributes: agrammar.attributes
-  };
-  InferenceEngine::infer(&mut grammar, agrammar.rules);
-  propagation_phase(&mut grammar);
-  selection_phase(&mut grammar);
   Partial::Value(grammar)
 }

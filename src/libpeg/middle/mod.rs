@@ -27,6 +27,7 @@ mod analysis;
 mod lint;
 mod attribute;
 mod typing;
+mod post_typing_analysis;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
@@ -41,6 +42,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
     .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::grammar_typing(cx, grammar))
+    .and_then(|grammar| post_typing_analysis::analyse(cx, grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
