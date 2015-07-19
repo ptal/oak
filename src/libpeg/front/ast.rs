@@ -57,12 +57,19 @@ pub struct CharacterInterval {
   pub hi: char
 }
 
+#[derive(Clone)]
+pub enum TypeAnnotation {
+  Invisible,
+  Unit
+}
+
 // Implicitly typed expression.
 #[derive(Clone)]
 pub struct Expression
 {
   pub span: Span,
-  pub node: ExpressionNode
+  pub node: ExpressionNode,
+  pub ty: Option<TypeAnnotation>
 }
 
 pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
@@ -72,7 +79,7 @@ pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expre
 
 pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression>
 {
-  box Expression {span : sp, node: expr}
+  box Expression {span : sp, node: expr, ty: None}
 }
 
 pub type ExpressionNode = Expression_<Expression>;

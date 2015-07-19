@@ -169,7 +169,10 @@ impl<'a> Parser<'a>
     let mut seq = Vec::new();
     loop{
       match self.parse_rule_prefixed(rule_name){
-        Some(expr) => seq.push(expr),
+        Some(expr) => {
+          let expr = self.parse_type_annotation(expr, rule_name);
+          seq.push(expr)
+        },
         None => break
       }
     }
@@ -181,6 +184,48 @@ impl<'a> Parser<'a>
           rule_name).as_str());
     }
     spanned_expr(lo, hi, Sequence(seq))
+  }
+
+  // `e -> ty`
+  fn parse_type_annotation(&mut self, expr: Box<Expression>, rule_name: &str) -> Box<Expression>
+  {
+    let token = self.rp.token.clone();
+    match token {
+      rtok::RArrow => {
+        self.bump();
+        self.parse_type(expr, rule_name)
+      },
+      _ => expr
+    }
+  }
+
+  // `()` or `(^)`
+  fn parse_type(&mut self, mut expr: Box<Expression>, rule_name: &str) -> Box<Expression>
+  {
+    let token = self.rp.token.clone();
+    match token {
+      rtok::OpenDelim(rust::DelimToken::Paren) => {
+        self.bump();
+        let token = self.rp.token.clone();
+        let mut ty = TypeAnnotation::Unit;
+        if token == rtok::BinOp(rbtok::Caret) {
+          self.bump();
+          ty = TypeAnnotation::Invisible;
+        }
+        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)).unwrap();
+        expr.ty = Some(ty);
+        expr
+      }
+      _ => {
+        let span = self.rp.span;
+        self.rp.span_err(
+          span,
+          format!("In rule {}: Unknown token after `->`. Use the arrow to annotate an expression with the unit type `()` or the invisible type `(^)`.",
+            rule_name).as_str()
+        );
+        expr
+      }
+    }
   }
 
   fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
