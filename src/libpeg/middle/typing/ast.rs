@@ -78,6 +78,18 @@ impl Expression
       ty_context: Both
     }
   }
+
+  pub fn to_unit_type(&mut self)
+  {
+    self.ty = RefCell::new(ExprTy::unit());
+  }
+
+  pub fn is_by_default_invisible(&self) -> bool {
+    match &self.node {
+      &StrLiteral(_) | &NotPredicate(_) | &AndPredicate(_) => true,
+      _ => false
+    }
+  }
 }
 
 pub type ExpressionNode = Expression_<Expression>;

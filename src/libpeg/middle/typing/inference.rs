@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also read the rule type annotations (`invisible_type` and `unit_type`) and correctly infer the type corresponding. It does not propagate the invisible types, this step is done in `typing::propagation`.
-//! Literal (e.g. "if") and syntactic predicates (e.g. "&e" and "!e") are by default invisibles.
+//! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modify the type accordingly. It does not propagate the invisible types, this step is done in `typing::propagation`.
+//! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
 pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
+use front::ast::TypeAnnotation;
 use middle::typing::visitor::*;
 use middle::typing::ast::ExprTy::*;
 use rust;
@@ -58,7 +59,8 @@ impl<'r> InferenceEngine<'r>
   fn infer_expr_type(&self, expr: Box<AExpression>) -> Box<Expression>
   {
     let sp = expr.span.clone();
-    match expr.node {
+    let ty = expr.ty.clone();
+    let mut typed_expr = match expr.node {
       AnySingleChar => self.infer_identity_expr(sp, AnySingleChar),
       CharacterClass(c) => self.infer_identity_expr(sp, CharacterClass(c)),
       StrLiteral(s) => self.infer_unit_expr(sp, StrLiteral(s)),
@@ -77,6 +79,36 @@ impl<'r> InferenceEngine<'r>
           unreachable!();
         }
       }
+    };
+    self.default_invisible(&mut typed_expr);
+    self.type_annotation(typed_expr, ty)
+  }
+
+  fn type_annotation(&self, mut expr: Box<Expression>, ty: Option<TypeAnnotation>) -> Box<Expression>
+  {
+    if let Some(ty) = ty {
+      match ty {
+        TypeAnnotation::Invisible => {
+          self.make_invisible(&mut expr);
+        }
+        TypeAnnotation::Unit => {
+          expr.to_unit_type();
+        }
+      }
+    }
+    expr
+  }
+
+  fn make_invisible(&self, expr: &mut Box<Expression>)
+  {
+    expr.invisible = true;
+    expr.to_unit_type();
+  }
+
+  fn default_invisible(&self, expr: &mut Box<Expression>)
+  {
+    if expr.is_by_default_invisible() {
+      self.make_invisible(expr);
     }
   }
 
