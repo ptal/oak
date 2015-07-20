@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also read the rule type annotations (`invisible_type` and `unit_type`) and correctly infer the type corresponding. It does not propagate the invisible types, this step is done in `typing::propagation`.
+//! Literal (e.g. "if") and syntactic predicates (e.g. "&e" and "!e") are by default invisibles.
+
 pub use middle::attribute::ast::Grammar as AGrammar;
 pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
@@ -48,8 +51,7 @@ impl<'r> InferenceEngine<'r>
     let expr = self.infer_expr_type(rule.def);
     Rule{
       name: rule.name,
-      def: expr,
-      attributes: rule.attributes
+      def: expr
     }
   }
 
@@ -57,15 +59,15 @@ impl<'r> InferenceEngine<'r>
   {
     let sp = expr.span.clone();
     match expr.node {
-      AnySingleChar => self.infer_char_expr(sp, AnySingleChar),
-      CharacterClass(c) => self.infer_char_expr(sp, CharacterClass(c)),
+      AnySingleChar => self.infer_identity_expr(sp, AnySingleChar),
+      CharacterClass(c) => self.infer_identity_expr(sp, CharacterClass(c)),
       StrLiteral(s) => self.infer_unit_expr(sp, StrLiteral(s)),
       NotPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| NotPredicate(e)),
       AndPredicate(sub) => self.infer_sub_unit_expr(sp, sub, |e| AndPredicate(e)),
       NonTerminalSymbol(ident) => self.infer_rule_type_ph(sp, ident),
-      ZeroOrMore(sub) => self.infer_sub_expr(sp, sub, |e| ZeroOrMore(e), Vector),
-      OneOrMore(sub) => self.infer_sub_expr(sp, sub, |e| OneOrMore(e), Vector),
-      Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), OptionalTy),
+      ZeroOrMore(sub) => self.infer_sub_expr(sp, sub, |e| ZeroOrMore(e), Identity),
+      OneOrMore(sub) => self.infer_sub_expr(sp, sub, |e| OneOrMore(e), Identity),
+      Optional(sub) =>  self.infer_sub_expr(sp, sub, |e| Optional(e), Identity),
       Sequence(sub) => self.infer_tuple_expr(sp, sub),
       Choice(sub) => self.infer_choice_expr(sp, sub),
       workaround => { // Waiting for Rust FIX: collaterally moved values.
@@ -78,14 +80,14 @@ impl<'r> InferenceEngine<'r>
     }
   }
 
-  fn infer_char_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
+  fn infer_identity_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
   {
-    box Expression::new(sp, node, Character)
+    box Expression::new(sp, node, Identity)
   }
 
   fn infer_unit_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
   {
-    box Expression::new(sp, node, Unit)
+    box Expression::new(sp, node, ExprTy::unit())
   }
 
   fn infer_sub_unit_expr<F>(&self, sp: Span, sub: Box<AExpression>, make_node: F) -> Box<Expression>
@@ -98,7 +100,7 @@ impl<'r> InferenceEngine<'r>
   {
     box Expression::new(sp,
       NonTerminalSymbol(ident.clone()),
-      TypeOf(ident))
+      Identity)
   }
 
   fn infer_sub_expr<FNode>(&self, sp: Span, sub: Box<AExpression>,
@@ -131,7 +133,7 @@ impl<'r> InferenceEngine<'r>
   fn infer_choice_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
   {
     let nodes = self.infer_list_expr(subs);
-    box Expression::new(sp, Choice(nodes), Sum)
+    box Expression::new(sp, Choice(nodes), Identity)
   }
 
   fn infer_semantic_action(&self, sp: Span, expr: Box<AExpression>, action_name: Ident) -> Box<Expression>

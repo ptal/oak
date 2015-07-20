@@ -19,24 +19,17 @@ peg!{
   // #![disable_code(ast)]
 
   #[start]
-  #[invisible_type]
-  composed_type_name = spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)?
+  composed_type_name = (spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)?) -> (^)
 
   type_name = auto_infer_kw &(lparen / eof / comma)
             / ident
 
-  #[invisible_type]
-  spacing = [" \n\t"]*
+  spacing = [" \n\t"]* -> (^)
 
   ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing
-  #[invisible_type]
   auto_infer_kw = "_" spacing
-  #[invisible_type]
   lparen = "(" spacing
-  #[invisible_type]
   rparen = ")" spacing
-  #[invisible_type]
   eof = !.
-  #[invisible_type]
   comma = "," spacing
 }

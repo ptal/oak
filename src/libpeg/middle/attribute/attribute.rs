@@ -15,7 +15,6 @@
 pub use identifier::*;
 pub use middle::attribute::code_printer::*;
 pub use middle::attribute::code_gen::*;
-pub use middle::attribute::rule_type::*;
 
 use rust::ExtCtxt;
 use attribute::model::{AttributeArray, access, DuplicateAttribute, AttributeMerger, AttributeInfo};
@@ -25,7 +24,6 @@ pub struct GrammarAttributes
   pub code_gen: CodeGeneration,
   pub code_printer: CodePrinter,
   pub starting_rule: Ident
-  // lints: LintStore
 }
 
 impl GrammarAttributes
@@ -90,27 +88,15 @@ fn start_by_name(attr: AttributeArray) -> AttributeInfo
   access::by_name(&attr, "start").clone()
 }
 
-pub struct RuleAttributes
-{
-  pub ty: RuleType
-}
+pub struct RuleAttributes;
 
 impl RuleAttributes
 {
   pub fn model() -> AttributeArray
   {
-    let mut model = RuleType::model();
-    model.push(AttributeInfo::simple(
+    vec![AttributeInfo::simple(
       "start",
       "entry point of the grammar, the parsing starts with this rule."
-    ));
-    model
-  }
-
-  pub fn new(cx: &ExtCtxt, rule_attr: &AttributeArray) -> RuleAttributes
-  {
-    RuleAttributes {
-      ty: RuleType::new(cx, rule_attr)
-    }
+    )]
   }
 }

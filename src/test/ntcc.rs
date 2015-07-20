@@ -21,9 +21,8 @@ peg!{
   #[start]
   start = spacing expression
 
-  #[invisible_type]
   expression
-    = sum
+    = (sum
     / par
     / tell
     / next
@@ -31,7 +30,7 @@ peg!{
     / rep
     / unless
     / let_in
-    / skip_kw
+    / skip_kw) -> (^)
 
   sum
     = pick_kw or? when sum_body* end_kw?
@@ -78,8 +77,7 @@ peg!{
 
   comparison = le / neq / lt / ge / gt / eq
 
-  #[invisible_type]
-  spacing = [" \n\t"]*
+  spacing = [" \n\t"]* -> (^)
 
   let_in = let_kw var_decl in_kw expression
 

@@ -15,22 +15,22 @@
 use middle::typing::visitor::*;
 use middle::typing::ast::ExprTy::*;
 
-// The UnitPropagate nodes (expressed with P in the following rules)
-// are propagated following these rules:
-//  * Vector(P) -> P
-//  * OptionalTy(P) -> P
-//  * Tuple([e,..,e']) -> P (with all e=P) // Tested before any other propagation, if there is a (), it doesn't propagate.
-//  * Tuple([e, P, e']) -> Tuple([e, e'])
-//  * Tuple([e, (), e']) -> Tuple([e, e'])
-//  * Sum([e,...,e']) -> P (with all e=P)
-// Semantic actions stop propagation.
+//! The UnitPropagate nodes (expressed with P in the following rules)
+//! are propagated following these rules:
+//!  * Vector(P) -> P
+//!  * OptionalTy(P) -> P
+//!  * Tuple([e,..,e']) -> P (with all e=P). It is tested before any other propagation, if there is a (), it doesn't propagate.
+//!  * Tuple([e, P, e']) -> Tuple([e, e'])
+//!  * Tuple([e, (), e']) -> Tuple([e, e'])
+//!  * Sum([e,...,e']) -> P (with all e=P)
+//! Semantic actions stop propagation.
 
-// There are automatic propagation rules:
-//  * Tuple([e]) -> e
-//  * Tuple([]) -> ()
+//! There are automatic propagation rules:
+//!  * Tuple([e]) -> e
+//!  * Tuple([]) -> ()
 
-// The parser already lifted up this expression:
-//  * Sum([e]) -> e
+//! The parser already lifted up this expression:
+//!  * Sum([e]) -> e
 
 pub fn propagation_phase(grammar: &mut Grammar)
 {

@@ -37,19 +37,7 @@ pub struct Grammar
 pub struct Rule
 {
   pub name: SpannedIdent,
-  pub def: Box<Expression>,
-  pub attributes: RuleAttributes
-}
-
-impl Rule
-{
-  pub fn is_inline(&self) -> bool
-  {
-    match self.attributes.ty.style {
-      RuleTypeStyle::Inline => true,
-      _ => false
-    }
-  }
+  pub def: Box<Expression>
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -73,6 +61,7 @@ pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
+  pub invisible: bool,
   pub ty: RefCell<ExprTy>,
   pub ty_context: TypingContext
 }
@@ -84,16 +73,9 @@ impl Expression
     Expression {
       span: sp,
       node: node,
+      invisible: false,
       ty: RefCell::new(ty),
       ty_context: Both
-    }
-  }
-
-  pub fn deref_type(&self, rules: &HashMap<Ident, Rule>) -> ExprTy {
-    if let TypeOf(rule_name) = self.ty.borrow().clone() {
-      rules.get(&rule_name).unwrap().def.deref_type(rules)
-    } else {
-      self.ty.borrow().clone()
     }
   }
 }
@@ -103,35 +85,30 @@ pub type ExpressionNode = Expression_<Expression>;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ExprTy
 {
-  Character,
-  Unit,
-  UnitPropagate,
-  TypeOf(Ident),
-  Vector,
+  /// The type of the expression is given with a trivial mapping between expressions and types.
+  /// For example, `e?` has type `Option<T>` if the type of `e` is `T`.
+  Identity,
+  /// `Tuple(vec![])` is the unit type.
+  /// `Tuple(vec![i])` is a projection of the type of an inner expression.
+  /// `Tuple(vec![i,..,j])` is a tuple for the sub-expressions at index `i,..,j`.
   Tuple(Vec<usize>),
-  OptionalTy,
-  Sum,
   Action(rust::FunctionRetTy)
 }
 
 impl ExprTy
 {
-  pub fn must_propagate(&self) -> bool {
-    *self == UnitPropagate
-  }
-
   pub fn is_unit(&self) -> bool {
     match *self {
-      UnitPropagate | Unit => true,
+      Tuple(ref sub) => sub.len() == 0,
       _ => false
     }
   }
 
-  pub fn is_leaf(&self) -> bool {
-    match *self {
-        UnitPropagate | Unit
-      | Character | Action(_) => true,
-      _ => false
-    }
+  pub fn unit() -> ExprTy {
+    Tuple(vec![])
+  }
+
+  pub fn projection(index: usize) -> ExprTy {
+    Tuple(vec![index])
   }
 }
