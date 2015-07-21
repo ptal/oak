@@ -218,7 +218,7 @@ impl<'cx> PegCompiler<'cx>
         self.compile_str_literal(lit_str)
       },
       &AnySingleChar => {
-        self.compile_any_single_char(expr.ty.borrow().deref(), expr.ty_context)
+        self.compile_any_single_char(expr.ty.borrow().deref(), expr.context)
       },
       &NonTerminalSymbol(id) => {
         self.compile_non_terminal_symbol(id)
@@ -258,7 +258,7 @@ impl<'cx> PegCompiler<'cx>
     fn_name
   }
 
-  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: TypingContext) -> Ident
+  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> Ident
   {
     self.compile_parse_fn("any_single_char", quote_expr!(self.cx,
       peg::runtime::any_single_char(input, pos)

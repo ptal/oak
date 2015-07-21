@@ -16,40 +16,23 @@
 //! parsing functions.
 //!
 //! It can be untyped, typed or both depending on the calling contexts.
-//! The calling context of the start rule is `UnTyped` if its type is unit and
-//! is `Typed` otherwise.
+//! The calling context of the start rule is `UnValued` if its type is unit and
+//! is `Valued` otherwise.
 //!
 //! Semantics actions in an untyped context won't be called.
 
-use middle::typing::visitor::*;
-use middle::typing::ast::TypingContext::*;
+use middle::typing::ast::*;
+use middle::typing::ast::EvaluationContext::*;
 
 pub fn selection_phase(grammar: &mut Grammar)
 {
   Selector::select(&mut grammar.rules, grammar.attributes.starting_rule.clone());
 }
 
-trait FlatMerge<T>
-{
-  fn flat_merge(self, a: T) -> T;
-}
-
-impl FlatMerge<TypingContext> for Option<TypingContext>
-{
-  fn flat_merge(self, context: TypingContext) -> TypingContext
-  {
-    match self {
-      None => context,
-      Some(Both) => Both,
-      Some(x) => x.merge(context)
-    }
-  }
-}
-
 struct Selector
 {
-  visited: HashMap<Ident, Option<TypingContext>>,
-  to_visit: Vec<(Ident, TypingContext)>
+  visited: HashMap<Ident, Option<EvaluationContext>>,
+  to_visit: Vec<(Ident, EvaluationContext)>
 }
 
 impl Selector
@@ -82,17 +65,17 @@ impl Selector
   }
 
   fn context_of_start_rule(rules: &HashMap<Ident, Rule>, start: Ident)
-    -> TypingContext
+    -> EvaluationContext
   {
     if rules[&start].def.ty.borrow().is_unit() {
-      UnTyped
+      UnValued
     }
     else {
-      Typed
+      Valued
     }
   }
 
-  fn mark_if_not_visited(&mut self, rule_id: Ident, context: TypingContext) -> bool
+  fn mark_if_not_visited(&mut self, rule_id: Ident, context: EvaluationContext) -> bool
   {
     let visited = self.visited[&rule_id];
     let new_visited = Some(visited.flat_merge(context));
@@ -110,7 +93,7 @@ impl Selector
   }
 
   fn visit_rule(&mut self, rules: &mut HashMap<Ident, Rule>,
-    rule_id: Ident, context: TypingContext)
+    rule_id: Ident, context: EvaluationContext)
   {
     let first_visit = self.first_visit(rule_id);
     if self.mark_if_not_visited(rule_id, context) {
@@ -123,14 +106,14 @@ impl Selector
 
 struct ExpressionVisitor
 {
-  to_visit: Vec<(Ident, TypingContext)>,
+  to_visit: Vec<(Ident, EvaluationContext)>,
   first_visit: bool
 }
 
 impl ExpressionVisitor
 {
-  fn visit(expr: &mut Expression, context: TypingContext, first_visit: bool)
-    -> Vec<(Ident, TypingContext)>
+  fn visit(expr: &mut Expression, context: EvaluationContext, first_visit: bool)
+    -> Vec<(Ident, EvaluationContext)>
   {
     let mut visitor = ExpressionVisitor {
       to_visit: vec![],
@@ -140,12 +123,12 @@ impl ExpressionVisitor
     visitor.to_visit
   }
 
-  fn visit_expr(&mut self, expr: &mut Expression, mut context: TypingContext)
+  fn visit_expr(&mut self, expr: &mut Expression, mut context: EvaluationContext)
   {
     // The context of a () type doesn't change, so it's safe to return.
     if expr.ty.borrow().is_unit() {
       if self.first_visit {
-        context = UnTyped;
+        context = UnValued;
       }
       else {
         return ();
@@ -155,12 +138,12 @@ impl ExpressionVisitor
     self.visit_expr_node(&mut expr.node, context);
   }
 
-  fn visit_non_terminal_symbol(&mut self, ident: Ident, context: TypingContext)
+  fn visit_non_terminal_symbol(&mut self, ident: Ident, context: EvaluationContext)
   {
     self.to_visit.push((ident, context));
   }
 
-  fn visit_expr_node(&mut self, expr: &mut ExpressionNode, context: TypingContext)
+  fn visit_expr_node(&mut self, expr: &mut ExpressionNode, context: EvaluationContext)
   {
     match expr {
       &mut NonTerminalSymbol(id) => {
@@ -178,7 +161,7 @@ impl ExpressionVisitor
       }
         &mut NotPredicate(ref mut expr)
       | &mut AndPredicate(ref mut expr) => {
-        self.visit_expr(&mut *expr, UnTyped)
+        self.visit_expr(&mut *expr, UnValued)
       }
         &mut StrLiteral(_)
       | &mut AnySingleChar
@@ -186,7 +169,7 @@ impl ExpressionVisitor
     }
   }
 
-  fn visit_exprs(&mut self, exprs: &mut Vec<Box<Expression>>, context: TypingContext)
+  fn visit_exprs(&mut self, exprs: &mut Vec<Box<Expression>>, context: EvaluationContext)
   {
     assert!(exprs.len() > 0);
     for expr in exprs.iter_mut() {

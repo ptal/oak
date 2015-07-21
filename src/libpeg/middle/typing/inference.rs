@@ -20,7 +20,7 @@ pub use middle::attribute::ast::Rule as ARule;
 pub use middle::attribute::ast::Expression as AExpression;
 
 use front::ast::TypeAnnotation;
-use middle::typing::visitor::*;
+use middle::typing::ast::*;
 use middle::typing::ast::ExprTy::*;
 use rust;
 use std::iter::FromIterator;

@@ -23,7 +23,7 @@ pub use std::collections::HashMap;
 pub use std::cell::RefCell;
 
 use rust;
-use middle::typing::ast::TypingContext::*;
+use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
 
 pub struct Grammar
@@ -41,18 +41,35 @@ pub struct Rule
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum TypingContext
+pub enum EvaluationContext
 {
-  Typed,
-  UnTyped,
+  Valued,
+  UnValued,
   Both
 }
 
-impl TypingContext
+impl EvaluationContext
 {
-  pub fn merge(self, other: TypingContext) -> TypingContext {
+  pub fn merge(self, other: EvaluationContext) -> EvaluationContext {
     if self != other { Both }
     else { self }
+  }
+}
+
+trait FlatMerge<T>
+{
+  fn flat_merge(self, a: T) -> T;
+}
+
+impl FlatMerge<EvaluationContext> for Option<EvaluationContext>
+{
+  fn flat_merge(self, context: EvaluationContext) -> EvaluationContext
+  {
+    match self {
+      None => context,
+      Some(Both) => Both,
+      Some(x) => x.merge(context)
+    }
   }
 }
 
@@ -63,19 +80,19 @@ pub struct Expression
   pub node: ExpressionNode,
   pub invisible: RefCell<bool>,
   pub ty: RefCell<ExprTy>,
-  pub ty_context: TypingContext
+  pub context: EvaluationContext
 }
 
 impl Expression
 {
   pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression
   {
-    let mut expr = Expression {
+    let expr = Expression {
       span: sp,
       node: node,
       invisible: RefCell::new(false),
       ty: RefCell::new(ty),
-      ty_context: Both
+      context: Both
     };
     if expr.is_by_default_invisible() {
       expr.to_invisible_type();
