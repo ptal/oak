@@ -27,7 +27,6 @@ mod analysis;
 mod lint;
 mod attribute;
 mod typing;
-// mod post_typing_analysis;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>

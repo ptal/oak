@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! The main goal of RecursiveType is to ensure that mutual recursive rules that need to be typed can actually be typed.
+
 use middle::typing::visitor::*;
 
-// The main goal of InliningLoop is to ensure that expr.deref_type_of(..)
-// will not loop with infinite deref. It also ensures that all rules are
-// typables (untypables rules on purpose must be annotated with #[invisible_type]).
-
-pub struct InliningLoop<'a>
+pub struct RecursiveType<'a>
 {
   cx: &'a ExtCtxt<'a>,
   rules: &'a HashMap<Ident, Rule>,
@@ -27,22 +25,22 @@ pub struct InliningLoop<'a>
   cycle_detected: bool
 }
 
-impl<'a> InliningLoop<'a>
+impl<'a> RecursiveType<'a>
 {
   pub fn analyse(cx: &'a ExtCtxt, start_rule: Ident, rules: &'a HashMap<Ident, Rule>) -> bool
   {
-    let mut inlining_loop = InliningLoop::new(cx, rules);
+    let mut inlining_loop = RecursiveType::new(cx, rules);
     inlining_loop.visit_rule(rules.get(&start_rule).unwrap());
     inlining_loop.cycle_detected
   }
 
-  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> InliningLoop<'a>
+  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a>
   {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
       visited.insert(id.clone(), false);
     }
-    InliningLoop {
+    RecursiveType {
       cx: cx,
       rules: rules,
       visited: visited,
@@ -74,7 +72,7 @@ impl<'a> InliningLoop<'a>
   }
 }
 
-impl<'a> Visitor for InliningLoop<'a>
+impl<'a> Visitor for RecursiveType<'a>
 {
   fn visit_rule(&mut self, rule: &Rule)
   {
@@ -108,7 +106,7 @@ impl<'a> Visitor for InliningLoop<'a>
   }
 
   // Semantic action breaks cycles because the action is already typed by the user.
-  // character, unit and unit_propagate don't generate loops (trivial cases).
+  // character, unit and unit_propagate do not generate loops (trivial cases).
   fn visit_expr(&mut self, expr: &Box<Expression>)
   {
     if !expr.ty.borrow().is_leaf() {

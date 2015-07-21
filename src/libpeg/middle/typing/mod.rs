@@ -23,6 +23,7 @@ pub mod visitor;
 mod inference;
 mod bottom_up_unit;
 // mod selection;
+// mod analysis;
 
 pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
 {
