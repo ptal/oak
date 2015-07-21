@@ -61,7 +61,7 @@ pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
-  pub invisible: bool,
+  pub invisible: RefCell<bool>,
   pub ty: RefCell<ExprTy>,
   pub ty_context: TypingContext
 }
@@ -70,21 +70,48 @@ impl Expression
 {
   pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression
   {
-    Expression {
+    let mut expr = Expression {
       span: sp,
       node: node,
-      invisible: false,
+      invisible: RefCell::new(false),
       ty: RefCell::new(ty),
       ty_context: Both
+    };
+    if expr.is_by_default_invisible() {
+      expr.to_invisible_type();
     }
+    expr
   }
 
-  pub fn to_unit_type(&mut self)
+  pub fn is_invisible(&self) -> bool {
+    *self.invisible.borrow()
+  }
+
+  pub fn is_unit(&self) -> bool {
+    self.ty.borrow().is_unit()
+  }
+
+  pub fn ty_clone(&self) -> ExprTy {
+    self.ty.borrow().clone()
+  }
+
+  pub fn to_unit_type(&self)
   {
-    self.ty = RefCell::new(ExprTy::unit());
+    *self.ty.borrow_mut() = ExprTy::unit();
   }
 
-  pub fn is_by_default_invisible(&self) -> bool {
+  pub fn to_invisible_type(&self)
+  {
+    *self.invisible.borrow_mut() = true;
+    self.to_unit_type();
+  }
+
+  pub fn to_tuple_type(&self, indexes: Vec<usize>)
+  {
+    *self.ty.borrow_mut() = Tuple(indexes);
+  }
+
+  fn is_by_default_invisible(&self) -> bool {
     match &self.node {
       &StrLiteral(_) | &NotPredicate(_) | &AndPredicate(_) => true,
       _ => false
@@ -101,7 +128,7 @@ pub enum ExprTy
   /// For example, `e?` has type `Option<T>` if the type of `e` is `T`.
   Identity,
   /// `Tuple(vec![])` is the unit type.
-  /// `Tuple(vec![i])` is a projection of the type of an inner expression.
+  /// `Tuple(vec![i])` is a projection of the type of a sub-expression.
   /// `Tuple(vec![i,..,j])` is a tuple for the sub-expressions at index `i,..,j`.
   Tuple(Vec<usize>),
   Action(rust::FunctionRetTy)
@@ -111,16 +138,12 @@ impl ExprTy
 {
   pub fn is_unit(&self) -> bool {
     match *self {
-      Tuple(ref sub) => sub.len() == 0,
+      Tuple(ref indexes) => indexes.len() == 0,
       _ => false
     }
   }
 
   pub fn unit() -> ExprTy {
     Tuple(vec![])
-  }
-
-  pub fn projection(index: usize) -> ExprTy {
-    Tuple(vec![index])
   }
 }

@@ -60,7 +60,7 @@ impl<'r> InferenceEngine<'r>
   {
     let sp = expr.span.clone();
     let ty = expr.ty.clone();
-    let mut typed_expr = match expr.node {
+    let typed_expr = match expr.node {
       AnySingleChar => self.infer_identity_expr(sp, AnySingleChar),
       CharacterClass(c) => self.infer_identity_expr(sp, CharacterClass(c)),
       StrLiteral(s) => self.infer_unit_expr(sp, StrLiteral(s)),
@@ -80,16 +80,15 @@ impl<'r> InferenceEngine<'r>
         }
       }
     };
-    self.default_invisible(&mut typed_expr);
     self.type_annotation(typed_expr, ty)
   }
 
-  fn type_annotation(&self, mut expr: Box<Expression>, ty: Option<TypeAnnotation>) -> Box<Expression>
+  fn type_annotation(&self, expr: Box<Expression>, ty: Option<TypeAnnotation>) -> Box<Expression>
   {
     if let Some(ty) = ty {
       match ty {
         TypeAnnotation::Invisible => {
-          self.make_invisible(&mut expr);
+          expr.to_invisible_type();
         }
         TypeAnnotation::Unit => {
           expr.to_unit_type();
@@ -97,19 +96,6 @@ impl<'r> InferenceEngine<'r>
       }
     }
     expr
-  }
-
-  fn make_invisible(&self, expr: &mut Box<Expression>)
-  {
-    expr.invisible = true;
-    expr.to_unit_type();
-  }
-
-  fn default_invisible(&self, expr: &mut Box<Expression>)
-  {
-    if expr.is_by_default_invisible() {
-      self.make_invisible(expr);
-    }
   }
 
   fn infer_identity_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
