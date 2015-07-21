@@ -39,7 +39,6 @@ pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
   Partial::Value(grammar)
 }
 
-
 pub fn type_analysis(_cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
 {
   Partial::Value(grammar)

@@ -24,6 +24,7 @@ type RExpr = rust::P<rust::Expr>;
 pub struct PegCompiler<'cx>
 {
   parsing_functions: Vec<rust::P<rust::Item>>,
+  concrete_to_rule_names: HashMap<Ident, Ident>,
   cx: &'cx ExtCtxt<'cx>,
   unique_id: u32,
   current_rule_name: Ident
@@ -33,13 +34,22 @@ impl<'cx> PegCompiler<'cx>
 {
   pub fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
+    let concrete_to_rule_names = PegCompiler::concrete_to_rule_names(&grammar);
     let mut compiler = PegCompiler{
       parsing_functions: Vec::new(),
+      concrete_to_rule_names: concrete_to_rule_names,
       cx: cx,
       unique_id: 0,
       current_rule_name: grammar.rules.keys().next().unwrap().clone()
     };
     compiler.compile_peg(&grammar)
+  }
+
+  fn concrete_to_rule_names(grammar: &Grammar) -> HashMap<Ident, Ident>
+  {
+    FromIterator::from_iter(
+      grammar.rules.keys()
+      .map(|id| (id.clone(), PegCompiler::gen_fun_name_from_rule(id.clone()))))
   }
 
   fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
@@ -132,21 +142,21 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_rules(&mut self, grammar: &Grammar) {
     for rule in grammar.rules.values() {
-      let rule_name = rule.name.node.clone();
       let rule_def_fn = self.compile_expression(&rule.def);
+      self.current_rule_name = rule.name.node.clone();
+      let rule_name = self.current_concrete_rule_name();
       self.parsing_functions.push(quote_item!(self.cx,
-        fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
+        pub fn $rule_name (input: &str, pos: usize) -> Result<usize, String>
         {
           $rule_def_fn(input, pos)
         }
       ).expect(format!("Quote the rule `{}`.", rule.name.node.clone()).as_str()));
-      self.current_rule_name = rule_name;
     }
   }
 
   fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
   {
-    let start_rule_name = grammar.attributes.starting_rule;
+    let start_rule_name = self.concrete_rule_name(&grammar.attributes.starting_rule);
     (quote_item!(self.cx,
       impl peg::Parser for Parser
       {
@@ -159,7 +169,7 @@ impl<'cx> PegCompiler<'cx>
   }
 
   fn compile_parse_fn(&mut self, prefix: &str, body: RExpr) -> Ident {
-    let fun_name = self.gensym(prefix);
+    let fun_name = self.gen_expr_fun_name(prefix);
     self.parsing_functions.push(quote_item!(self.cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
       {
@@ -183,18 +193,44 @@ impl<'cx> PegCompiler<'cx>
     self.unique_id - 1
   }
 
-  fn current_lc_rule_name(&self) -> String
+  fn lc_rule_name(rule_name: Ident) -> String
   {
-    let rule_name = id_to_string(self.current_rule_name);
+    let rule_name = id_to_string(rule_name);
     string_to_lowercase(&rule_name)
   }
 
-  fn gensym<'a>(&mut self, prefix: &'a str) -> Ident
+  fn gen_fun_name_from_rule(rule_name: Ident) -> Ident
+  {
+    PegCompiler::gen_fun_name(PegCompiler::lc_rule_name(rule_name))
+  }
+
+  fn current_lc_rule_name(&self) -> String
+  {
+    PegCompiler::lc_rule_name(self.current_rule_name)
+  }
+
+  fn concrete_rule_name(&self, id: &Ident) -> Ident
+  {
+    self.concrete_to_rule_names[id].clone()
+  }
+
+  fn current_concrete_rule_name(&self) -> Ident
+  {
+    self.concrete_rule_name(&self.current_rule_name)
+  }
+
+  fn gen_fun_name(name: String) -> Ident
   {
     rust::gensym_ident(format!(
+      "parse_{}", name).as_str())
+  }
+
+  fn gen_expr_fun_name(&mut self, prefix: &str) -> Ident
+  {
+    PegCompiler::gen_fun_name(format!(
       "{}_in_rule_{}_{}", prefix,
         self.current_lc_rule_name(),
-        self.gen_uid()).as_str())
+        self.gen_uid()))
   }
 
   fn map_foldr_expr<'a, F>(&mut self, seq: &'a [Box<Expression>], f: F) -> RExpr where
@@ -220,7 +256,7 @@ impl<'cx> PegCompiler<'cx>
       &AnySingleChar => {
         self.compile_any_single_char(expr.ty.borrow().deref(), expr.context)
       },
-      &NonTerminalSymbol(id) => {
+      &NonTerminalSymbol(ref id) => {
         self.compile_non_terminal_symbol(id)
       },
       &Sequence(ref seq) => {
@@ -253,9 +289,9 @@ impl<'cx> PegCompiler<'cx>
     }
   }
 
-  fn compile_non_terminal_symbol(&mut self, fn_name: Ident) -> Ident
+  fn compile_non_terminal_symbol(&mut self, rule_id: &Ident) -> Ident
   {
-    fn_name
+    self.concrete_rule_name(&rule_id)
   }
 
   fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> Ident
@@ -299,7 +335,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_star(&mut self, expr_fn: Ident) -> Ident
   {
-    let fun_name = self.gensym("star");
+    let fun_name = self.gen_expr_fun_name("star");
     let cx = self.cx;
     self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
@@ -328,7 +364,7 @@ impl<'cx> PegCompiler<'cx>
   {
     let expr_fn = self.compile_expression(expr);
     let star_fn = self.compile_star(expr_fn);
-    let fun_name = self.gensym("plus");
+    let fun_name = self.gen_expr_fun_name("plus");
     let cx = self.cx;
     self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
@@ -365,7 +401,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> Ident
   {
-    let fun_name = self.gensym("class_char");
+    let fun_name = self.gen_expr_fun_name("class_char");
     let cx = self.cx;
 
     let mut seq_it = expr.intervals.iter();
