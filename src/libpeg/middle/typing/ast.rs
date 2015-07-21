@@ -56,7 +56,7 @@ impl EvaluationContext
   }
 }
 
-trait FlatMerge<T>
+pub trait FlatMerge<T>
 {
   fn flat_merge(self, a: T) -> T;
 }

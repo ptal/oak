@@ -14,7 +14,7 @@
 
 use middle::typing::inference::*;
 use middle::typing::bottom_up_unit::*;
-// use middle::typing::selection::*;
+use middle::typing::top_down_unit::*;
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
@@ -22,10 +22,10 @@ pub mod ast;
 pub mod visitor;
 mod inference;
 mod bottom_up_unit;
-// mod selection;
+mod top_down_unit;
 // mod analysis;
 
-pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
+pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
 {
   let mut grammar = Grammar {
     name: agrammar.name,
@@ -35,6 +35,12 @@ pub fn grammar_typing(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar>
   };
   InferenceEngine::infer(&mut grammar, agrammar.rules);
   bottom_up_unit_inference(&mut grammar);
-  // selection_phase(&mut grammar);
+  top_down_unit_inference(&mut grammar);
+  Partial::Value(grammar)
+}
+
+
+pub fn type_analysis(_cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
+{
   Partial::Value(grammar)
 }

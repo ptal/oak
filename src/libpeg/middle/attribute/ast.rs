@@ -50,7 +50,7 @@ impl Grammar
 
     let rules = FromIterator::from_iter(
       sgrammar.rules.into_iter()
-      .map(|(id, rule)| (id, Rule::new(cx, rule.name, rule.def)))
+      .map(|(id, rule)| (id, Rule::new(rule.name, rule.def)))
     );
 
     let attributes = GrammarAttributes::new(cx, rules_models, grammar_model);
@@ -77,7 +77,7 @@ pub struct Rule{
 
 impl Rule
 {
-  fn new(cx: &ExtCtxt, name: SpannedIdent, def: Box<Expression>) -> Rule
+  fn new(name: SpannedIdent, def: Box<Expression>) -> Rule
   {
     Rule{
       name: name,
