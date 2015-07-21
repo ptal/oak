@@ -36,18 +36,18 @@
 //!    * `e:t -> (^) => e:(^)`
 
 //! One of the difficulty for implementing this is to deal with the recursion introduced by the typing rule of non-terminal symbol with the `R` function. Untypable recursive types must not generate errors here because the rule might be called in a context where the AST does not need to be build. The recursive type analysis will be performed after the top-down unit propagation (see `typing::top_down_unit`).
-//! The algorithm is divided in two steps, it first propagates unit inside rules (`IntraRulePropagation`) and then between the rules (`InterRulePropagation`). The inter-rule propagation does not loop. We start from the root grammar rule, whenever we encounter an already visited node, it means that the expression is not typable and let the type of the non-terminal symbol to `Identity`. Of course, after the inter-rule propagation, `Identity`-type loop can arise but generating or not an error is decided by the recursive type analysis that uses the value context in addition.
+//! The algorithm is divided in two steps, it first propagates unit types inside rules (`IntraRule`) and then between the rules (`InterRule`). The inter-rule propagation does not loop. We start from the root grammar rule, whenever we encounter an already visited node, it means that the expression is not typable and let the type of the non-terminal symbol to `Identity`. Of course, after the inter-rule propagation, `Identity`-type loop can arise but generating or not an error is decided by the recursive type analysis that uses the value context in addition.
 
 use middle::typing::visitor::*;
 use middle::typing::ast::ExprTy::*;
 
-pub fn propagation_phase(grammar: &mut Grammar)
+pub fn bottom_up_unit_inference(grammar: &mut Grammar)
 {
-  IntraRulePropagation::propagate(&grammar.rules);
-  InterRulePropagation::propagate(&grammar.rules);
+  IntraRule::propagate(&grammar.rules);
+  InterRule::propagate(&grammar.rules);
 }
 
-trait Propagator
+trait BottomUpAnalysis
 {
   fn visit_rules(&mut self, rules: &HashMap<Ident, Rule>) {
     for rule in rules.values() {
@@ -160,31 +160,25 @@ trait Propagator
   }
 }
 
-struct IntraRulePropagation<'a>
-{
-  rules: &'a HashMap<Ident, Rule>
-}
+struct IntraRule;
 
-impl<'a> IntraRulePropagation<'a>
+impl IntraRule
 {
-  pub fn propagate(rules: &'a HashMap<Ident, Rule>)
+  pub fn propagate(rules: &HashMap<Ident, Rule>)
   {
-    let mut propagator = IntraRulePropagation {
-      rules: rules
-    };
-    propagator.visit_rules(rules);
+    IntraRule.visit_rules(rules);
   }
 }
 
-impl<'a> Propagator for IntraRulePropagation<'a> {}
+impl BottomUpAnalysis for IntraRule {}
 
-struct InterRulePropagation<'a>
+struct InterRule<'a>
 {
   rules: &'a HashMap<Ident, Rule>,
   visited: HashMap<Ident, bool>
 }
 
-impl<'a> InterRulePropagation<'a>
+impl<'a> InterRule<'a>
 {
   pub fn propagate(rules: &'a HashMap<Ident, Rule>)
   {
@@ -192,7 +186,7 @@ impl<'a> InterRulePropagation<'a>
     for id in rules.keys() {
       visited.insert(id.clone(), false);
     }
-    let mut propagator = InterRulePropagation {
+    let mut propagator = InterRule {
       rules: rules,
       visited: visited
     };
@@ -208,7 +202,7 @@ impl<'a> InterRulePropagation<'a>
   }
 }
 
-impl<'a> Propagator for InterRulePropagation<'a>
+impl<'a> BottomUpAnalysis for InterRule<'a>
 {
   fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident)
   {
