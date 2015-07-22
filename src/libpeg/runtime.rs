@@ -17,37 +17,82 @@ pub trait Parser
   fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;
 }
 
-pub fn any_single_char(input: &str, pos: usize) -> Result<usize, String>
+pub struct ParseState<T>
 {
-  if input.len() - pos > 0 {
-    Ok(pos + input.char_at(pos).len_utf8())
+  pub data: T,
+  pub offset: usize
+}
+
+impl<T> ParseState<T>
+{
+  pub fn new(data: T, offset: usize) -> ParseState<T>
+  {
+    ParseState {
+      data: data,
+      offset: offset
+    }
+  }
+}
+
+impl ParseState<()>
+{
+  pub fn stateless(offset: usize) -> ParseState<()>
+  {
+    ParseState::new((), offset)
+  }
+
+  pub fn erase<T>(source: ParseState<T>) -> ParseState<()>
+  {
+    ParseState {
+      data: (),
+      offset: source.offset
+    }
+  }
+}
+
+pub fn parse_any_single_char(input: &str, offset: usize) -> Result<ParseState<char>, String>
+{
+  if offset < input.len() {
+    let any = input.char_at(offset);
+    Ok(ParseState::new(any, offset + any.len_utf8()))
   } else {
     Err(format!("End of input when matching `.`"))
   }
 }
 
-pub fn match_literal(input: &str, pos: usize, lit: &str, lit_len: usize)
-  -> Result<usize, String>
+pub fn recognize_any_single_char(input: &str, offset: usize) -> Result<ParseState<()>, String>
 {
-  if input.len() - pos == 0 {
+  parse_any_single_char(input, offset).map(|state| ParseState::erase(state))
+}
+
+pub fn parse_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
+  -> Result<ParseState<()>, String>
+{
+  if offset >= input.len() {
     Err(format!("End of input when matching the literal `{}`", lit))
-  } else if input[pos..].starts_with(lit) {
-    Ok(pos + lit_len)
+  } else if input[offset..].starts_with(lit) {
+    Ok(ParseState::stateless(offset + lit_len))
   } else {
-    Err(format!("Expected `{}` but got `{}`", lit, &input[pos..]))
+    Err(format!("Expected `{}` but got `{}`", lit, &input[offset..]))
   }
 }
 
-pub fn make_result<'a>(input: &'a str, parsing_res: &Result<usize, String>)
+pub fn recognize_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
+  -> Result<ParseState<()>, String>
+{
+  parse_match_literal(input, offset, lit, lit_len)
+}
+
+pub fn make_result<'a, T>(input: &'a str, parsing_res: &Result<ParseState<T>, String>)
  -> Result<Option<&'a str>, String>
 {
   match parsing_res {
-    &Ok(pos) => {
-      assert!(pos <= input.len());
-      if pos == input.len() {
+    &Ok(ref state) => {
+      assert!(state.offset <= input.len());
+      if state.offset == input.len() {
         Ok(None)
       } else {
-        Ok(Some(&input[pos..]))
+        Ok(Some(&input[state.offset..]))
       }
     },
     &Err(ref msg) => Err(msg.clone())

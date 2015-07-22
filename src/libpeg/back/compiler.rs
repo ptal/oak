@@ -137,7 +137,7 @@ impl<'cx> PegCompiler<'cx>
       self.current_rule_name = rule.name.node.clone();
       let rule_fn_name = self.names.rule_recognizer_name(&self.current_rule_name);
       self.parsing_functions.push(quote_item!(self.cx,
-        pub fn $rule_fn_name (input: &str, pos: usize) -> Result<usize, String>
+        pub fn $rule_fn_name (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
         {
           $rule_def_fn(input, pos)
         }
@@ -162,7 +162,7 @@ impl<'cx> PegCompiler<'cx>
   fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> Ident {
     let fun_name = self.names.expression_recognizer_name(prefix, &self.current_rule_name);
     self.parsing_functions.push(quote_item!(self.cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         $body
       }
@@ -242,7 +242,7 @@ impl<'cx> PegCompiler<'cx>
   fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> Ident
   {
     self.compile_expr_recognizer("any_single_char", quote_expr!(self.cx,
-      peg::runtime::any_single_char(input, pos)
+      peg::runtime::recognize_any_single_char(input, pos)
     ))
   }
 
@@ -252,7 +252,7 @@ impl<'cx> PegCompiler<'cx>
     let lit_len = lit_str.len();
 
     self.compile_expr_recognizer("str_literal", quote_expr!(self.cx,
-      peg::runtime::match_literal(input, pos, $lit_str, $lit_len)
+      peg::runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)
     ))
   }
 
@@ -261,7 +261,7 @@ impl<'cx> PegCompiler<'cx>
     let cx = self.cx;
     let expr = self.map_foldr_expr(seq, |block, expr| {
       quote_expr!(cx,
-        $expr.and_then(|pos| $block)
+        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
       )
     });
     self.compile_expr_recognizer("sequence", expr)
@@ -283,17 +283,17 @@ impl<'cx> PegCompiler<'cx>
     let fun_name = self.names.expression_recognizer_name("star", &self.current_rule_name);
     let cx = self.cx;
     self.parsing_functions.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         let mut npos = pos;
         while npos < input.len() {
           let pos = npos;
           match $expr_fn(input, pos) {
-            Ok(pos) => { npos = pos; }
+            Ok(state) => { npos = state.offset; }
             _ => break
           }
         }
-        Ok(npos)
+        Ok(peg::runtime::ParseState::stateless(npos))
       }
     ).expect("Quote the parsing function of `expr*`."));
     fun_name
@@ -310,13 +310,13 @@ impl<'cx> PegCompiler<'cx>
     let expr_fn = self.compile_expression(expr);
     let star_fn = self.compile_star(expr_fn);
     self.compile_expr_recognizer("plus",
-      quote_expr!(self.cx, $expr_fn(input, pos).and_then(|pos| $star_fn(input, pos))))
+      quote_expr!(self.cx, $expr_fn(input, pos).and_then(|state| $star_fn(input, state.offset))))
   }
 
   fn compile_optional(&mut self, expr: &Box<Expression>) -> Ident
   {
     self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
-      $inner_call.or_else(|_| Ok(pos))
+      $inner_call.or_else(|_| Ok(peg::runtime::ParseState::stateless(pos)))
     ))
   }
 
@@ -325,7 +325,7 @@ impl<'cx> PegCompiler<'cx>
     self.compile_parse_expr_fn(expr, "not_predicate", |cx, inner_call| quote_expr!(cx,
       match $inner_call {
         Ok(_) => Err(format!("An `!expr` failed.")),
-        _ => Ok(pos)
+        _ => Ok(peg::runtime::ParseState::stateless(pos))
       }
     ))
   }
@@ -333,7 +333,7 @@ impl<'cx> PegCompiler<'cx>
   fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> Ident
   {
     self.compile_parse_expr_fn(expr, "and_predicate", |cx, inner_call| quote_expr!(cx,
-      $inner_call.map(|_| pos)
+      $inner_call.map(|_| peg::runtime::ParseState::stateless(pos))
     ))
   }
 
@@ -353,11 +353,12 @@ impl<'cx> PegCompiler<'cx>
     );
 
     self.parsing_functions.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<usize, String>
+      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
-        let current = input.char_range_at(pos).ch;
+        let char_range = input.char_range_at(pos);
+        let current = char_range.ch;
         if $cond {
-          Ok(input.char_range_at(pos).next)
+          Ok(peg::runtime::ParseState::stateless(char_range.next))
         } else {
           Err(format!("It doesn't match the character class."))
         }
