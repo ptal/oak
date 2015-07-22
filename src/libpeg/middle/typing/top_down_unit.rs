@@ -12,17 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The selection phase is used to identify the typing contexts of the future
-//! parsing functions.
-//!
-//! It can be untyped, typed or both depending on the calling contexts.
-//! The calling context of the start rule is `UnValued` if its type is unit and
-//! is `Valued` otherwise.
-//!
-//! Semantics actions in an untyped context won't be called.
-
-//! Top-down unit inference analyses the evaluation context of each expression. It prevents untypable expression to generate error if the context does not expect the expression to have a type other than unit.
+//! Top-down unit inference analyses the evaluation context of each expression. It prevents untypable expression to generate errors if the context does not expect the expression to have a type other than unit.
 //! The type of the expression is not modified, so one is expected to examine the context before using the expression type.
+//! The calling context of the start rule is `UnValued` if its type is unit and is `Valued` otherwise. Semantics actions in an unvalued context won't be called.
 
 use middle::typing::ast::*;
 use middle::typing::ast::EvaluationContext::*;

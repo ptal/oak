@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modify the type accordingly. It does not propagate the invisible types, this step is done in `typing::propagation`.
+//! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modify the type accordingly. It does not propagate the invisible types, this step is done in `typing::bottom_up_unit`.
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
 pub use middle::attribute::ast::Grammar as AGrammar;

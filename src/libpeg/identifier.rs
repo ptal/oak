@@ -31,3 +31,9 @@ pub fn string_to_lowercase(s: &String) -> String
 {
   s.chars().flat_map(char::to_lowercase).collect()
 }
+
+pub fn ident_to_lowercase(ident: &Ident) -> String
+{
+  let ident = id_to_string(ident.clone());
+  string_to_lowercase(&ident)
+}
