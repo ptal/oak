@@ -135,7 +135,7 @@ impl<'cx> PegCompiler<'cx>
     for rule in grammar.rules.values() {
       let rule_def_fn = self.compile_expression(&rule.def);
       self.current_rule_name = rule.name.node.clone();
-      let rule_fn_name = self.names.rule_recognizer_name(&self.current_rule_name);
+      let rule_fn_name = self.names.rule_name(&self.current_rule_name).recognizer;
       self.parsing_functions.push(quote_item!(self.cx,
         pub fn $rule_fn_name (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
         {
@@ -147,7 +147,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
   {
-    let start_rule_name = self.names.rule_recognizer_name(&grammar.attributes.starting_rule);
+    let start_rule_name = self.names.rule_name(&grammar.attributes.starting_rule).recognizer;
     (quote_item!(self.cx,
       impl peg::Parser for Parser
       {
@@ -160,7 +160,7 @@ impl<'cx> PegCompiler<'cx>
   }
 
   fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> Ident {
-    let fun_name = self.names.expression_recognizer_name(prefix, &self.current_rule_name);
+    let fun_name = self.names.expression_name(prefix, &self.current_rule_name).recognizer;
     self.parsing_functions.push(quote_item!(self.cx,
       fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
@@ -236,7 +236,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_non_terminal_symbol(&mut self, rule_id: &Ident) -> Ident
   {
-    self.names.rule_recognizer_name(rule_id)
+    self.names.rule_name(rule_id).recognizer
   }
 
   fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> Ident
@@ -280,7 +280,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_star(&mut self, expr_fn: Ident) -> Ident
   {
-    let fun_name = self.names.expression_recognizer_name("star", &self.current_rule_name);
+    let fun_name = self.names.expression_name("star", &self.current_rule_name).recognizer;
     let cx = self.cx;
     self.parsing_functions.push(quote_item!(cx,
       fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
@@ -339,7 +339,7 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> Ident
   {
-    let fun_name = self.names.expression_recognizer_name("class_char", &self.current_rule_name);
+    let fun_name = self.names.expression_name("class_char", &self.current_rule_name).recognizer;
     let cx = self.cx;
 
     let mut seq_it = expr.intervals.iter();

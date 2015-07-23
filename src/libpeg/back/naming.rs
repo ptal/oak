@@ -15,11 +15,33 @@
 use rust;
 use middle::ast::*;
 
+#[derive(Clone)]
+pub struct FunctionName
+{
+  pub recognizer: Ident,
+  pub parser: Ident
+}
+
+impl FunctionName
+{
+  fn from_base_name(base_name: String) -> FunctionName
+  {
+    FunctionName {
+      recognizer: FunctionName::gen_ident("recognize", &base_name),
+      parser: FunctionName::gen_ident("parse", &base_name)
+    }
+  }
+
+  fn gen_ident(prefix: &str, base_name: &String) -> Ident
+  {
+    rust::gensym_ident(format!("{}_{}", prefix, base_name).as_str())
+  }
+}
+
 pub struct NameFactory
 {
-  rule_id_to_recognizer_id: HashMap<Ident, Ident>,
-  rule_id_to_parser_id: HashMap<Ident, Ident>,
-  unique_id: u32,
+  rule_name_memoization: HashMap<Ident, FunctionName>,
+  unique_id: u32
 }
 
 impl NameFactory
@@ -27,56 +49,36 @@ impl NameFactory
   pub fn new() -> NameFactory
   {
     NameFactory {
-      rule_id_to_recognizer_id: HashMap::new(),
-      rule_id_to_parser_id: HashMap::new(),
+      rule_name_memoization: HashMap::new(),
       unique_id: 0
     }
   }
 
-  pub fn expression_recognizer_name(&mut self, expr: &str, current_rule: &Ident) -> Ident
+  pub fn expression_name(&mut self, expr: &str, current_rule: &Ident) -> FunctionName
   {
-    self.expression_name("recognize", expr, current_rule)
+    FunctionName::from_base_name(
+      format!("{}_in_rule_{}_{}",
+        expr,
+        ident_to_lowercase(current_rule),
+        self.gen_uid()
+      ))
   }
 
-  pub fn expression_parser_name(&mut self, expr: &str, current_rule: &Ident) -> Ident
+  pub fn rule_name(&mut self, rule: &Ident) -> FunctionName
   {
-    self.expression_name("parse", expr, current_rule)
-  }
-
-  pub fn rule_recognizer_name(&mut self, rule: &Ident) -> Ident
-  {
-    NameFactory::rule_name("recognize", rule, &mut self.rule_id_to_recognizer_id)
-  }
-
-  pub fn rule_parser_name(&mut self, rule: &Ident) -> Ident
-  {
-    NameFactory::rule_name("parse", rule, &mut self.rule_id_to_parser_id)
+    match self.rule_name_memoization.get(rule).cloned() {
+      Some(fun_name) => fun_name,
+      None => {
+        let fun_name = FunctionName::from_base_name(ident_to_lowercase(rule));
+        self.rule_name_memoization.insert(rule.clone(), fun_name.clone());
+        fun_name
+      }
+    }
   }
 
   fn gen_uid(&mut self) -> u32
   {
     self.unique_id += 1;
     self.unique_id - 1
-  }
-
-  fn expression_name(&mut self, action: &str, expr: &str, current_rule: &Ident) -> Ident
-  {
-    rust::gensym_ident(format!(
-      "{}_{}_in_rule_{}_{}", action, expr,
-        ident_to_lowercase(current_rule),
-        self.gen_uid()).as_str())
-  }
-
-  fn rule_name(action: &str, rule: &Ident, memoization: &mut HashMap<Ident, Ident>) -> Ident
-  {
-    match memoization.get(rule).cloned() {
-      Some(id) => id,
-      None => {
-        let fun_name = format!("{}_{}", action, ident_to_lowercase(rule));
-        let fun_id = rust::gensym_ident(fun_name.as_str());
-        memoization.insert(rule.clone(), fun_id.clone());
-        fun_id
-      }
-    }
   }
 }
