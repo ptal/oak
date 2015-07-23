@@ -16,19 +16,19 @@ use rust;
 use middle::ast::*;
 
 #[derive(Clone)]
-pub struct FunctionName
+pub struct GenFunNames
 {
   pub recognizer: Ident,
   pub parser: Ident
 }
 
-impl FunctionName
+impl GenFunNames
 {
-  fn from_base_name(base_name: String) -> FunctionName
+  fn from_base_name(base_name: String) -> GenFunNames
   {
-    FunctionName {
-      recognizer: FunctionName::gen_ident("recognize", &base_name),
-      parser: FunctionName::gen_ident("parse", &base_name)
+    GenFunNames {
+      recognizer: GenFunNames::gen_ident("recognize", &base_name),
+      parser: GenFunNames::gen_ident("parse", &base_name)
     }
   }
 
@@ -40,7 +40,7 @@ impl FunctionName
 
 pub struct NameFactory
 {
-  rule_name_memoization: HashMap<Ident, FunctionName>,
+  rule_name_memoization: HashMap<Ident, GenFunNames>,
   unique_id: u32
 }
 
@@ -54,9 +54,9 @@ impl NameFactory
     }
   }
 
-  pub fn expression_name(&mut self, expr: &str, current_rule: &Ident) -> FunctionName
+  pub fn expression_name(&mut self, expr: &str, current_rule: &Ident) -> GenFunNames
   {
-    FunctionName::from_base_name(
+    GenFunNames::from_base_name(
       format!("{}_in_rule_{}_{}",
         expr,
         ident_to_lowercase(current_rule),
@@ -64,12 +64,12 @@ impl NameFactory
       ))
   }
 
-  pub fn rule_name(&mut self, rule: &Ident) -> FunctionName
+  pub fn rule_name(&mut self, rule: &Ident) -> GenFunNames
   {
     match self.rule_name_memoization.get(rule).cloned() {
       Some(fun_name) => fun_name,
       None => {
-        let fun_name = FunctionName::from_base_name(ident_to_lowercase(rule));
+        let fun_name = GenFunNames::from_base_name(ident_to_lowercase(rule));
         self.rule_name_memoization.insert(rule.clone(), fun_name.clone());
         fun_name
       }

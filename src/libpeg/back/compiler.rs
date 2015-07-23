@@ -133,13 +133,14 @@ impl<'cx> PegCompiler<'cx>
 
   fn compile_rules(&mut self, grammar: &Grammar) {
     for rule in grammar.rules.values() {
-      let rule_def_fn = self.compile_expression(&rule.def);
       self.current_rule_name = rule.name.node.clone();
-      let rule_fn_name = self.names.rule_name(&self.current_rule_name).recognizer;
+      let expr_fn = self.compile_expression(&rule.def);
+      let expr_recognizer = expr_fn.recognizer;
+      let rule_recognizer = self.names.rule_name(&self.current_rule_name).recognizer;
       self.parsing_functions.push(quote_item!(self.cx,
-        pub fn $rule_fn_name (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
+        pub fn $rule_recognizer (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
         {
-          $rule_def_fn(input, pos)
+          $expr_recognizer(input, pos)
         }
       ).expect(format!("Quote the rule `{}`.", rule.name.node.clone()).as_str()));
     }
@@ -159,22 +160,24 @@ impl<'cx> PegCompiler<'cx>
       })).expect("Quote the implementation of `peg::Parser` for Parser.")
   }
 
-  fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> Ident {
-    let fun_name = self.names.expression_name(prefix, &self.current_rule_name).recognizer;
+  fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> GenFunNames {
+    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
+    let recognizer = fun_names.recognizer;
     self.parsing_functions.push(quote_item!(self.cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
+      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         $body
       }
     ).expect(format!("Quotation of a parsing function ({}).", prefix).as_str()));
-    fun_name
+    fun_names
   }
 
-  fn compile_parse_expr_fn<F>(&mut self, expr: &Box<Expression>, prefix: &str, make_body: F) -> Ident where
+  fn compile_parse_expr_fn<F>(&mut self, expr: &Box<Expression>, prefix: &str, make_body: F) -> GenFunNames where
     F: Fn(&ExtCtxt<'cx>, RExpr) -> RExpr
   {
-    let expr_fn_ident = self.compile_expression(expr);
-    let body = make_body(self.cx, quote_expr!(self.cx, $expr_fn_ident(input, pos)));
+    let fun_names = self.compile_expression(expr);
+    let recognizer = fun_names.recognizer;
+    let body = make_body(self.cx, quote_expr!(self.cx, $recognizer(input, pos)));
     self.compile_expr_recognizer(prefix, body)
   }
 
@@ -185,14 +188,14 @@ impl<'cx> PegCompiler<'cx>
     let mut seq_it = seq
       .iter()
       .map(|e| self.compile_expression(e))
-      .map(|fn_ident| quote_expr!(cx, $fn_ident(input, pos)))
+      .map(|GenFunNames{recognizer,..}| quote_expr!(cx, $recognizer(input, pos)))
       .rev();
 
     let block = seq_it.next().expect("Can not right fold an empty sequence.");
     seq_it.fold(quote_expr!(self.cx, $block), f)
   }
 
-  fn compile_expression(&mut self, expr: &Box<Expression>) -> Ident
+  fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
@@ -234,19 +237,19 @@ impl<'cx> PegCompiler<'cx>
     }
   }
 
-  fn compile_non_terminal_symbol(&mut self, rule_id: &Ident) -> Ident
+  fn compile_non_terminal_symbol(&mut self, rule_id: &Ident) -> GenFunNames
   {
-    self.names.rule_name(rule_id).recognizer
+    self.names.rule_name(rule_id)
   }
 
-  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> Ident
+  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> GenFunNames
   {
     self.compile_expr_recognizer("any_single_char", quote_expr!(self.cx,
       peg::runtime::recognize_any_single_char(input, pos)
     ))
   }
 
-  fn compile_str_literal(&mut self, lit_str: &String) -> Ident
+  fn compile_str_literal(&mut self, lit_str: &String) -> GenFunNames
   {
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
@@ -256,90 +259,10 @@ impl<'cx> PegCompiler<'cx>
     ))
   }
 
-  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> Ident
+  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> GenFunNames
   {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(seq, |block, expr| {
-      quote_expr!(cx,
-        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
-      )
-    });
-    self.compile_expr_recognizer("sequence", expr)
-  }
-
-  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> Ident
-  {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(choices, |block, expr| {
-      quote_expr!(cx,
-        $expr.or_else(|_| $block)
-      )
-    });
-    self.compile_expr_recognizer("choice", expr)
-  }
-
-  fn compile_star(&mut self, expr_fn: Ident) -> Ident
-  {
-    let fun_name = self.names.expression_name("star", &self.current_rule_name).recognizer;
-    let cx = self.cx;
-    self.parsing_functions.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-      {
-        let mut npos = pos;
-        while npos < input.len() {
-          let pos = npos;
-          match $expr_fn(input, pos) {
-            Ok(state) => { npos = state.offset; }
-            _ => break
-          }
-        }
-        Ok(peg::runtime::ParseState::stateless(npos))
-      }
-    ).expect("Quote the parsing function of `expr*`."));
-    fun_name
-  }
-
-  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> Ident
-  {
-    let expr_fn = self.compile_expression(expr);
-    self.compile_star(expr_fn)
-  }
-
-  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> Ident
-  {
-    let expr_fn = self.compile_expression(expr);
-    let star_fn = self.compile_star(expr_fn);
-    self.compile_expr_recognizer("plus",
-      quote_expr!(self.cx, $expr_fn(input, pos).and_then(|state| $star_fn(input, state.offset))))
-  }
-
-  fn compile_optional(&mut self, expr: &Box<Expression>) -> Ident
-  {
-    self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
-      $inner_call.or_else(|_| Ok(peg::runtime::ParseState::stateless(pos)))
-    ))
-  }
-
-  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> Ident
-  {
-    self.compile_parse_expr_fn(expr, "not_predicate", |cx, inner_call| quote_expr!(cx,
-      match $inner_call {
-        Ok(_) => Err(format!("An `!expr` failed.")),
-        _ => Ok(peg::runtime::ParseState::stateless(pos))
-      }
-    ))
-  }
-
-  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> Ident
-  {
-    self.compile_parse_expr_fn(expr, "and_predicate", |cx, inner_call| quote_expr!(cx,
-      $inner_call.map(|_| peg::runtime::ParseState::stateless(pos))
-    ))
-  }
-
-  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> Ident
-  {
-    let fun_name = self.names.expression_name("class_char", &self.current_rule_name).recognizer;
+    let fn_name = self.names.expression_name("class_char", &self.current_rule_name);
+    let recognizer = fn_name.recognizer;
     let cx = self.cx;
 
     let mut seq_it = expr.intervals.iter();
@@ -353,7 +276,7 @@ impl<'cx> PegCompiler<'cx>
     );
 
     self.parsing_functions.push(quote_item!(cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
+      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         let char_range = input.char_range_at(pos);
         let current = char_range.ch;
@@ -364,6 +287,91 @@ impl<'cx> PegCompiler<'cx>
         }
       }
     ).expect("Quotation of a character class (e.g. `[0-9]`)."));
-    fun_name
+    fn_name
+  }
+
+  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
+  {
+    let cx = self.cx;
+    let expr = self.map_foldr_expr(seq, |block, expr| {
+      quote_expr!(cx,
+        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
+      )
+    });
+    self.compile_expr_recognizer("sequence", expr)
+  }
+
+  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> GenFunNames
+  {
+    let cx = self.cx;
+    let expr = self.map_foldr_expr(choices, |block, expr| {
+      quote_expr!(cx,
+        $expr.or_else(|_| $block)
+      )
+    });
+    self.compile_expr_recognizer("choice", expr)
+  }
+
+  fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
+  {
+    let fun_names = self.names.expression_name("star", &self.current_rule_name);
+    let recognizer = fun_names.recognizer;
+    let expr_recognizer = expr_fn.recognizer;
+    let cx = self.cx;
+    self.parsing_functions.push(quote_item!(cx,
+      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
+      {
+        let mut npos = pos;
+        while npos < input.len() {
+          let pos = npos;
+          match $expr_recognizer(input, pos) {
+            Ok(state) => { npos = state.offset; }
+            _ => break
+          }
+        }
+        Ok(peg::runtime::ParseState::stateless(npos))
+      }
+    ).expect("Quote the parsing function of `expr*`."));
+    fun_names
+  }
+
+  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> GenFunNames
+  {
+    let expr_fn = self.compile_expression(expr);
+    self.compile_star(expr_fn)
+  }
+
+  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> GenFunNames
+  {
+    let expr_fn = self.compile_expression(expr);
+    let expr_recognizer = expr_fn.recognizer;
+    let star_fn = self.compile_star(expr_fn);
+    let star_recognizer = star_fn.recognizer;
+    self.compile_expr_recognizer("plus",
+      quote_expr!(self.cx, $expr_recognizer(input, pos).and_then(|state| $star_recognizer(input, state.offset))))
+  }
+
+  fn compile_optional(&mut self, expr: &Box<Expression>) -> GenFunNames
+  {
+    self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
+      $inner_call.or_else(|_| Ok(peg::runtime::ParseState::stateless(pos)))
+    ))
+  }
+
+  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> GenFunNames
+  {
+    self.compile_parse_expr_fn(expr, "not_predicate", |cx, inner_call| quote_expr!(cx,
+      match $inner_call {
+        Ok(_) => Err(format!("An `!expr` failed.")),
+        _ => Ok(peg::runtime::ParseState::stateless(pos))
+      }
+    ))
+  }
+
+  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> GenFunNames
+  {
+    self.compile_parse_expr_fn(expr, "and_predicate", |cx, inner_call| quote_expr!(cx,
+      $inner_call.map(|_| peg::runtime::ParseState::stateless(pos))
+    ))
   }
 }
