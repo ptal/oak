@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Top-down unit inference analyses the evaluation context of each expression. It prevents untypable expression to generate errors if the context does not expect the expression to have a type other than unit.
+//! Top-down unit inference analyses the evaluation context of each expression. It prevents untypable expression to generate errors if the context does not expect the expression to construct a value other than unit.
 //! The type of the expression is not modified, so one is expected to examine the context before using the expression type.
 //! The calling context of the start rule is `UnValued` if its type is unit and is `Valued` otherwise. Semantics actions in an unvalued context won't be called.
 
@@ -119,13 +119,13 @@ impl ExpressionVisitor
 
   fn visit_expr(&mut self, expr: &mut Expression, context: EvaluationContext)
   {
-    // For any `C |- e:()`, the context of `e` is unvalued and it does not depend on the current context.
+    // For any `Valued |- e:()`, the context of `e` is both valued and unvalued, however the parser will be an alias to the recognizer.
     let context =
       if expr.is_unit() {
         if !self.first_visit {
           return ();
         }
-        UnValued
+        context.merge(UnValued)
       } else {
         expr.context.merge(context)
       };

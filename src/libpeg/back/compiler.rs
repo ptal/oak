@@ -17,15 +17,13 @@ use middle::ast::*;
 use back::naming::*;
 
 use std::iter::*;
-use std::ops::RangeFull;
-use std::ops::Deref;
 
 type RExpr = rust::P<rust::Expr>;
 
 pub struct PegCompiler<'cx>
 {
   names: NameFactory,
-  parsing_functions: Vec<rust::P<rust::Item>>,
+  gen_functions: HashMap<Ident, rust::P<rust::Item>>,
   cx: &'cx ExtCtxt<'cx>,
   current_rule_name: Ident
 }
@@ -36,7 +34,7 @@ impl<'cx> PegCompiler<'cx>
   {
     let mut compiler = PegCompiler{
       names: NameFactory::new(),
-      parsing_functions: Vec::new(),
+      gen_functions: HashMap::new(),
       cx: cx,
       current_rule_name: grammar.rules.keys().next().unwrap().clone()
     };
@@ -126,7 +124,7 @@ impl<'cx> PegCompiler<'cx>
             Parser
           }
         }).expect("Quote the `Parser` implementation."));
-    parser.extend(self.parsing_functions.drain(RangeFull));
+    parser.extend(self.gen_functions.drain().map(|(_,v)| v));
     parser.push(parser_impl);
     parser
   }
@@ -137,7 +135,7 @@ impl<'cx> PegCompiler<'cx>
       let expr_fn = self.compile_expression(&rule.def);
       let expr_recognizer = expr_fn.recognizer;
       let rule_recognizer = self.names.rule_name(&self.current_rule_name).recognizer;
-      self.parsing_functions.push(quote_item!(self.cx,
+      self.gen_functions.insert(rule_recognizer.clone(), quote_item!(self.cx,
         pub fn $rule_recognizer (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
         {
           $expr_recognizer(input, pos)
@@ -160,10 +158,45 @@ impl<'cx> PegCompiler<'cx>
       })).expect("Quote the implementation of `peg::Parser` for Parser.")
   }
 
-  fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> GenFunNames {
+  fn compile_expr_to_functions(&mut self, prefix: &str,
+    recognizer_body: RExpr, parser_body: RExpr,
+    ty: ExprTy, context: EvaluationContext, rust_ty: rust::P<rust::Ty>) -> GenFunNames
+  {
+    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
+    let GenFunNames{recognizer, parser} = fun_names.clone();
+    let unit_ty = quote_ty!(self.cx, ());
+    if context.is_unvalued() {
+      self.insert_gen_function(recognizer, recognizer_body, unit_ty.clone());
+    }
+    if context.is_valued() {
+      if ty.is_unit() {
+        assert!(context == EvaluationContext::Both);
+        let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
+        self.insert_gen_function(parser, recognizer_call, unit_ty);
+      }
+      else {
+        self.insert_gen_function(parser, parser_body, rust_ty);
+      }
+    }
+    fun_names
+  }
+
+  fn insert_gen_function(&mut self, fun_name: Ident, body: RExpr, ty: rust::P<rust::Ty>)
+  {
+    let gen_fun = quote_item!(self.cx,
+      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<$ty>, String>
+      {
+        $body
+      }
+    ).expect("Quotation of a generated function.");
+    self.gen_functions.insert(fun_name.clone(), gen_fun);
+  }
+
+  fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> GenFunNames
+  {
     let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
     let recognizer = fun_names.recognizer;
-    self.parsing_functions.push(quote_item!(self.cx,
+    self.gen_functions.insert(recognizer.clone(), quote_item!(self.cx,
       fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         $body
@@ -199,10 +232,13 @@ impl<'cx> PegCompiler<'cx>
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
-        self.compile_str_literal(lit_str)
+        self.compile_str_literal(lit_str, expr.ty_clone(), expr.context)
       },
       &AnySingleChar => {
-        self.compile_any_single_char(expr.ty.borrow().deref(), expr.context)
+        self.compile_any_single_char(expr.ty_clone(), expr.context)
+      },
+      &CharacterClass(ref e) => {
+        self.compile_character_class(e, expr.ty_clone(), expr.context)
       },
       &NonTerminalSymbol(ref id) => {
         self.compile_non_terminal_symbol(id)
@@ -228,9 +264,6 @@ impl<'cx> PegCompiler<'cx>
       &AndPredicate(ref e) => {
         self.compile_and_predicate(e)
       },
-      &CharacterClass(ref e) => {
-        self.compile_character_class(e)
-      },
       &SemanticAction(ref e, _) => {
         self.compile_expression(e)
       }
@@ -242,29 +275,36 @@ impl<'cx> PegCompiler<'cx>
     self.names.rule_name(rule_id)
   }
 
-  fn compile_any_single_char(&mut self, _ty: &ExprTy, _context: EvaluationContext) -> GenFunNames
+  fn compile_any_single_char(&mut self, ty: ExprTy, context: EvaluationContext) -> GenFunNames
   {
-    self.compile_expr_recognizer("any_single_char", quote_expr!(self.cx,
+    let recognizer = quote_expr!(self.cx,
       peg::runtime::recognize_any_single_char(input, pos)
-    ))
+    );
+    let parser = quote_expr!(self.cx,
+      peg::runtime::parse_any_single_char(input, pos)
+    );
+    let rust_ty = quote_ty!(self.cx, char);
+    self.compile_expr_to_functions("any_single_char", recognizer, parser, ty, context, rust_ty)
   }
 
-  fn compile_str_literal(&mut self, lit_str: &String) -> GenFunNames
+  fn compile_str_literal(&mut self, lit_str: &String, ty: ExprTy, context: EvaluationContext) -> GenFunNames
   {
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
 
-    self.compile_expr_recognizer("str_literal", quote_expr!(self.cx,
+    let recognizer = quote_expr!(self.cx,
       peg::runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)
-    ))
+    );
+    let parser = quote_expr!(self.cx,
+      peg::runtime::parse_match_literal(input, pos, $lit_str, $lit_len)
+    );
+    let rust_ty = quote_ty!(self.cx, ());
+    self.compile_expr_to_functions("str_literal", recognizer, parser, ty, context, rust_ty)
   }
 
-  fn compile_character_class(&mut self, expr: &CharacterClassExpr) -> GenFunNames
+  fn compile_character_class(&mut self, expr: &CharacterClassExpr, ty: ExprTy, context: EvaluationContext) -> GenFunNames
   {
-    let fn_name = self.names.expression_name("class_char", &self.current_rule_name);
-    let recognizer = fn_name.recognizer;
     let cx = self.cx;
-
     let mut seq_it = expr.intervals.iter();
 
     let CharacterInterval{lo, hi} = *seq_it.next()
@@ -275,19 +315,25 @@ impl<'cx> PegCompiler<'cx>
       }
     );
 
-    self.parsing_functions.push(quote_item!(cx,
-      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-      {
-        let char_range = input.char_range_at(pos);
-        let current = char_range.ch;
-        if $cond {
-          Ok(peg::runtime::ParseState::stateless(char_range.next))
-        } else {
-          Err(format!("It doesn't match the character class."))
-        }
-      }
-    ).expect("Quotation of a character class (e.g. `[0-9]`)."));
-    fn_name
+    let make_char_class_body = |result: RExpr| quote_expr!(cx, {
+      let char_range = input.char_range_at(pos);
+      let current = char_range.ch;
+      if $cond {
+        Ok($result)
+      } else {
+        Err(format!("It doesn't match the character class."))
+      }}
+    );
+
+    let recognizer = make_char_class_body(quote_expr!(cx,
+      peg::runtime::ParseState::stateless(char_range.next)
+    ));
+    let parser = make_char_class_body(quote_expr!(cx,
+      peg::runtime::ParseState::new(current, char_range.next)
+    ));
+
+    let rust_ty = quote_ty!(self.cx, char);
+    self.compile_expr_to_functions("class_char", recognizer, parser, ty, context, rust_ty)
   }
 
   fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
@@ -318,7 +364,7 @@ impl<'cx> PegCompiler<'cx>
     let recognizer = fun_names.recognizer;
     let expr_recognizer = expr_fn.recognizer;
     let cx = self.cx;
-    self.parsing_functions.push(quote_item!(cx,
+    self.gen_functions.insert(recognizer.clone(), quote_item!(cx,
       fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
       {
         let mut npos = pos;
