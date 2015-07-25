@@ -40,6 +40,7 @@ impl GenFunNames
 
 pub struct NameFactory
 {
+  /// This table is needed because creating two differents `Ident` with an identical string yield distinct identifiers. So naming and refering to a Rust function must be done through the same identifiers.
   rule_name_memoization: HashMap<Ident, GenFunNames>,
   unique_id: u32
 }

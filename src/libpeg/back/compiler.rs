@@ -181,6 +181,20 @@ impl<'cx> PegCompiler<'cx>
     fun_names
   }
 
+  fn compile_expr_to_functions_alias(&mut self, prefix: &str,
+    recognizer_body: RExpr, context: EvaluationContext) -> GenFunNames
+  {
+    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
+    let GenFunNames{recognizer, parser} = fun_names.clone();
+    let unit_ty = quote_ty!(self.cx, ());
+    self.insert_gen_function(recognizer, recognizer_body, unit_ty.clone());
+    if context.is_valued() {
+      let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
+      self.insert_gen_function(parser, recognizer_call, unit_ty);
+    }
+    fun_names
+  }
+
   fn insert_gen_function(&mut self, fun_name: Ident, body: RExpr, ty: rust::P<rust::Ty>)
   {
     let gen_fun = quote_item!(self.cx,
@@ -243,6 +257,12 @@ impl<'cx> PegCompiler<'cx>
       &NonTerminalSymbol(ref id) => {
         self.compile_non_terminal_symbol(id)
       },
+      &NotPredicate(ref e) => {
+        self.compile_not_predicate(e, expr.context)
+      },
+      &AndPredicate(ref e) => {
+        self.compile_and_predicate(e, expr.context)
+      },
       &Sequence(ref seq) => {
         self.compile_sequence(seq.as_slice())
       },
@@ -257,12 +277,6 @@ impl<'cx> PegCompiler<'cx>
       },
       &Optional(ref e) => {
         self.compile_optional(e)
-      },
-      &NotPredicate(ref e) => {
-        self.compile_not_predicate(e)
-      },
-      &AndPredicate(ref e) => {
-        self.compile_and_predicate(e)
       },
       &SemanticAction(ref e, _) => {
         self.compile_expression(e)
@@ -331,9 +345,29 @@ impl<'cx> PegCompiler<'cx>
     let parser = make_char_class_body(quote_expr!(cx,
       peg::runtime::ParseState::new(current, char_range.next)
     ));
-
     let rust_ty = quote_ty!(self.cx, char);
     self.compile_expr_to_functions("class_char", recognizer, parser, ty, context, rust_ty)
+  }
+
+  fn compile_not_predicate(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
+  {
+    let sub_recognizer = self.compile_expression(expr).recognizer;
+    let recognizer = quote_expr!(self.cx,
+      match $sub_recognizer(input, pos) {
+        Ok(_) => Err(format!("An `!expr` failed.")),
+        _ => Ok(peg::runtime::ParseState::stateless(pos))
+      }
+    );
+    self.compile_expr_to_functions_alias("not_predicate", recognizer, context)
+  }
+
+  fn compile_and_predicate(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
+  {
+    let sub_recognizer = self.compile_expression(expr).recognizer;
+    let recognizer = quote_expr!(self.cx,
+      $sub_recognizer(input, pos).map(|_| peg::runtime::ParseState::stateless(pos))
+    );
+    self.compile_expr_to_functions_alias("and_predicate", recognizer, context)
   }
 
   fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
@@ -401,23 +435,6 @@ impl<'cx> PegCompiler<'cx>
   {
     self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
       $inner_call.or_else(|_| Ok(peg::runtime::ParseState::stateless(pos)))
-    ))
-  }
-
-  fn compile_not_predicate(&mut self, expr: &Box<Expression>) -> GenFunNames
-  {
-    self.compile_parse_expr_fn(expr, "not_predicate", |cx, inner_call| quote_expr!(cx,
-      match $inner_call {
-        Ok(_) => Err(format!("An `!expr` failed.")),
-        _ => Ok(peg::runtime::ParseState::stateless(pos))
-      }
-    ))
-  }
-
-  fn compile_and_predicate(&mut self, expr: &Box<Expression>) -> GenFunNames
-  {
-    self.compile_parse_expr_fn(expr, "and_predicate", |cx, inner_call| quote_expr!(cx,
-      $inner_call.map(|_| peg::runtime::ParseState::stateless(pos))
     ))
   }
 }
