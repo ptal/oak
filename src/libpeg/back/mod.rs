@@ -13,6 +13,7 @@
 // limitations under the License.
 
 mod ast;
+mod rule_typer;
 mod naming;
 mod compiler;
 

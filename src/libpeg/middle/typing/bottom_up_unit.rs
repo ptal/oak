@@ -184,7 +184,7 @@ impl<'a> InterRule<'a>
   {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
-      visited.insert(id.clone(), false);
+      visited.insert(*id, false);
     }
     let mut propagator = InterRule {
       rules: rules,

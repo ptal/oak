@@ -13,12 +13,13 @@
 // limitations under the License.
 
 use rust;
-use rust::Span;
-use middle::ast::{Grammar_, Rule_, Expression_};
 use back::ast::FunctionKind::*;
 
-pub type RTy = rust::P<rust::Ty>;
+pub use std::collections::HashMap;
+pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent, Ident};
+pub use middle::ast::{Grammar_, Rule_, Expression_, ExprTy};
 
+pub type RTy = rust::P<rust::Ty>;
 pub type Grammar = Grammar_<Expression>;
 pub type Rule = Rule_<Expression>;
 
@@ -28,6 +29,7 @@ pub struct Expression
 {
   pub span: Span,
   pub node: ExpressionNode,
+  pub ty: ExprTy,
   pub kind: FunctionKind
 }
 

@@ -22,9 +22,9 @@ type RExpr = rust::P<rust::Expr>;
 
 pub struct PegCompiler<'cx>
 {
+  cx: &'cx ExtCtxt<'cx>,
   names: NameFactory,
   gen_functions: HashMap<Ident, rust::P<rust::Item>>,
-  cx: &'cx ExtCtxt<'cx>,
   current_rule_name: Ident
 }
 
@@ -32,10 +32,10 @@ impl<'cx> PegCompiler<'cx>
 {
   pub fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
-    let mut compiler = PegCompiler{
+    let mut compiler = PegCompiler {
+      cx: cx,
       names: NameFactory::new(),
       gen_functions: HashMap::new(),
-      cx: cx,
       current_rule_name: grammar.rules.keys().next().unwrap().clone()
     };
     compiler.compile_peg(&grammar)
