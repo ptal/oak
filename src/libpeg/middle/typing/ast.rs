@@ -26,18 +26,21 @@ use rust;
 use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
 
-pub struct Grammar
+pub type Grammar = Grammar_<Expression>;
+pub type Rule = Rule_<Expression>;
+
+pub struct Grammar_<Expr>
 {
   pub name: Ident,
-  pub rules: HashMap<Ident, Rule>,
+  pub rules: HashMap<Ident, Rule_<Expr>>,
   pub rust_items: HashMap<Ident, rust::P<rust::Item>>,
   pub attributes: GrammarAttributes
 }
 
-pub struct Rule
+pub struct Rule_<Expr>
 {
   pub name: SpannedIdent,
-  pub def: Box<Expression>
+  pub def: Box<Expr>
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -80,6 +83,8 @@ impl FlatMerge<EvaluationContext> for Option<EvaluationContext>
     }
   }
 }
+
+pub type ExpressionNode = Expression_<Expression>;
 
 // Explicitly typed expression.
 pub struct Expression
@@ -143,8 +148,6 @@ impl Expression
     }
   }
 }
-
-pub type ExpressionNode = Expression_<Expression>;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ExprTy

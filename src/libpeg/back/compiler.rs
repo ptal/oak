@@ -263,6 +263,9 @@ impl<'cx> PegCompiler<'cx>
       &AndPredicate(ref e) => {
         self.compile_and_predicate(e, expr.context)
       },
+      &Optional(ref e) => {
+        self.compile_optional(e, expr.context)
+      },
       &Sequence(ref seq) => {
         self.compile_sequence(seq.as_slice())
       },
@@ -274,9 +277,6 @@ impl<'cx> PegCompiler<'cx>
       },
       &OneOrMore(ref e) => {
         self.compile_one_or_more(e)
-      },
-      &Optional(ref e) => {
-        self.compile_optional(e)
       },
       &SemanticAction(ref e, _) => {
         self.compile_expression(e)
@@ -370,26 +370,14 @@ impl<'cx> PegCompiler<'cx>
     self.compile_expr_to_functions_alias("and_predicate", recognizer, context)
   }
 
-  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
+  fn compile_optional(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
   {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(seq, |block, expr| {
-      quote_expr!(cx,
-        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
-      )
-    });
-    self.compile_expr_recognizer("sequence", expr)
-  }
-
-  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> GenFunNames
-  {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(choices, |block, expr| {
-      quote_expr!(cx,
-        $expr.or_else(|_| $block)
-      )
-    });
-    self.compile_expr_recognizer("choice", expr)
+    let GenFunNames{recognizer:sub_recognizer,parser:sub_parser} = self.compile_expression(expr);
+    let recognizer = quote_expr!(self.cx,
+      $sub_recognizer(input, pos).or_else(
+        |_| Ok(peg::runtime::ParseState::stateless(pos)))
+    );
+    self.compile_expr_to_functions_alias("optional", recognizer, context)
   }
 
   fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
@@ -431,10 +419,25 @@ impl<'cx> PegCompiler<'cx>
       quote_expr!(self.cx, $expr_recognizer(input, pos).and_then(|state| $star_recognizer(input, state.offset))))
   }
 
-  fn compile_optional(&mut self, expr: &Box<Expression>) -> GenFunNames
+  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
   {
-    self.compile_parse_expr_fn(expr, "optional", |cx, inner_call| quote_expr!(cx,
-      $inner_call.or_else(|_| Ok(peg::runtime::ParseState::stateless(pos)))
-    ))
+    let cx = self.cx;
+    let expr = self.map_foldr_expr(seq, |block, expr| {
+      quote_expr!(cx,
+        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
+      )
+    });
+    self.compile_expr_recognizer("sequence", expr)
+  }
+
+  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> GenFunNames
+  {
+    let cx = self.cx;
+    let expr = self.map_foldr_expr(choices, |block, expr| {
+      quote_expr!(cx,
+        $expr.or_else(|_| $block)
+      )
+    });
+    self.compile_expr_recognizer("choice", expr)
   }
 }
