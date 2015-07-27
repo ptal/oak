@@ -26,7 +26,7 @@ pub use front::ast::Grammar as FGrammar;
 mod analysis;
 mod lint;
 mod attribute;
-mod typing;
+pub mod typing;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>

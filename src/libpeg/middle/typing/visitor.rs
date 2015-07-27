@@ -12,135 +12,106 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::typing::ast::*;
+use middle::typing::ast::*;
 
-pub trait Visitor
+pub trait Visitor<R>
 {
-  fn visit_grammar(&mut self, grammar: &Grammar)
-  {
-    walk_grammar(self, grammar);
+  fn visit_expr(&mut self, expr: &Box<Expression>) -> R {
+    walk_expr(self, expr)
   }
 
-  fn visit_rule(&mut self, rule: &Rule)
-  {
-    walk_rule(self, rule);
+  fn visit_str_literal(&mut self, _parent: &Box<Expression>, _lit: &String) -> R;
+  fn visit_non_terminal_symbol(&mut self, _parent: &Box<Expression>, _id: Ident) -> R;
+
+  fn visit_character(&mut self, _parent: &Box<Expression>) -> R;
+
+  fn visit_any_single_char(&mut self, parent: &Box<Expression>) -> R {
+    self.visit_character(parent)
   }
 
-  fn visit_expr(&mut self, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_character_class(&mut self, parent: &Box<Expression>, _expr: &CharacterClassExpr) -> R {
+    self.visit_character(parent)
   }
 
-  fn visit_str_literal(&mut self, _sp: Span, _lit: &String) {}
-  fn visit_any_single_char(&mut self, _sp: Span) {}
-  fn visit_non_terminal_symbol(&mut self, _sp: Span, _id: Ident) {}
+  fn visit_sequence(&mut self, _parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> R;
+  fn visit_choice(&mut self, _parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> R;
 
-  fn visit_sequence(&mut self, _sp: Span, exprs: &Vec<Box<Expression>>)
-  {
-    walk_exprs(self, exprs);
+  fn visit_repeat(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    walk_expr(self, expr)
   }
 
-  fn visit_choice(&mut self, _sp: Span, exprs: &Vec<Box<Expression>>)
-  {
-    walk_exprs(self, exprs);
+  fn visit_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    self.visit_repeat(parent, expr)
   }
 
-  fn visit_zero_or_more(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    self.visit_repeat(parent, expr)
   }
 
-  fn visit_one_or_more(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_optional(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    walk_expr(self, expr)
   }
 
-  fn visit_optional(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_syntactic_predicate(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    walk_expr(self, expr)
   }
 
-  fn visit_not_predicate(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_not_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    self.visit_syntactic_predicate(parent, expr)
   }
 
-  fn visit_and_predicate(&mut self, _sp: Span, expr: &Box<Expression>)
-  {
-    walk_expr(self, expr);
+  fn visit_and_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> R {
+    self.visit_syntactic_predicate(parent, expr)
   }
 
-  fn visit_character_class(&mut self, _sp: Span, _expr: &CharacterClassExpr) {}
-
-  fn visit_semantic_action(&mut self, _sp: Span, expr: &Box<Expression>, _id: Ident)
-  {
-    walk_expr(self, expr);
+  fn visit_semantic_action(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>, _id: Ident) -> R {
+    walk_expr(self, expr)
   }
 }
 
-pub fn walk_grammar<V: Visitor+?Sized>(visitor: &mut V, grammar: &Grammar)
+pub fn walk_expr<R, V: Visitor<R>+?Sized>(visitor: &mut V, parent: &Box<Expression>) -> R
 {
-  for rule in grammar.rules.values() {
-    visitor.visit_rule(rule);
-  }
-}
-
-pub fn walk_rule<V: Visitor+?Sized>(visitor: &mut V, rule: &Rule)
-{
-  visitor.visit_expr(&rule.def);
-}
-
-pub fn walk_expr<V: Visitor+?Sized>(visitor: &mut V, expr: &Box<Expression>)
-{
-  walk_expr_node(visitor, &expr.node, expr.span.clone());
-}
-
-pub fn walk_expr_node<V: Visitor+?Sized>(visitor: &mut V, expr: &ExpressionNode, sp: Span)
-{
-  match expr {
+  match &parent.node {
     &StrLiteral(ref lit) => {
-      visitor.visit_str_literal(sp, lit)
+      visitor.visit_str_literal(parent, lit)
     }
     &AnySingleChar => {
-      visitor.visit_any_single_char(sp)
+      visitor.visit_any_single_char(parent)
     }
     &NonTerminalSymbol(id) => {
-      visitor.visit_non_terminal_symbol(sp, id)
+      visitor.visit_non_terminal_symbol(parent, id)
     }
     &Sequence(ref seq) => {
-      visitor.visit_sequence(sp, seq)
+      visitor.visit_sequence(parent, seq)
     }
     &Choice(ref choices) => {
-      visitor.visit_choice(sp, choices)
+      visitor.visit_choice(parent, choices)
     }
     &ZeroOrMore(ref expr) => {
-      visitor.visit_zero_or_more(sp, expr)
+      visitor.visit_zero_or_more(parent, expr)
     }
     &OneOrMore(ref expr) => {
-      visitor.visit_one_or_more(sp, expr)
+      visitor.visit_one_or_more(parent, expr)
     }
     &Optional(ref expr) => {
-      visitor.visit_optional(sp, expr)
+      visitor.visit_optional(parent, expr)
     }
     &NotPredicate(ref expr) => {
-      visitor.visit_not_predicate(sp, expr)
+      visitor.visit_not_predicate(parent, expr)
     }
     &AndPredicate(ref expr) => {
-      visitor.visit_and_predicate(sp, expr)
+      visitor.visit_and_predicate(parent, expr)
     }
     &CharacterClass(ref char_class) => {
-      visitor.visit_character_class(sp, char_class)
+      visitor.visit_character_class(parent, char_class)
     }
     &SemanticAction(ref expr, id) => {
-      visitor.visit_semantic_action(sp, expr, id)
+      visitor.visit_semantic_action(parent, expr, id)
     }
   }
 }
 
-pub fn walk_exprs<V: Visitor+?Sized>(visitor: &mut V, exprs: &Vec<Box<Expression>>)
+pub fn walk_exprs<R, V: Visitor<R>+?Sized>(visitor: &mut V, exprs: &Vec<Box<Expression>>) -> Vec<R>
 {
-  assert!(exprs.len() > 0);
-  for expr in exprs.iter() {
-    visitor.visit_expr(expr);
-  }
+  exprs.iter().map(|expr| visitor.visit_expr(expr)).collect()
 }

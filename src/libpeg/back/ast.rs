@@ -17,7 +17,7 @@ use back::ast::FunctionKind::*;
 
 pub use std::collections::HashMap;
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent, Ident};
-pub use middle::ast::{Grammar_, Rule_, Expression_, ExprTy};
+pub use middle::ast::{Grammar_, Rule_, Expression_, ExprTy, CharacterInterval, CharacterClassExpr};
 
 pub type RTy = rust::P<rust::Ty>;
 pub type Grammar = Grammar_<Expression>;
@@ -33,6 +33,14 @@ pub struct Expression
   pub kind: FunctionKind
 }
 
+impl Expression
+{
+  pub fn return_type(&self, cx: &ExtCtxt) -> RTy {
+    self.kind.to_type(cx)
+  }
+}
+
+#[derive(Clone)]
 pub enum FunctionKind
 {
   /// Only the recognizer is generated.
@@ -51,6 +59,13 @@ impl FunctionKind
     match self {
       &Recognizer | &Both(_) | &ParserAlias => true,
       _ => false
+    }
+  }
+
+  pub fn to_type(&self, cx: &ExtCtxt) -> RTy {
+    match self.clone() {
+      Parser(ty) | Both(ty) => ty,
+      _ => quote_ty!(cx, ())
     }
   }
 }
