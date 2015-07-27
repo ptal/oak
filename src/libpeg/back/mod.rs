@@ -13,8 +13,16 @@
 // limitations under the License.
 
 mod ast;
-mod rule_typer;
 mod naming;
-mod compiler;
+mod type_gen;
+mod code_gen;
 
-pub use back::compiler::PegCompiler;
+use middle::ast::Grammar as TGrammar;
+use back;
+use rust;
+use rust::ExtCtxt;
+
+pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Box<rust::MacResult + 'cx> {
+  // let grammar = back::type_gen::generate_rust_types(cx, tgrammar);
+  back::code_gen::generate_rust_code(cx, tgrammar)
+}

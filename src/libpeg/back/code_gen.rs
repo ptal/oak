@@ -20,7 +20,12 @@ use std::iter::*;
 
 type RExpr = rust::P<rust::Expr>;
 
-pub struct PegCompiler<'cx>
+pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
+{
+  PegCompiler::compile(cx, grammar)
+}
+
+struct PegCompiler<'cx>
 {
   cx: &'cx ExtCtxt<'cx>,
   names: NameFactory,
@@ -30,7 +35,7 @@ pub struct PegCompiler<'cx>
 
 impl<'cx> PegCompiler<'cx>
 {
-  pub fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
+  fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
     let mut compiler = PegCompiler {
       cx: cx,

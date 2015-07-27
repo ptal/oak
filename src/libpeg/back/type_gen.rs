@@ -159,7 +159,6 @@ impl<'a> ExpressionTyper<'a>
   }
 }
 
-
 impl<'a> Visitor<Box<Expression>> for ExpressionTyper<'a>
 {
   fn visit_str_literal(&mut self, parent: &Box<TExpression>, lit: &String) -> Box<Expression> {

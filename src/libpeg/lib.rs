@@ -54,7 +54,7 @@ fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::
   let ast = parser.parse_grammar();
   let ast = middle::analyse(cx, ast);
   match ast {
-    Partial::Value(ast) => back::PegCompiler::compile(cx, ast),
+    Partial::Value(ast) => back::compile(cx, ast),
     Partial::Fake(_) | Partial::Nothing => {
       cx.parse_sess.span_diagnostic.handler.abort_if_errors();
       rust::DummyResult::any(rust::DUMMY_SP)
