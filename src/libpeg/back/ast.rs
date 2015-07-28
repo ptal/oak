@@ -20,6 +20,9 @@ pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent, Ident};
 pub use middle::ast::{Grammar_, Rule_, Expression_, ExprTy, CharacterInterval, CharacterClassExpr};
 
 pub type RTy = rust::P<rust::Ty>;
+pub type RExpr = rust::P<rust::Expr>;
+pub type RItem = rust::P<rust::Item>;
+
 pub type Grammar = Grammar_<Expression>;
 pub type Rule = Rule_<Expression>;
 
@@ -38,9 +41,13 @@ impl Expression
   pub fn return_type(&self, cx: &ExtCtxt) -> RTy {
     self.kind.to_type(cx)
   }
+
+  pub fn kind(&self) -> FunctionKind {
+    self.kind.clone()
+  }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum FunctionKind
 {
   /// Only the recognizer is generated.

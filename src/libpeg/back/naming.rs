@@ -55,23 +55,23 @@ impl NameFactory
     }
   }
 
-  pub fn expression_name(&mut self, expr: &str, current_rule: &Ident) -> GenFunNames
+  pub fn expression_name(&mut self, expr_desc: &str, current_rule: Ident) -> GenFunNames
   {
     GenFunNames::from_base_name(
       format!("{}_in_rule_{}_{}",
-        expr,
+        expr_desc,
         ident_to_lowercase(current_rule),
         self.gen_uid()
       ))
   }
 
-  pub fn rule_name(&mut self, rule: &Ident) -> GenFunNames
+  pub fn names_of_rule(&mut self, rule_name: Ident) -> GenFunNames
   {
-    match self.rule_name_memoization.get(rule).cloned() {
+    match self.rule_name_memoization.get(&rule_name).cloned() {
       Some(fun_name) => fun_name,
       None => {
-        let fun_name = GenFunNames::from_base_name(ident_to_lowercase(rule));
-        self.rule_name_memoization.insert(rule.clone(), fun_name.clone());
+        let fun_name = GenFunNames::from_base_name(ident_to_lowercase(rule_name));
+        self.rule_name_memoization.insert(rule_name, fun_name);
         fun_name
       }
     }

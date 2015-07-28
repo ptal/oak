@@ -18,7 +18,7 @@
 //!    * `f(e:t) => f(e):Identity`
 //! * Syntactic predicates (`&e`, `!e`):
 //!    * `f(e:t) => f(e):(^)`
-//! * Semantics actions: `(e:t > g) => (e > g): Identity`.
+//! * Semantics actions: `(e:t > g) => (e > g): Action`.
 //! * Non terminal symbol (`R` being a function from rule identifier to type)
 //!    * `ident:Identity => ident:(^)` if `R(ident) = (^)`.
 //!    * `ident:Identity => ident:()` if `R(ident) = ()`.

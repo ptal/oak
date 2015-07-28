@@ -13,35 +13,33 @@
 // limitations under the License.
 
 use rust;
-use middle::ast::*;
+use back::ast::*;
+use back::ast::Expression_::*;
 use back::naming::*;
+use back::function::*;
 
 use std::iter::*;
 
-type RExpr = rust::P<rust::Expr>;
-
 pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
 {
-  PegCompiler::compile(cx, grammar)
+  CodeGenerator::compile(cx, grammar)
 }
 
-struct PegCompiler<'cx>
+struct CodeGenerator<'cx>
 {
   cx: &'cx ExtCtxt<'cx>,
-  names: NameFactory,
-  gen_functions: HashMap<Ident, rust::P<rust::Item>>,
+  function_gen: FunctionGenerator<'cx>,
   current_rule_name: Ident
 }
 
-impl<'cx> PegCompiler<'cx>
+impl<'cx> CodeGenerator<'cx>
 {
   fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
   {
-    let mut compiler = PegCompiler {
+    let mut compiler = CodeGenerator {
       cx: cx,
-      names: NameFactory::new(),
-      gen_functions: HashMap::new(),
-      current_rule_name: grammar.rules.keys().next().unwrap().clone()
+      function_gen: FunctionGenerator::new(cx),
+      current_rule_name: *grammar.rules.keys().next().unwrap()
     };
     compiler.compile_peg(&grammar)
   }
@@ -112,7 +110,7 @@ impl<'cx> PegCompiler<'cx>
     }
   }
 
-  fn compile_parser(&mut self, grammar: &Grammar) -> Vec<rust::P<rust::Item>>
+  fn compile_parser(&mut self, grammar: &Grammar) -> Vec<RItem>
   {
     self.compile_rules(grammar);
 
@@ -129,29 +127,24 @@ impl<'cx> PegCompiler<'cx>
             Parser
           }
         }).expect("Quote the `Parser` implementation."));
-    parser.extend(self.gen_functions.drain().map(|(_,v)| v));
+    ;
+    parser.extend(self.function_gen.code().into_iter());
     parser.push(parser_impl);
     parser
   }
 
   fn compile_rules(&mut self, grammar: &Grammar) {
     for rule in grammar.rules.values() {
-      self.current_rule_name = rule.name.node.clone();
+      self.current_rule_name = rule.name.node;
       let expr_fn = self.compile_expression(&rule.def);
-      let expr_recognizer = expr_fn.recognizer;
-      let rule_recognizer = self.names.rule_name(&self.current_rule_name).recognizer;
-      self.gen_functions.insert(rule_recognizer.clone(), quote_item!(self.cx,
-        pub fn $rule_recognizer (input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-        {
-          $expr_recognizer(input, pos)
-        }
-      ).expect(format!("Quote the rule `{}`.", rule.name.node.clone()).as_str()));
+      self.function_gen.generate_rule(rule.def.kind(), self.current_rule_name, expr_fn);
     }
   }
 
-  fn compile_entry_point(&mut self, grammar: &Grammar) -> rust::P<rust::Item>
+  // TODO: decide whether we want to remove start attribute or not.
+  fn compile_entry_point(&mut self, grammar: &Grammar) -> RItem
   {
-    let start_rule_name = self.names.rule_name(&grammar.attributes.starting_rule).recognizer;
+    let start_rule_name = self.function_gen.names_of_rule(grammar.attributes.starting_rule).recognizer;
     (quote_item!(self.cx,
       impl peg::Parser for Parser
       {
@@ -161,76 +154,6 @@ impl<'cx> PegCompiler<'cx>
             &$start_rule_name(input, 0))
         }
       })).expect("Quote the implementation of `peg::Parser` for Parser.")
-  }
-
-  fn compile_expr_to_functions(&mut self, prefix: &str,
-    recognizer_body: RExpr, parser_body: RExpr,
-    ty: ExprTy, context: EvaluationContext, rust_ty: rust::P<rust::Ty>) -> GenFunNames
-  {
-    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
-    let GenFunNames{recognizer, parser} = fun_names.clone();
-    let unit_ty = quote_ty!(self.cx, ());
-    if context.is_unvalued() {
-      self.insert_gen_function(recognizer, recognizer_body, unit_ty.clone());
-    }
-    if context.is_valued() {
-      if ty.is_unit() {
-        assert!(context == EvaluationContext::Both);
-        let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
-        self.insert_gen_function(parser, recognizer_call, unit_ty);
-      }
-      else {
-        self.insert_gen_function(parser, parser_body, rust_ty);
-      }
-    }
-    fun_names
-  }
-
-  fn compile_expr_to_functions_alias(&mut self, prefix: &str,
-    recognizer_body: RExpr, context: EvaluationContext) -> GenFunNames
-  {
-    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
-    let GenFunNames{recognizer, parser} = fun_names.clone();
-    let unit_ty = quote_ty!(self.cx, ());
-    self.insert_gen_function(recognizer, recognizer_body, unit_ty.clone());
-    if context.is_valued() {
-      let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
-      self.insert_gen_function(parser, recognizer_call, unit_ty);
-    }
-    fun_names
-  }
-
-  fn insert_gen_function(&mut self, fun_name: Ident, body: RExpr, ty: rust::P<rust::Ty>)
-  {
-    let gen_fun = quote_item!(self.cx,
-      fn $fun_name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<$ty>, String>
-      {
-        $body
-      }
-    ).expect("Quotation of a generated function.");
-    self.gen_functions.insert(fun_name.clone(), gen_fun);
-  }
-
-  fn compile_expr_recognizer(&mut self, prefix: &str, body: RExpr) -> GenFunNames
-  {
-    let fun_names = self.names.expression_name(prefix, &self.current_rule_name);
-    let recognizer = fun_names.recognizer;
-    self.gen_functions.insert(recognizer.clone(), quote_item!(self.cx,
-      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-      {
-        $body
-      }
-    ).expect(format!("Quotation of a parsing function ({}).", prefix).as_str()));
-    fun_names
-  }
-
-  fn compile_parse_expr_fn<F>(&mut self, expr: &Box<Expression>, prefix: &str, make_body: F) -> GenFunNames where
-    F: Fn(&ExtCtxt<'cx>, RExpr) -> RExpr
-  {
-    let fun_names = self.compile_expression(expr);
-    let recognizer = fun_names.recognizer;
-    let body = make_body(self.cx, quote_expr!(self.cx, $recognizer(input, pos)));
-    self.compile_expr_recognizer(prefix, body)
   }
 
   fn map_foldr_expr<'a, F>(&mut self, seq: &'a [Box<Expression>], f: F) -> RExpr where
@@ -251,80 +174,71 @@ impl<'cx> PegCompiler<'cx>
   {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
-        self.compile_str_literal(lit_str, expr.ty_clone(), expr.context)
+        self.compile_str_literal(expr, lit_str)
       },
       &AnySingleChar => {
-        self.compile_any_single_char(expr.ty_clone(), expr.context)
+        self.compile_any_single_char(expr)
       },
       &CharacterClass(ref e) => {
-        self.compile_character_class(e, expr.ty_clone(), expr.context)
+        self.compile_character_class(expr, e)
       },
-      &NonTerminalSymbol(ref id) => {
+      &NonTerminalSymbol(id) => {
         self.compile_non_terminal_symbol(id)
       },
       &NotPredicate(ref e) => {
-        self.compile_not_predicate(e, expr.context)
+        self.compile_not_predicate(expr, e)
       },
       &AndPredicate(ref e) => {
-        self.compile_and_predicate(e, expr.context)
+        self.compile_and_predicate(expr, e)
       },
       &Optional(ref e) => {
-        self.compile_optional(e, expr.context)
+        self.compile_optional(expr, e)
       },
       &Sequence(ref seq) => {
-        self.compile_sequence(seq.as_slice())
+        self.compile_sequence(expr, seq.as_slice())
       },
       &Choice(ref choices) => {
-        self.compile_choice(choices.as_slice())
+        self.compile_choice(expr, choices.as_slice())
       },
       &ZeroOrMore(ref e) => {
-        self.compile_zero_or_more(e)
+        self.compile_zero_or_more(expr, e)
       },
       &OneOrMore(ref e) => {
-        self.compile_one_or_more(e)
+        self.compile_one_or_more(expr, e)
       },
-      &SemanticAction(ref e, _) => {
-        self.compile_expression(e)
+      &SemanticAction(ref e, id) => {
+        self.compile_semantic_action(expr, e, id)
       }
     }
   }
 
-  fn compile_non_terminal_symbol(&mut self, rule_id: &Ident) -> GenFunNames
+  fn compile_non_terminal_symbol(&mut self, rule_id: Ident) -> GenFunNames
   {
-    self.names.rule_name(rule_id)
+    self.function_gen.names_of_rule(rule_id)
   }
 
-  fn compile_any_single_char(&mut self, ty: ExprTy, context: EvaluationContext) -> GenFunNames
+  fn compile_any_single_char(&mut self, parent: &Box<Expression>) -> GenFunNames
   {
-    let recognizer = quote_expr!(self.cx,
-      peg::runtime::recognize_any_single_char(input, pos)
-    );
-    let parser = quote_expr!(self.cx,
-      peg::runtime::parse_any_single_char(input, pos)
-    );
-    let rust_ty = quote_ty!(self.cx, char);
-    self.compile_expr_to_functions("any_single_char", recognizer, parser, ty, context, rust_ty)
+    self.function_gen.generate_expr("any_single_char", self.current_rule_name, parent.kind(),
+      quote_expr!(self.cx, peg::runtime::recognize_any_single_char(input, pos)),
+      quote_expr!(self.cx, peg::runtime::parse_any_single_char(input, pos))
+    )
   }
 
-  fn compile_str_literal(&mut self, lit_str: &String, ty: ExprTy, context: EvaluationContext) -> GenFunNames
+  fn compile_str_literal(&mut self, parent: &Box<Expression>, lit_str: &String) -> GenFunNames
   {
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
-
-    let recognizer = quote_expr!(self.cx,
-      peg::runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)
-    );
-    let parser = quote_expr!(self.cx,
-      peg::runtime::parse_match_literal(input, pos, $lit_str, $lit_len)
-    );
-    let rust_ty = quote_ty!(self.cx, ());
-    self.compile_expr_to_functions("str_literal", recognizer, parser, ty, context, rust_ty)
+    self.function_gen.generate_expr("str_literal", self.current_rule_name, parent.kind(),
+      quote_expr!(self.cx, peg::runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)),
+      quote_expr!(self.cx, peg::runtime::parse_match_literal(input, pos, $lit_str, $lit_len))
+    )
   }
 
-  fn compile_character_class(&mut self, expr: &CharacterClassExpr, ty: ExprTy, context: EvaluationContext) -> GenFunNames
+  fn compile_character_class(&mut self, parent: &Box<Expression>, classes: &CharacterClassExpr) -> GenFunNames
   {
     let cx = self.cx;
-    let mut seq_it = expr.intervals.iter();
+    let mut seq_it = classes.intervals.iter();
 
     let CharacterInterval{lo, hi} = *seq_it.next()
       .expect("Empty character intervals should be forbidden at the parsing stage.");
@@ -344,105 +258,130 @@ impl<'cx> PegCompiler<'cx>
       }}
     );
 
-    let recognizer = make_char_class_body(quote_expr!(cx,
-      peg::runtime::ParseState::stateless(char_range.next)
-    ));
-    let parser = make_char_class_body(quote_expr!(cx,
-      peg::runtime::ParseState::new(current, char_range.next)
-    ));
-    let rust_ty = quote_ty!(self.cx, char);
-    self.compile_expr_to_functions("class_char", recognizer, parser, ty, context, rust_ty)
+    self.function_gen.generate_expr("class_char", self.current_rule_name, parent.kind(),
+      make_char_class_body(quote_expr!(cx, peg::runtime::ParseState::stateless(char_range.next))),
+      make_char_class_body(quote_expr!(cx, peg::runtime::ParseState::new(current, char_range.next)))
+    )
   }
 
-  fn compile_not_predicate(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
+  fn compile_not_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let sub_recognizer = self.compile_expression(expr).recognizer;
-    let recognizer = quote_expr!(self.cx,
-      match $sub_recognizer(input, pos) {
+    let cx = self.cx;
+    let names = self.compile_expression(expr);
+    let make_body = |fun_id:Ident| quote_expr!(cx,
+      match $fun_id(input, pos) {
         Ok(_) => Err(format!("An `!expr` failed.")),
         _ => Ok(peg::runtime::ParseState::stateless(pos))
       }
     );
-    self.compile_expr_to_functions_alias("not_predicate", recognizer, context)
+    self.function_gen.generate_expr("not_predicate", self.current_rule_name, parent.kind(),
+      make_body(names.recognizer),
+      make_body(names.parser))
   }
 
-  fn compile_and_predicate(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
+  fn compile_and_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let sub_recognizer = self.compile_expression(expr).recognizer;
-    let recognizer = quote_expr!(self.cx,
-      $sub_recognizer(input, pos).map(|_| peg::runtime::ParseState::stateless(pos))
+    let cx = self.cx;
+    let names = self.compile_expression(expr);
+    let make_body = |fun_id:Ident| quote_expr!(cx,
+      $fun_id(input, pos).map(|_| peg::runtime::ParseState::stateless(pos))
     );
-    self.compile_expr_to_functions_alias("and_predicate", recognizer, context)
+    self.function_gen.generate_expr("and_predicate", self.current_rule_name, parent.kind(),
+      make_body(names.recognizer),
+      make_body(names.parser))
   }
 
-  fn compile_optional(&mut self, expr: &Box<Expression>, context: EvaluationContext) -> GenFunNames
+  fn compile_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let GenFunNames{recognizer:sub_recognizer,parser:sub_parser} = self.compile_expression(expr);
-    let recognizer = quote_expr!(self.cx,
-      $sub_recognizer(input, pos).or_else(
-        |_| Ok(peg::runtime::ParseState::stateless(pos)))
-    );
-    self.compile_expr_to_functions_alias("optional", recognizer, context)
+    self.compile_expression(expr)
+    // let GenFunNames{recognizer, parser} = self.compile_expression(expr);
+    // let recognizer_body = quote_expr!(self.cx,
+    //   $recognizer(input, pos).or_else(
+    //     |_| Ok(peg::runtime::ParseState::stateless(pos)))
+    // );
+    // let parser_body = quote_expr!(self.cx,
+    //   $parser(input, pos).or_else(
+    //     |_| Ok(peg::runtime::ParseState::stateless(pos)))
+    // );
+    // self.function_gen.generate_expr("optional", self.current_rule_name, parent.kind(),
+    //   recognizer_body,
+    //   parser_body)
   }
 
-  fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
+  // fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
+  // {
+  //   let fun_names = self.names.expression_name("star", &self.current_rule_name);
+  //   let recognizer = fun_names.recognizer;
+  //   let expr_recognizer = expr_fn.recognizer;
+  //   let cx = self.cx;
+  //   self.gen_functions.insert(recognizer.clone(), quote_item!(cx,
+  //     fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
+  //     {
+  //       let mut npos = pos;
+  //       while npos < input.len() {
+  //         let pos = npos;
+  //         match $expr_recognizer(input, pos) {
+  //           Ok(state) => { npos = state.offset; }
+  //           _ => break
+  //         }
+  //       }
+  //       Ok(peg::runtime::ParseState::stateless(npos))
+  //     }
+  //   ).expect("Quote the parsing function of `expr*`."));
+  //   fun_names
+  // }
+
+  fn compile_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let fun_names = self.names.expression_name("star", &self.current_rule_name);
-    let recognizer = fun_names.recognizer;
-    let expr_recognizer = expr_fn.recognizer;
-    let cx = self.cx;
-    self.gen_functions.insert(recognizer.clone(), quote_item!(cx,
-      fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-      {
-        let mut npos = pos;
-        while npos < input.len() {
-          let pos = npos;
-          match $expr_recognizer(input, pos) {
-            Ok(state) => { npos = state.offset; }
-            _ => break
-          }
-        }
-        Ok(peg::runtime::ParseState::stateless(npos))
-      }
-    ).expect("Quote the parsing function of `expr*`."));
-    fun_names
+    self.compile_expression(expr)
+    // let expr_fn = self.compile_expression(expr);
+    // self.compile_star(expr_fn)
   }
 
-  fn compile_zero_or_more(&mut self, expr: &Box<Expression>) -> GenFunNames
+  fn compile_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let expr_fn = self.compile_expression(expr);
-    self.compile_star(expr_fn)
+    self.compile_expression(expr)
+    // let expr_fn = self.compile_expression(expr);
+    // let expr_recognizer = expr_fn.recognizer;
+    // let star_fn = self.compile_star(expr_fn);
+    // let star_recognizer = star_fn.recognizer;
+    // self.compile_expr_recognizer("plus",
+    //   quote_expr!(self.cx, $expr_recognizer(input, pos).and_then(|state| $star_recognizer(input, state.offset))))
   }
 
-  fn compile_one_or_more(&mut self, expr: &Box<Expression>) -> GenFunNames
+  fn compile_sequence<'a>(&mut self, parent: &Box<Expression>, seq: &'a [Box<Expression>]) -> GenFunNames
   {
-    let expr_fn = self.compile_expression(expr);
-    let expr_recognizer = expr_fn.recognizer;
-    let star_fn = self.compile_star(expr_fn);
-    let star_recognizer = star_fn.recognizer;
-    self.compile_expr_recognizer("plus",
-      quote_expr!(self.cx, $expr_recognizer(input, pos).and_then(|state| $star_recognizer(input, state.offset))))
+    self.compile_expression(&seq[0])
+    // let cx = self.cx;
+    // let expr = self.map_foldr_expr(seq, |block, expr| {
+    //   quote_expr!(cx,
+    //     $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
+    //   )
+    // });
+    // self.compile_expr_recognizer("sequence", expr)
   }
 
-  fn compile_sequence<'a>(&mut self, seq: &'a [Box<Expression>]) -> GenFunNames
+  fn compile_choice<'a>(&mut self, parent: &Box<Expression>, choices: &'a [Box<Expression>]) -> GenFunNames
   {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(seq, |block, expr| {
-      quote_expr!(cx,
-        $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
-      )
-    });
-    self.compile_expr_recognizer("sequence", expr)
+    self.compile_expression(&choices[0])
+    // let cx = self.cx;
+    // let expr = self.map_foldr_expr(choices, |block, expr| {
+    //   quote_expr!(cx,
+    //     $expr.or_else(|_| $block)
+    //   )
+    // });
+    // self.compile_expr_recognizer("choice", expr)
   }
 
-  fn compile_choice<'a>(&mut self, choices: &'a [Box<Expression>]) -> GenFunNames
+  fn compile_semantic_action(&mut self, parent: &Box<Expression>, expr: &Box<Expression>, action_name: Ident) -> GenFunNames
   {
-    let cx = self.cx;
-    let expr = self.map_foldr_expr(choices, |block, expr| {
-      quote_expr!(cx,
-        $expr.or_else(|_| $block)
-      )
-    });
-    self.compile_expr_recognizer("choice", expr)
+    self.compile_expression(expr)
+    // let cx = self.cx;
+    // let expr = self.map_foldr_expr(choices, |block, expr| {
+    //   quote_expr!(cx,
+    //     $expr.or_else(|_| $block)
+    //   )
+    // });
+    // self.compile_expr_recognizer("choice", expr)
   }
 }

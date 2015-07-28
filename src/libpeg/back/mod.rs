@@ -14,6 +14,7 @@
 
 mod ast;
 mod naming;
+mod function;
 mod type_gen;
 mod code_gen;
 
@@ -23,6 +24,6 @@ use rust;
 use rust::ExtCtxt;
 
 pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Box<rust::MacResult + 'cx> {
-  // let grammar = back::type_gen::generate_rust_types(cx, tgrammar);
-  back::code_gen::generate_rust_code(cx, tgrammar)
+  let grammar = back::type_gen::generate_rust_types(cx, tgrammar);
+  back::code_gen::generate_rust_code(cx, grammar)
 }
