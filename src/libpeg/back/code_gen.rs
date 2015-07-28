@@ -266,29 +266,26 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_not_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let cx = self.cx;
-    let names = self.compile_expression(expr);
-    let make_body = |fun_id:Ident| quote_expr!(cx,
-      match $fun_id(input, pos) {
+    let recognizer_name = self.compile_expression(expr).recognizer;
+    let body = quote_expr!(self.cx,
+      match $recognizer_name(input, pos) {
         Ok(_) => Err(format!("An `!expr` failed.")),
         _ => Ok(peg::runtime::ParseState::stateless(pos))
       }
     );
-    self.function_gen.generate_expr("not_predicate", self.current_rule_name, parent.kind(),
-      make_body(names.recognizer),
-      make_body(names.parser))
+    self.function_gen.generate_unit_expr(
+      "not_predicate", self.current_rule_name, parent.kind(), body)
   }
 
   fn compile_and_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    let cx = self.cx;
-    let names = self.compile_expression(expr);
-    let make_body = |fun_id:Ident| quote_expr!(cx,
-      $fun_id(input, pos).map(|_| peg::runtime::ParseState::stateless(pos))
+    let recognizer_name = self.compile_expression(expr).recognizer;
+    let body = quote_expr!(self.cx,
+      $recognizer_name(input, pos)
+      .map(|_| peg::runtime::ParseState::stateless(pos))
     );
-    self.function_gen.generate_expr("and_predicate", self.current_rule_name, parent.kind(),
-      make_body(names.recognizer),
-      make_body(names.parser))
+    self.function_gen.generate_unit_expr(
+      "and_predicate", self.current_rule_name, parent.kind(), body)
   }
 
   fn compile_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames

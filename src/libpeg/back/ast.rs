@@ -47,7 +47,7 @@ impl Expression
   }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum FunctionKind
 {
   /// Only the recognizer is generated.
@@ -65,6 +65,13 @@ impl FunctionKind
   pub fn is_recognizer(&self) -> bool {
     match self {
       &Recognizer | &Both(_) | &ParserAlias => true,
+      _ => false
+    }
+  }
+
+  pub fn is_unit(&self) -> bool {
+    match self {
+      &Recognizer | &ParserAlias => true,
       _ => false
     }
   }

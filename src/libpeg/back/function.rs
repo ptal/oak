@@ -75,6 +75,17 @@ impl<'cx> FunctionGenerator<'cx>
     names
   }
 
+  pub fn generate_unit_expr(&mut self, expr_desc: &str, current_rule_id: Ident, kind: FunctionKind,
+    recognizer_body: RExpr) -> GenFunNames
+  {
+    assert!(kind.is_unit(),
+      format!("Unit_expr: Expression `{}` is expected to have an unit type but found `{:?}`.", expr_desc, kind));
+    let names = self.name_factory.expression_name(expr_desc, current_rule_id);
+    self.generate_recognizer(kind.clone(), names, recognizer_body);
+    self.generate_parser_alias(kind.clone(), names);
+    names
+  }
+
   pub fn generate_rule(&mut self, kind: FunctionKind, rule_id: Ident, expr_fn_names: GenFunNames) {
     let cx = self.cx;
     let rule_name = self.names_of_rule(rule_id);

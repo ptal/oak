@@ -155,7 +155,7 @@ impl<'a> ExpressionTyper<'a>
     let typed_expr = self.visit_expr(expr);
     let ty = typed_expr.return_type(self.cx);
     let parent_ty = compose_ty(self.cx, ty);
-    self.build_expr(expr, parent_ty, compose_ast(typed_expr))
+    self.build_expr(parent, parent_ty, compose_ast(typed_expr))
   }
 }
 
@@ -220,7 +220,7 @@ impl<'a> Visitor<Box<Expression>> for ExpressionTyper<'a>
   fn visit_semantic_action(&mut self, parent: &Box<TExpression>, expr: &Box<TExpression>, id: Ident) -> Box<Expression> {
     self.compose_expr(parent, expr,
       |expr| SemanticAction(expr, id),
-      |cx,_| TypeGenerator::action_ty(cx, expr.ty_clone()))
+      |cx,_| TypeGenerator::action_ty(cx, parent.ty_clone()))
   }
 }
 
