@@ -290,19 +290,20 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    self.compile_expression(expr)
-    // let GenFunNames{recognizer, parser} = self.compile_expression(expr);
-    // let recognizer_body = quote_expr!(self.cx,
-    //   $recognizer(input, pos).or_else(
-    //     |_| Ok(peg::runtime::ParseState::stateless(pos)))
-    // );
-    // let parser_body = quote_expr!(self.cx,
-    //   $parser(input, pos).or_else(
-    //     |_| Ok(peg::runtime::ParseState::stateless(pos)))
-    // );
-    // self.function_gen.generate_expr("optional", self.current_rule_name, parent.kind(),
-    //   recognizer_body,
-    //   parser_body)
+    let GenFunNames{recognizer, parser} = self.compile_expression(expr);
+    let recognizer_body = quote_expr!(self.cx,
+      $recognizer(input, pos).or_else(
+        |_| Ok(peg::runtime::ParseState::stateless(pos)))
+    );
+    let parser_body = quote_expr!(self.cx,
+      match $parser(input, pos) {
+        Ok(state) => Ok(peg::runtime::ParseState::new(Some(state.data), state.pos)),
+        Err(_) => Ok(peg::runtime::ParseState::new(None, pos))
+      }
+    );
+    self.function_gen.generate_expr("optional", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
   }
 
   // fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
