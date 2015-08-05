@@ -306,45 +306,64 @@ impl<'cx> CodeGenerator<'cx>
       parser_body)
   }
 
-  // fn compile_star(&mut self, expr_fn: GenFunNames) -> GenFunNames
-  // {
-  //   let fun_names = self.names.expression_name("star", &self.current_rule_name);
-  //   let recognizer = fun_names.recognizer;
-  //   let expr_recognizer = expr_fn.recognizer;
-  //   let cx = self.cx;
-  //   self.gen_functions.insert(recognizer.clone(), quote_item!(cx,
-  //     fn $recognizer(input: &str, pos: usize) -> Result<peg::runtime::ParseState<()>, String>
-  //     {
-  //       let mut npos = pos;
-  //       while npos < input.len() {
-  //         let pos = npos;
-  //         match $expr_recognizer(input, pos) {
-  //           Ok(state) => { npos = state.offset; }
-  //           _ => break
-  //         }
-  //       }
-  //       Ok(peg::runtime::ParseState::stateless(npos))
-  //     }
-  //   ).expect("Quote the parsing function of `expr*`."));
-  //   fun_names
-  // }
+  fn compile_star(&mut self, parent: &Box<Expression>, expr: &Box<Expression>,
+    recognizer_res: RExpr, parser_res: RExpr) -> GenFunNames
+  {
+    let GenFunNames{recognizer, parser} = self.compile_expression(expr);
+
+    let recognizer_body = quote_expr!(self.cx, {
+      let mut current = pos;
+      while current < input.len() {
+        match $recognizer(input, current) {
+          Ok(state) => { current = state.offset; }
+          _ => break
+        }
+      }
+      $recognizer_res
+    });
+
+    let parser_body = quote_expr!(self.cx, {
+      let mut data = vec![];
+      let mut current = pos;
+      while current < input.len() {
+        match $parser(input, current) {
+          Ok(state) => {
+            data.push(state.data);
+            current = state.offset;
+          }
+          _ => break
+        }
+      }
+      $parser_res
+    });
+    self.function_gen.generate_expr("star", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
+  }
 
   fn compile_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    self.compile_expression(expr)
-    // let expr_fn = self.compile_expression(expr);
-    // self.compile_star(expr_fn)
+    let cx = self.cx;
+    self.compile_star(parent, expr,
+      quote_expr!(cx, Ok(peg::runtime::ParseState::stateless(current))),
+      quote_expr!(cx, Ok(peg::runtime::ParseState::new(data, current))))
   }
 
   fn compile_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
   {
-    self.compile_expression(expr)
-    // let expr_fn = self.compile_expression(expr);
-    // let expr_recognizer = expr_fn.recognizer;
-    // let star_fn = self.compile_star(expr_fn);
-    // let star_recognizer = star_fn.recognizer;
-    // self.compile_expr_recognizer("plus",
-    //   quote_expr!(self.cx, $expr_recognizer(input, pos).and_then(|state| $star_recognizer(input, state.offset))))
+    let cx = self.cx;
+    let make_result = |res:RExpr| {
+      quote_expr!(cx, {
+        if current == pos {
+          Err(format!("Expected at least one occurrence of an expression in `e+`."))
+        } else {
+          $res
+        }
+      })
+    };
+    self.compile_star(parent, expr,
+      make_result(quote_expr!(cx, Ok(peg::runtime::ParseState::stateless(current)))),
+      make_result(quote_expr!(cx, Ok(peg::runtime::ParseState::new(data, current)))))
   }
 
   fn compile_sequence<'a>(&mut self, parent: &Box<Expression>, seq: &'a [Box<Expression>]) -> GenFunNames

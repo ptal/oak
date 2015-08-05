@@ -19,7 +19,6 @@ peg!{
   // #![disable_code(ast)]
 
   #[start]
-  test = ["0-9"]? composed_type_name
   composed_type_name = (spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)?) -> (^)
 
   type_name = auto_infer_kw &(lparen / eof / comma)
