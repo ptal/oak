@@ -15,7 +15,7 @@
 peg!{
   grammar calculator;
 
-  // #![print(all)]
+  #![print(all)]
 
   #[start]
   expression = sum
@@ -30,15 +30,17 @@ peg!{
     = ["0-9"]+ > to_digit
     / "(" expression ")"
 
-  fn add(x: int, rest: Vec<int>) -> int {
+  fn add((x, rest): (u32, Vec<u32>)) -> u32 {
     rest.iter().fold(x, |x,y| x+y)
   }
 
-  fn mult(x: int, rest: Vec<int>) -> int {
+  fn mult((x, rest): (u32, Vec<u32>)) -> u32 {
     rest.iter().fold(x, |x,y| x*y)
   }
 
-  fn to_digit(env: &Env<()>, n: str) -> int {
-    from_str::<int>(n).unwrap()
+  fn to_digit(raw_text: Vec<char>) -> u32 {
+    use std::str::FromStr;
+    let text: String = raw_text.into_iter().collect();
+    u32::from_str(&*text).unwrap()
   }
 }

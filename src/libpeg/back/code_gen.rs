@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+// This part generates the Rust code from the AST built during the previous phases. For a single expression, two functions can be generated: recognizer and parser. The difference is that recognizer does not build any value while parser does.
+//
+// Semantics actions `expr > f` are compiled into `f(expr)` with `expr` expanded if `expr` is a tuple. Semantics actions are not called in recognizers.
+
 use rust;
 use back::ast::*;
 use back::ast::Expression_::*;
@@ -116,10 +121,10 @@ impl<'cx> CodeGenerator<'cx>
 
     let parser_impl = self.compile_entry_point(grammar);
 
-    let mut parser = vec![];
-    parser.push(quote_item!(self.cx, pub struct Parser;).
+    let mut rust_code: Vec<RItem> = grammar.rust_items.values().cloned().collect();
+    rust_code.push(quote_item!(self.cx, pub struct Parser;).
       expect("Quote the `Parser` declaration."));
-    parser.push(quote_item!(self.cx,
+    rust_code.push(quote_item!(self.cx,
         impl Parser
         {
           pub fn new() -> Parser
@@ -127,10 +132,9 @@ impl<'cx> CodeGenerator<'cx>
             Parser
           }
         }).expect("Quote the `Parser` implementation."));
-    ;
-    parser.extend(self.function_gen.code().into_iter());
-    parser.push(parser_impl);
-    parser
+    rust_code.extend(self.function_gen.code().into_iter());
+    rust_code.push(parser_impl);
+    rust_code
   }
 
   fn compile_rules(&mut self, grammar: &Grammar) {
@@ -392,13 +396,40 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_semantic_action(&mut self, parent: &Box<Expression>, expr: &Box<Expression>, action_name: Ident) -> GenFunNames
   {
-    self.compile_expression(expr)
-    // let cx = self.cx;
-    // let expr = self.map_foldr_expr(choices, |block, expr| {
-    //   quote_expr!(cx,
-    //     $expr.or_else(|_| $block)
-    //   )
-    // });
-    // self.compile_expr_recognizer("choice", expr)
+    // let t: Vec<RExpr> = vec![
+    //   quote_expr!(self.cx, 1),
+    //   quote_expr!(self.cx, 3)
+    // ];
+
+    // println!("{:?}", t);
+
+    // let e: RExpr = quote_expr!(self.cx, $action_name());
+    // match e.node {
+    //   rust::Expr_::ExprCall(ref id,_) => {
+    //     println!("expr call: {:?}", id);
+    //     match id.node {
+    //       rust::Expr_::ExprPath(_,_) => println!("path"),
+    //       _ => println!("something else")
+    //     };
+    //   },
+    //   _ => println!("something else")
+    // };
+
+    // let sub_ty = expr.ty.clone();
+    let GenFunNames{recognizer, parser} = self.compile_expression(expr);
+
+    let recognizer_body = quote_expr!(self.cx,
+      $recognizer(input, pos)
+    );
+
+    let parser_body = quote_expr!(self.cx,
+      $parser(input, pos).map(|state| {
+        let data = $action_name(state.data);
+        peg::runtime::ParseState::new(data, state.offset)
+      })
+    );
+    self.function_gen.generate_expr("semantic_action", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
   }
 }

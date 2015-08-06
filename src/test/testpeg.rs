@@ -33,7 +33,7 @@ use peg::Parser;
 use term::*;
 use ExpectedResult::*;
 
-mod ntcc;
+// mod ntcc;
 mod type_name;
 mod calculator;
 
@@ -313,7 +313,7 @@ fn main()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
+  // test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
   test_engine.register("type_name", box type_name::type_name::Parser::new());
   test_engine.register("calculator", box calculator::calculator::Parser::new());
   test_engine.run();
