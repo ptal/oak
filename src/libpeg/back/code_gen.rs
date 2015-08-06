@@ -160,20 +160,6 @@ impl<'cx> CodeGenerator<'cx>
       })).expect("Quote the implementation of `peg::Parser` for Parser.")
   }
 
-  fn map_foldr_expr<'a, F>(&mut self, seq: &'a [Box<Expression>], f: F) -> RExpr where
-    F: FnMut(RExpr, RExpr) -> RExpr
-  {
-    let cx = self.cx;
-    let mut seq_it = seq
-      .iter()
-      .map(|e| self.compile_expression(e))
-      .map(|GenFunNames{recognizer,..}| quote_expr!(cx, $recognizer(input, pos)))
-      .rev();
-
-    let block = seq_it.next().expect("Can not right fold an empty sequence.");
-    seq_it.fold(quote_expr!(self.cx, $block), f)
-  }
-
   fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames
   {
     match &expr.node {
@@ -382,16 +368,38 @@ impl<'cx> CodeGenerator<'cx>
     // self.compile_expr_recognizer("sequence", expr)
   }
 
-  fn compile_choice<'a>(&mut self, parent: &Box<Expression>, choices: &'a [Box<Expression>]) -> GenFunNames
+  fn map_foldr_expr<F, G>(&mut self, names: Vec<GenFunNames>, f: F, g: G) -> RExpr where
+    F: Fn(GenFunNames) -> Ident,
+    G: Fn(RExpr, Ident) -> RExpr
   {
-    self.compile_expression(&choices[0])
-    // let cx = self.cx;
-    // let expr = self.map_foldr_expr(choices, |block, expr| {
-    //   quote_expr!(cx,
-    //     $expr.or_else(|_| $block)
-    //   )
-    // });
-    // self.compile_expr_recognizer("choice", expr)
+    let cx = self.cx;
+    let mut names_it = names.into_iter()
+      .map(f)
+      .rev();
+
+    let first = names_it.next().expect("Can not right fold an empty sequence.");
+    names_it.fold(quote_expr!(self.cx, $first(input, pos)), g)
+  }
+
+  fn compile_choice(&mut self, parent: &Box<Expression>, choices: &[Box<Expression>]) -> GenFunNames
+  {
+    let choices: Vec<_> = choices.iter().map(|choice| self.compile_expression(choice)).collect();
+
+    let cx = self.cx;
+    let make_body = |accu:RExpr, name:Ident| {
+      quote_expr!(cx, $accu.or_else(|_| $name(input, pos)))
+    };
+    let recognizer_body = self.map_foldr_expr(choices.clone(),
+      |name| name.recognizer,
+      &make_body
+    );
+    let parser_body = self.map_foldr_expr(choices,
+      |name| name.parser,
+      make_body
+    );
+    self.function_gen.generate_expr("choice", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
   }
 
   fn compile_semantic_action(&mut self, parent: &Box<Expression>, expr: &Box<Expression>, action_name: Ident) -> GenFunNames
