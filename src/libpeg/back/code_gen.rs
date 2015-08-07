@@ -18,6 +18,7 @@
 // Semantics actions `expr > f` are compiled into `f(expr)` with `expr` expanded if `expr` is a tuple. Semantics actions are not called in recognizers.
 
 use rust;
+use rust::AstBuilder;
 use back::ast::*;
 use back::ast::Expression_::*;
 use back::naming::*;
@@ -28,6 +29,16 @@ use std::iter::*;
 pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
 {
   CodeGenerator::compile(cx, grammar)
+}
+
+fn map_foldr<T, U, V, F, G>(data: Vec<T>, accu: V, f: F, g: G) -> V where
+  F: Fn(T) -> U,
+  G: Fn(V, U) -> V
+{
+  let mut data = data.into_iter()
+    .map(f)
+    .rev();
+  data.fold(accu, g)
 }
 
 struct CodeGenerator<'cx>
@@ -202,6 +213,12 @@ impl<'cx> CodeGenerator<'cx>
     }
   }
 
+  fn compile_exprs(&mut self, exprs: &[Box<Expression>]) -> Vec<GenFunNames>
+  {
+    let res: Vec<_> = exprs.iter().map(|expr| self.compile_expression(expr)).collect();
+    res
+  }
+
   fn compile_non_terminal_symbol(&mut self, rule_id: Ident) -> GenFunNames
   {
     self.function_gen.names_of_rule(rule_id)
@@ -356,44 +373,72 @@ impl<'cx> CodeGenerator<'cx>
       make_result(quote_expr!(cx, Ok(peg::runtime::ParseState::new(data, current)))))
   }
 
-  fn compile_sequence<'a>(&mut self, parent: &Box<Expression>, seq: &'a [Box<Expression>]) -> GenFunNames
+  fn compile_sequence(&mut self, parent: &Box<Expression>, seq: &[Box<Expression>]) -> GenFunNames
   {
-    self.compile_expression(&seq[0])
-    // let cx = self.cx;
-    // let expr = self.map_foldr_expr(seq, |block, expr| {
-    //   quote_expr!(cx,
-    //     $expr.and_then(|peg::runtime::ParseState { offset: pos, ..}| { $block })
-    //   )
-    // });
-    // self.compile_expr_recognizer("sequence", expr)
-  }
+    let seq = self.compile_exprs(seq);
 
-  fn map_foldr_expr<F, G>(&mut self, names: Vec<GenFunNames>, f: F, g: G) -> RExpr where
-    F: Fn(GenFunNames) -> Ident,
-    G: Fn(RExpr, Ident) -> RExpr
-  {
     let cx = self.cx;
-    let mut names_it = names.into_iter()
-      .map(f)
-      .rev();
+    let recognizer_body = map_foldr(seq.clone(),
+      quote_expr!(cx, |state| state),
+      |name| name.recognizer,
+      |accu: RExpr, name: Ident| {
+        quote_expr!(cx, $name(input, pos).and_then(|state| {
+          let pos = state.offset;
+          $accu
+        }))
+      }
+    );
 
-    let first = names_it.next().expect("Can not right fold an empty sequence.");
-    names_it.fold(quote_expr!(self.cx, $first(input, pos)), g)
+    let state_names: Vec<Ident> = seq.iter().enumerate()
+      .map(|(idx, _)| {
+        rust::gensym_ident(format!("state{}", idx).as_str())
+      })
+      .rev()
+      .collect();
+
+    let tuple_indexes = parent.tuple_indexes();
+
+    let tuple_result = tuple_indexes.into_iter()
+      .map(|idx| state_names[idx])
+      .map(|name| quote_expr!(cx, $name.data))
+      .collect();
+
+    let parser_body = map_foldr(seq,
+      (cx.expr_tuple(parent.span, tuple_result), state_names.len()),
+      |name| name.recognizer,
+      |(accu, state_idx): (RExpr, usize), name: Ident| {
+        let state_idx = state_idx - 1;
+        let state_name = state_names[state_idx];
+        (
+          quote_expr!(cx, $name(input, pos).and_then(|$state_name| {
+            let pos = $state_name.offset;
+            $accu
+          })),
+          state_idx
+        )
+      }
+    ).0;
+    self.function_gen.generate_expr("sequence", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
   }
 
   fn compile_choice(&mut self, parent: &Box<Expression>, choices: &[Box<Expression>]) -> GenFunNames
   {
-    let choices: Vec<_> = choices.iter().map(|choice| self.compile_expression(choice)).collect();
+    let choices = self.compile_exprs(choices);
 
     let cx = self.cx;
+    let error = quote_expr!(cx, Err(err));
     let make_body = |accu:RExpr, name:Ident| {
-      quote_expr!(cx, $accu.or_else(|_| $name(input, pos)))
+      quote_expr!(cx, $name(input, pos).or_else(|err| $accu))
     };
-    let recognizer_body = self.map_foldr_expr(choices.clone(),
+    let recognizer_body = map_foldr(choices.clone(),
+      error.clone(),
       |name| name.recognizer,
       &make_body
     );
-    let parser_body = self.map_foldr_expr(choices,
+    let parser_body = map_foldr(choices,
+      error,
       |name| name.parser,
       make_body
     );

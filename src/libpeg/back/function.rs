@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
 use back::ast::*;
 use back::ast::FunctionKind::*;
 use back::naming::*;

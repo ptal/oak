@@ -45,6 +45,15 @@ impl Expression
   pub fn kind(&self) -> FunctionKind {
     self.kind.clone()
   }
+
+  pub fn tuple_indexes(&self) -> Vec<usize> {
+    if let ExprTy::Tuple(indexes) = self.ty.clone() {
+      indexes
+    }
+    else {
+      panic!("Expected a tuple type for extracting indexes but found {:?}.", self.ty);
+    }
+  }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
