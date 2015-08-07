@@ -289,7 +289,7 @@ impl<'a> Visitor<RTy> for RuleTyper<'a>
     TypeGenerator::char_ty(self.cx)
   }
 
-  fn visit_non_terminal_symbol(&mut self, parent: &Box<TExpression>, id: Ident) -> RTy {
+  fn visit_non_terminal_symbol(&mut self, _parent: &Box<TExpression>, id: Ident) -> RTy {
     let rule = self.rules.get(&id).unwrap();
     self.visit_rule(rule);
     self.rules_ty[&id].clone()

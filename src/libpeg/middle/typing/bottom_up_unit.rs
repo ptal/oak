@@ -139,7 +139,7 @@ trait BottomUpAnalysis
       if !self.propagate_invisibility(parent, exprs) {
         // Remove unit types from the tuple.
         let inners: Vec<usize> = inners.into_iter()
-          .filter(|&idx| exprs[idx].is_unit())
+          .filter(|&idx| !exprs[idx].is_unit())
           .collect();
 
         if inners.is_empty() {

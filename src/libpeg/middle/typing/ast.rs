@@ -57,14 +57,6 @@ impl EvaluationContext
     if self != other { Both }
     else { self }
   }
-
-  pub fn is_unvalued(&self) -> bool {
-    *self != Valued
-  }
-
-  pub fn is_valued(&self) -> bool {
-    *self != UnValued
-  }
 }
 
 pub trait FlatMerge<T>

@@ -15,7 +15,7 @@
 use rust;
 use middle::ast::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct GenFunNames
 {
   pub recognizer: Ident,

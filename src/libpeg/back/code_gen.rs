@@ -35,7 +35,7 @@ fn map_foldr<T, U, V, F, G>(data: Vec<T>, accu: V, f: F, g: G) -> V where
   F: Fn(T) -> U,
   G: Fn(V, U) -> V
 {
-  let mut data = data.into_iter()
+  let data = data.into_iter()
     .map(f)
     .rev();
   data.fold(accu, g)
@@ -379,7 +379,7 @@ impl<'cx> CodeGenerator<'cx>
 
     let cx = self.cx;
     let recognizer_body = map_foldr(seq.clone(),
-      quote_expr!(cx, |state| state),
+      quote_expr!(cx, state),
       |name| name.recognizer,
       |accu: RExpr, name: Ident| {
         quote_expr!(cx, $name(input, pos).and_then(|state| {
@@ -405,7 +405,7 @@ impl<'cx> CodeGenerator<'cx>
 
     let parser_body = map_foldr(seq,
       (cx.expr_tuple(parent.span, tuple_result), state_names.len()),
-      |name| name.recognizer,
+      |name| name.parser,
       |(accu, state_idx): (RExpr, usize), name: Ident| {
         let state_idx = state_idx - 1;
         let state_name = state_names[state_idx];
