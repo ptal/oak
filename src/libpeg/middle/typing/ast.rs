@@ -97,7 +97,7 @@ impl Expression
       node: node,
       invisible: RefCell::new(false),
       ty: RefCell::new(ty),
-      context: Both
+      context: UnValued
     };
     if expr.is_by_default_invisible() {
       expr.to_invisible_type();

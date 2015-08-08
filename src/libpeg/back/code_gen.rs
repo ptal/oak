@@ -379,7 +379,7 @@ impl<'cx> CodeGenerator<'cx>
 
     let cx = self.cx;
     let recognizer_body = map_foldr(seq.clone(),
-      quote_expr!(cx, state),
+      quote_expr!(cx, Ok(state)),
       |name| name.recognizer,
       |accu: RExpr, name: Ident| {
         quote_expr!(cx, $name(input, pos).and_then(|state| {
@@ -398,13 +398,21 @@ impl<'cx> CodeGenerator<'cx>
 
     let tuple_indexes = parent.tuple_indexes();
 
-    let tuple_result = tuple_indexes.into_iter()
+    let mut tuple_result: Vec<RExpr> = tuple_indexes.into_iter()
       .map(|idx| state_names[idx])
       .map(|name| quote_expr!(cx, $name.data))
       .collect();
 
+    let value =
+      if tuple_result.len() == 1 {
+        tuple_result.pop().unwrap()
+      } else {
+        cx.expr_tuple(parent.span, tuple_result)
+      };
+    let value = quote_expr!(cx, Ok(peg::runtime::ParseState::new($value, pos)));
+
     let parser_body = map_foldr(seq,
-      (cx.expr_tuple(parent.span, tuple_result), state_names.len()),
+      (value, state_names.len()),
       |name| name.parser,
       |(accu, state_idx): (RExpr, usize), name: Ident| {
         let state_idx = state_idx - 1;
