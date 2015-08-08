@@ -15,6 +15,7 @@
 use middle::typing::inference::*;
 use middle::typing::bottom_up_unit::*;
 use middle::typing::top_down_unit::*;
+use middle::typing::printer::*;
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
@@ -23,6 +24,7 @@ pub mod visitor;
 mod inference;
 mod bottom_up_unit;
 mod top_down_unit;
+mod printer;
 // mod analysis;
 
 pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
@@ -36,6 +38,7 @@ pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
   InferenceEngine::infer(&mut grammar, agrammar.rules);
   bottom_up_unit_inference(&mut grammar);
   top_down_unit_inference(&mut grammar);
+  print_annotated_rules(&grammar);
   Partial::Value(grammar)
 }
 
