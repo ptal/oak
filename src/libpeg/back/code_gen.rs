@@ -457,35 +457,33 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_semantic_action(&mut self, parent: &Box<Expression>, expr: &Box<Expression>, action_name: Ident) -> GenFunNames
   {
-    // let t: Vec<RExpr> = vec![
-    //   quote_expr!(self.cx, 1),
-    //   quote_expr!(self.cx, 3)
-    // ];
-
-    // println!("{:?}", t);
-
-    // let e: RExpr = quote_expr!(self.cx, $action_name());
-    // match e.node {
-    //   rust::Expr_::ExprCall(ref id,_) => {
-    //     println!("expr call: {:?}", id);
-    //     match id.node {
-    //       rust::Expr_::ExprPath(_,_) => println!("path"),
-    //       _ => println!("something else")
-    //     };
-    //   },
-    //   _ => println!("something else")
-    // };
-
-    // let sub_ty = expr.ty.clone();
     let GenFunNames{recognizer, parser} = self.compile_expression(expr);
 
     let recognizer_body = quote_expr!(self.cx,
       $recognizer(input, pos)
     );
 
+    let ty = expr.ty.clone();
+    let state_data = quote_expr!(self.cx, state.data);
+    let action_params = match ty {
+      ExprTy::Tuple(ref indexes) if indexes.len() > 1 => {
+        indexes.iter()
+          .map(|&idx| self.cx.expr_tup_field_access(parent.span, state_data.clone(), idx))
+          .collect()
+      },
+      ExprTy::Tuple(ref indexes) if indexes.len() == 0 => {
+        vec![]
+      }
+      _ => {
+        vec![state_data]
+      }
+    };
+
+    let action_call = self.cx.expr_call_ident(parent.span, action_name, action_params);
+
     let parser_body = quote_expr!(self.cx,
       $parser(input, pos).map(|state| {
-        let data = $action_name(state.data);
+        let data = $action_call;
         peg::runtime::ParseState::new(data, state.offset)
       })
     );

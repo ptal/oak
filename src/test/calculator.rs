@@ -30,11 +30,11 @@ peg!{
     = ["0-9"]+ > to_digit
     / "(" expression ")"
 
-  fn add((x, rest): (u32, Vec<u32>)) -> u32 {
+  fn add(x: u32, rest: Vec<u32>) -> u32 {
     rest.iter().fold(x, |x,y| x+y)
   }
 
-  fn mult((x, rest): (u32, Vec<u32>)) -> u32 {
+  fn mult(x: u32, rest: Vec<u32>) -> u32 {
     rest.iter().fold(x, |x,y| x*y)
   }
 
