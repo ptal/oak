@@ -13,7 +13,7 @@ This library is highly experimental, I don't even know if my goals are possible.
 
 What I would like to achieve before 1.0 and publishing on crates.io:
 
-- [ ] Semantics actions. The code generation is missing but most of the type inference on rules is done. The "big idea" is to avoid naming expression in the rule (such as `e1:v1`) and to keep the grammar as clean as possible.
+- [*] Semantics actions. The code generation is missing but most of the type inference on rules is done. The "big idea" is to avoid naming expression in the rule (such as `e1:v1`) and to keep the grammar as clean as possible.
 - [ ] Non-consuming loop analysis. For example `(&e)*` might generate a parser that does not terminate.
 - [ ] Decent error reporting. Probably something based on [1].
 - [ ] It definitely needs more tests.

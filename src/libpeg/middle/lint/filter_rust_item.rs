@@ -42,6 +42,6 @@ impl FilterRustItem
   fn warn_ignored_item(cx: &ExtCtxt, item: &P<Item>) {
     cx.span_warn(item.span, format!(
       "`{}` is not a function and will be ignored.",
-      item.ident.as_str()).as_str());
+      item.ident.to_string()).as_str());
   }
 }

@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
-use std::ops::Deref;
 pub use std::string::String;
 pub use rust::{Ident, Name};
 
 pub fn id_to_string(id: Ident) -> String
 {
-  String::from(rust::get_ident(id).deref())
+  id.to_string()
 }
 
 pub fn name_to_string(name: Name) -> String
 {
-  String::from(rust::get_name(name).deref())
+ name.to_string()
 }
 
 pub fn string_to_lowercase(s: &String) -> String
