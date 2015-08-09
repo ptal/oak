@@ -87,7 +87,7 @@ impl<'cx> CodeGenerator<'cx>
       pub mod $grammar_name
       {
         #![allow(dead_code)]
-        #![allow(unused_parens)]
+        #![allow(unused_parens, unused_variables)]
         #![allow(plugin_as_library)] // for the runtime.
 
         $parser
