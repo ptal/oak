@@ -141,7 +141,11 @@ return_kw = "return" spacing -> (^)
 
 The type of `return_expr` is the type of `expr` as expected. The circumflex symbol in `(^)` indicates a bottom up propagation of unit in expression. The propagation is only stopped if a value with another type is encountered. The expression `return_kw? return_kw?` has type `(^)`, it has been propagated across `Option<(^)>` and `((^), (^))` types.
 
-That is for the story of typing parsing expressions. The story continues in the [issues tracker](https://github.com/ptal/Rust.peg/issues)! For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism, probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
+That is for the story of typing parsing expressions. The story continues in the [issues tracker](https://github.com/ptal/Rust.peg/issues)!
+
+## What's next?
+
+For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism, probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
 
 * Automatic wrapping of values into `Spanned<T>` structure to get location information ([#13](https://github.com/ptal/Rust.peg/issues/13)).
 * Closest relation between host language types and grammar expression types, for example `e1 > A / e2 > B` with `A` and `B` being variants ([#41](https://github.com/ptal/Rust.peg/issues/41), [#53](https://github.com/ptal/Rust.peg/issues/53), [#54](https://github.com/ptal/Rust.peg/issues/54)).
