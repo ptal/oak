@@ -34,6 +34,7 @@ pub struct Rule{
 pub enum Expression_<SubExpr>{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
+  CharacterClass(CharacterClassExpr), // [0-9]
   NonTerminalSymbol(Ident), // a_rule
   Sequence(Vec<Box<SubExpr>>), // a_rule next_rule
   Choice(Vec<Box<SubExpr>>), // try_this / or_try_this_one
@@ -42,7 +43,6 @@ pub enum Expression_<SubExpr>{
   Optional(Box<SubExpr>), // space?
   NotPredicate(Box<SubExpr>), // !space
   AndPredicate(Box<SubExpr>), // &space
-  CharacterClass(CharacterClassExpr), // [0-9]
   SemanticAction(Box<SubExpr>, Ident) // rule > function
 }
 
