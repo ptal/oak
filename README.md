@@ -1,4 +1,4 @@
-# Super quick example
+## Super quick example
 
 ```rust
 peg!{
@@ -31,7 +31,7 @@ peg!{
 }
 ```
 
-# Syntax cheat sheet
+## Syntax cheat sheet
 
 `e` is a sub expression and `T` is the type of `e`. The types are only informative, it does not show unit propagation. Greedy operators do not generate "backtracking points" and consume as many characters as possible.
 
@@ -53,11 +53,11 @@ peg!{
 | `e > f`         | Return type of `f`    | 5                | Match `e` and if it succeeds, call `f(v)` where `v` is the value of `e`. |
 | `e1 / e2 / e3`  | Type of any `e`       | 6                | Match `e1 e2 e3` in sequence. Immediately succeeds when one succeeds. |
 
-# Introduction to expressions types and (^)
+## Introduction to expressions types and `(^)`
 
 The full explanation of the what and why of types is available in the next section. A goal of this library is to give a type to any expression grammar. This permits to call a semantic action without naming expressions. In some cases, for example with the spacing rule `spacing = [" \n\t"]*`, the grammar compiler will not generate the expected type, here the rule `spacing` has type `Vec<char>` instead of `()` — we usually do not care about spaces. Therefore, users must annotate expressions with `e -> ()` to force their types to be `()`. It works and is enough for most cases. However, we sometimes want to propagate unit type up in the expression tree because these expressions are only of syntactic interest. The fact is that `e?` has type `Option<T>` even if `T = ()`. It is expected since `Option<()>` carries a boolean information about the presence of something. If we do not care, we can annotate `e` with `(^)` and the unit type will automatically be propagated, and even `e1? e2*` will have type `(^)` if `e1` and `e2` have type `(^)`. In the end, the goal is really to give an expression the type that you expect it to have!
 
-# The story of Rust.peg
+## The story of Rust.peg
 
 _This section explains the novelties of this library and is not a tutorial to parsing expression grammar. It supposes the reader knowledgeable on the subject so if you are not, you can consult tutorial on Parsing Expression Grammar on the internet. We might provide one later._
 
@@ -143,11 +143,11 @@ The type of `return_expr` is the type of `expr` as expected. The circumflex symb
 
 That is for the story of typing parsing expressions. The story continues in the [issues tracker](https://github.com/ptal/Rust.peg/issues)! For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism, probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
 
-* Automatic wrapping of values into `Spanned<T>` structure to get location information (#13).
-* Closest relation between host language types and grammar expression types, for example `e1 > A / e2 > B` with `A` and `B` being variants (#41, #53, #54).
-* Extend the choice operator to handle erroneous cases (#30).
-* Bootstrap the grammar (#42).
-* Parametrize rules with other rules and arguments (#10, #12, #28).
+* Automatic wrapping of values into `Spanned<T>` structure to get location information ([#13](https://github.com/ptal/Rust.peg/issues/13)).
+* Closest relation between host language types and grammar expression types, for example `e1 > A / e2 > B` with `A` and `B` being variants ([#41](https://github.com/ptal/Rust.peg/issues/41), [#53](https://github.com/ptal/Rust.peg/issues/53), [#54](https://github.com/ptal/Rust.peg/issues/54)).
+* Extend the choice operator to handle erroneous cases ([#30](https://github.com/ptal/Rust.peg/issues/30)).
+* Bootstrap the grammar ([#42](https://github.com/ptal/Rust.peg/issues/42)).
+* Parametrize rules with other rules and arguments ([#10](https://github.com/ptal/Rust.peg/issues/10), [#12](https://github.com/ptal/Rust.peg/issues/12), [#28](https://github.com/ptal/Rust.peg/issues/28)).
 * [...](https://github.com/ptal/Rust.peg/issues)
 
 A shortcoming to cleanly achieve these objectives with the Rust compiler is that we can only access item definitions declared inside the procedural macro. It probably means that, for the moment, compositionality would come at the cost of some analysis.
