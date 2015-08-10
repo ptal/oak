@@ -15,7 +15,7 @@
 pub use calculator::calculator::*;
 
 grammar! calculator{
-  #![print(all)]
+  // #![print(all)]
 
   #[start]
   expression = sum
@@ -30,17 +30,19 @@ grammar! calculator{
     = ["0-9"]+ > to_digit
     / "(" expression ")"
 
-  fn add(x: u32, rest: Vec<u32>) -> u32 {
+  fn add(x: Digit, rest: Vec<Digit>) -> Digit {
     rest.iter().fold(x, |x,y| x+y)
   }
 
-  fn mult(x: u32, rest: Vec<u32>) -> u32 {
+  fn mult(x: Digit, rest: Vec<Digit>) -> Digit {
     rest.iter().fold(x, |x,y| x*y)
   }
 
-  fn to_digit(raw_text: Vec<char>) -> u32 {
+  fn to_digit(raw_text: Vec<char>) -> Digit {
     use std::str::FromStr;
     let text: String = raw_text.into_iter().collect();
     u32::from_str(&*text).unwrap()
   }
+
+  pub type Digit = u32;
 }

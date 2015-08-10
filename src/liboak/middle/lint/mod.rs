@@ -13,4 +13,3 @@
 // limitations under the License.
 
 pub mod unused_rule;
-pub mod filter_rust_item;
