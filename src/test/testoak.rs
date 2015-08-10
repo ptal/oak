@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![crate_name = "testpeg"]
-#![crate_type = "bin"]
 #![feature(plugin, str_char, convert, path_ext, box_syntax, rustc_private)]
 
-#![plugin(peg)]
+#![plugin(oak)]
 
 extern crate oak_runtime;
 extern crate term;

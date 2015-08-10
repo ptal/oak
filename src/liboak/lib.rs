@@ -14,9 +14,6 @@
 
 //! This library proposes a syntax extension for a parser generator based on [Parsing Expression Grammar (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). It aims at simplifying the construction of the AST by typing the parsing rules. This is an experimental library.
 
-#![crate_name = "peg"]
-#![crate_type = "dylib"]
-
 #![feature(convert, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all, drain)]
 
 extern crate rustc;

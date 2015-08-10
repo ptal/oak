@@ -1,19 +1,20 @@
 [package]
 
-name = "peg"
+name = "oak"
 version = "0.1.0"
 authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
 [lib]
 
-name = "peg"
-path = "src/libpeg/lib.rs"
+name = "oak"
+path = "src/liboak/lib.rs"
 crate_type = ["dylib"]
+plugin = true
 
 [[bin]]
 
-name = "testpeg"
-path = "src/test/testpeg.rs"
+name = "testoak"
+path = "src/test/testoak.rs"
 
 [dependencies.attribute]
 git = "https://github.com/ptal/Rust.attribute"
