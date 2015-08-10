@@ -87,27 +87,26 @@ impl<'cx> CodeGenerator<'cx>
       {
         #![allow(dead_code)]
         #![allow(unused_parens, unused_variables)]
-        #![allow(plugin_as_library)] // for the runtime.
 
         $parser
       }
     ).expect("Quote the grammar module.");
 
-    self.insert_peg_crate(grammar_module)
+    self.insert_runtime_crate(grammar_module)
   }
 
-  // RUST BUG: We cannot quote `extern crate peg;` before the grammar module, so we use this workaround
+  // RUST BUG: We cannot quote `extern crate runtime;` before the grammar module, so we use this workaround
   // for adding the external crate after the creation of the module.
-  fn insert_peg_crate(&self, grammar_module: rust::P<rust::Item>)
+  fn insert_runtime_crate(&self, grammar_module: rust::P<rust::Item>)
     -> rust::P<rust::Item>
   {
-    let peg_crate = quote_item!(self.cx,
-      extern crate peg;
+    let runtime_crate = quote_item!(self.cx,
+      extern crate oak_runtime;
     ).expect("Quote the extern PEG crate.");
 
     match &grammar_module.node {
       &rust::ItemMod(ref module_code) => {
-        let mut items = vec![peg_crate];
+        let mut items = vec![runtime_crate];
         items.push_all(module_code.items.clone().as_slice());
         rust::P(rust::Item {
           ident: grammar_module.ident,
@@ -160,14 +159,14 @@ impl<'cx> CodeGenerator<'cx>
   {
     let start_rule_name = self.function_gen.names_of_rule(grammar.attributes.starting_rule).recognizer;
     (quote_item!(self.cx,
-      impl peg::Parser for Parser
+      impl oak_runtime::Parser for Parser
       {
         fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
         {
-          peg::runtime::make_result(input,
+          oak_runtime::make_result(input,
             &$start_rule_name(input, 0))
         }
-      })).expect("Quote the implementation of `peg::Parser` for Parser.")
+      })).expect("Quote the implementation of `oak_runtime::Parser` for Parser.")
   }
 
   fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames
@@ -226,8 +225,8 @@ impl<'cx> CodeGenerator<'cx>
   fn compile_any_single_char(&mut self, parent: &Box<Expression>) -> GenFunNames
   {
     self.function_gen.generate_expr("any_single_char", self.current_rule_name, parent.kind(),
-      quote_expr!(self.cx, peg::runtime::recognize_any_single_char(input, pos)),
-      quote_expr!(self.cx, peg::runtime::parse_any_single_char(input, pos))
+      quote_expr!(self.cx, oak_runtime::recognize_any_single_char(input, pos)),
+      quote_expr!(self.cx, oak_runtime::parse_any_single_char(input, pos))
     )
   }
 
@@ -236,8 +235,8 @@ impl<'cx> CodeGenerator<'cx>
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
     self.function_gen.generate_expr("str_literal", self.current_rule_name, parent.kind(),
-      quote_expr!(self.cx, peg::runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)),
-      quote_expr!(self.cx, peg::runtime::parse_match_literal(input, pos, $lit_str, $lit_len))
+      quote_expr!(self.cx, oak_runtime::recognize_match_literal(input, pos, $lit_str, $lit_len)),
+      quote_expr!(self.cx, oak_runtime::parse_match_literal(input, pos, $lit_str, $lit_len))
     )
   }
 
@@ -265,8 +264,8 @@ impl<'cx> CodeGenerator<'cx>
     );
 
     self.function_gen.generate_expr("class_char", self.current_rule_name, parent.kind(),
-      make_char_class_body(quote_expr!(cx, peg::runtime::ParseState::stateless(char_range.next))),
-      make_char_class_body(quote_expr!(cx, peg::runtime::ParseState::new(current, char_range.next)))
+      make_char_class_body(quote_expr!(cx, oak_runtime::ParseState::stateless(char_range.next))),
+      make_char_class_body(quote_expr!(cx, oak_runtime::ParseState::new(current, char_range.next)))
     )
   }
 
@@ -276,7 +275,7 @@ impl<'cx> CodeGenerator<'cx>
     let body = quote_expr!(self.cx,
       match $recognizer_name(input, pos) {
         Ok(_) => Err(format!("An `!expr` failed.")),
-        _ => Ok(peg::runtime::ParseState::stateless(pos))
+        _ => Ok(oak_runtime::ParseState::stateless(pos))
       }
     );
     self.function_gen.generate_unit_expr(
@@ -288,7 +287,7 @@ impl<'cx> CodeGenerator<'cx>
     let recognizer_name = self.compile_expression(expr).recognizer;
     let body = quote_expr!(self.cx,
       $recognizer_name(input, pos)
-      .map(|_| peg::runtime::ParseState::stateless(pos))
+      .map(|_| oak_runtime::ParseState::stateless(pos))
     );
     self.function_gen.generate_unit_expr(
       "and_predicate", self.current_rule_name, parent.kind(), body)
@@ -299,12 +298,12 @@ impl<'cx> CodeGenerator<'cx>
     let GenFunNames{recognizer, parser} = self.compile_expression(expr);
     let recognizer_body = quote_expr!(self.cx,
       $recognizer(input, pos).or_else(
-        |_| Ok(peg::runtime::ParseState::stateless(pos)))
+        |_| Ok(oak_runtime::ParseState::stateless(pos)))
     );
     let parser_body = quote_expr!(self.cx,
       match $parser(input, pos) {
-        Ok(state) => Ok(peg::runtime::ParseState::new(Some(state.data), state.pos)),
-        Err(_) => Ok(peg::runtime::ParseState::new(None, pos))
+        Ok(state) => Ok(oak_runtime::ParseState::new(Some(state.data), state.pos)),
+        Err(_) => Ok(oak_runtime::ParseState::new(None, pos))
       }
     );
     self.function_gen.generate_expr("optional", self.current_rule_name, parent.kind(),
@@ -351,8 +350,8 @@ impl<'cx> CodeGenerator<'cx>
   {
     let cx = self.cx;
     self.compile_star(parent, expr,
-      quote_expr!(cx, Ok(peg::runtime::ParseState::stateless(current))),
-      quote_expr!(cx, Ok(peg::runtime::ParseState::new(data, current))))
+      quote_expr!(cx, Ok(oak_runtime::ParseState::stateless(current))),
+      quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current))))
   }
 
   fn compile_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
@@ -368,8 +367,8 @@ impl<'cx> CodeGenerator<'cx>
       })
     };
     self.compile_star(parent, expr,
-      make_result(quote_expr!(cx, Ok(peg::runtime::ParseState::stateless(current)))),
-      make_result(quote_expr!(cx, Ok(peg::runtime::ParseState::new(data, current)))))
+      make_result(quote_expr!(cx, Ok(oak_runtime::ParseState::stateless(current)))),
+      make_result(quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current)))))
   }
 
   fn compile_sequence(&mut self, parent: &Box<Expression>, seq: &[Box<Expression>]) -> GenFunNames
@@ -408,7 +407,7 @@ impl<'cx> CodeGenerator<'cx>
       } else {
         cx.expr_tuple(parent.span, tuple_result)
       };
-    let value = quote_expr!(cx, Ok(peg::runtime::ParseState::new($value, pos)));
+    let value = quote_expr!(cx, Ok(oak_runtime::ParseState::new($value, pos)));
 
     let parser_body = map_foldr(seq,
       (value, state_names.len()),
@@ -483,7 +482,7 @@ impl<'cx> CodeGenerator<'cx>
     let parser_body = quote_expr!(self.cx,
       $parser(input, pos).map(|state| {
         let data = $action_call;
-        peg::runtime::ParseState::new(data, state.offset)
+        oak_runtime::ParseState::new(data, state.offset)
       })
     );
     self.function_gen.generate_expr("semantic_action", self.current_rule_name, parent.kind(),

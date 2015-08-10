@@ -17,7 +17,7 @@
 #![crate_name = "peg"]
 #![crate_type = "dylib"]
 
-#![feature(convert, str_char, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all, drain)]
+#![feature(convert, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all, drain)]
 
 extern crate rustc;
 extern crate syntax;
@@ -25,11 +25,9 @@ extern crate attribute;
 
 use rustc::plugin::Registry;
 
-pub use runtime::Parser;
 use front::parser;
 use monad::partial::Partial;
 
-pub mod runtime;
 mod front;
 mod middle;
 mod back;

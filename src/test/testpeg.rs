@@ -18,8 +18,7 @@
 
 #![plugin(peg)]
 
-#[allow(plugin_as_library)]
-extern crate peg;
+extern crate oak_runtime;
 extern crate term;
 
 use std::path::{PathBuf, Path};
@@ -28,7 +27,7 @@ use std::io;
 use std::io::Read;
 use std::iter::FromIterator;
 
-use peg::Parser;
+use oak_runtime::Parser;
 
 use term::*;
 use ExpectedResult::*;

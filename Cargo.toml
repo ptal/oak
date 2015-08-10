@@ -16,5 +16,7 @@ name = "testpeg"
 path = "src/test/testpeg.rs"
 
 [dependencies.attribute]
-
 git = "https://github.com/ptal/Rust.attribute"
+
+[dependencies.oak_runtime]
+path = "runtime"

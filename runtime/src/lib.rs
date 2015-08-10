@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(str_char)]
+
 pub trait Parser
 {
   fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;

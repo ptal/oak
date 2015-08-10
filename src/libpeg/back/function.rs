@@ -101,7 +101,7 @@ impl<'cx> FunctionGenerator<'cx>
 
   fn push_fun(&mut self, name: Ident, body: RExpr, ty: RTy) {
     let function = quote_item!(self.cx,
-      pub fn $name(input: &str, pos: usize) -> Result<peg::runtime::ParseState<$ty>, String>
+      pub fn $name(input: &str, pos: usize) -> Result<oak_runtime::ParseState<$ty>, String>
       {
         $body
       }
