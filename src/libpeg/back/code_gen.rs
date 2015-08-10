@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-// This part generates the Rust code from the AST built during the previous phases. For a single expression, two functions can be generated: recognizer and parser. The difference is that recognizer does not build any value while parser does.
-//
-// Semantics actions `expr > f` are compiled into `f(expr)` with `expr` expanded if `expr` is a tuple. Semantics actions are not called in recognizers.
+//! This part generates the Rust code from the AST built during the previous phases. For a single expression, two functions can be generated: recognizer and parser. The difference is that recognizer does not build any value while parser does.
+//!
+//! Semantics actions `expr > f` are compiled into `f(expr)` with `expr` expanded if `expr` is a tuple. Semantics actions are not called in recognizers.
 
 use rust;
 use rust::AstBuilder;
