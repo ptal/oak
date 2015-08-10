@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-grammar!{
-  grammar type_name;
+pub use type_name::type_name::*;
+
+grammar! type_name{
 
   // #![print(all)]
   // #![disable_code(ast)]

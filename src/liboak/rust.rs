@@ -21,6 +21,7 @@ pub use syntax::codemap::{DUMMY_SP, Span, Spanned, spanned, mk_sp, respan, ByteP
 pub use syntax::ext::base::{ExtCtxt,MacResult,MacEager,DummyResult};
 pub use syntax::ext::quote::rt::ToTokens;
 pub use syntax::ext::build::AstBuilder;
+pub use syntax::ext::base::SyntaxExtension;
 
 pub use syntax::parse::str_lit;
 pub use syntax::parse::attr::ParserAttr;

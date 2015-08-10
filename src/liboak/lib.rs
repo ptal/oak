@@ -35,17 +35,19 @@ mod monad;
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry)
 {
-  reg.register_macro("grammar", expand)
+  reg.register_syntax_extension(
+    rust::token::intern("grammar"),
+    rust::SyntaxExtension::IdentTT(Box::new(expand), None, false));
 }
 
-fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
+fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::Ident, tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
-  parse(cx, tts)
+  parse(cx, grammar_name, tts)
 }
 
-fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
+fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident, tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
-  let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts.to_vec());
+  let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
   let ast = parser.parse_grammar();
   let ast = middle::analyse(cx, ast);
   match ast {

@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-grammar!{
-  grammar ntcc;
+
+pub use ntcc::ntcc::*;
+
+grammar! ntcc{
 
   // #![print(all)]
   // #![disable_code(ast)]

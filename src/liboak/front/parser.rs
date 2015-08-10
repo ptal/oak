@@ -25,55 +25,28 @@ use front::ast::Expression_::*;
 pub struct Parser<'a>
 {
   rp: rust::Parser<'a>,
-  inner_attrs: Vec<rust::Attribute>
+  inner_attrs: Vec<rust::Attribute>,
+  grammar_name: rust::Ident
 }
 
 impl<'a> Parser<'a>
 {
   pub fn new(sess: &'a rust::ParseSess,
          cfg: rust::CrateConfig,
-         tts: Vec<rust::TokenTree>) -> Parser<'a>
+         tts: Vec<rust::TokenTree>,
+         grammar_name: rust::Ident) -> Parser<'a>
   {
     Parser{
       rp: rust::new_parser_from_tts(sess, cfg, tts),
-      inner_attrs: Vec::new()}
+      inner_attrs: Vec::new(),
+      grammar_name: grammar_name
+    }
   }
 
   pub fn parse_grammar(&mut self) -> Grammar
   {
-    let grammar_name = self.parse_grammar_decl();
     let (rules, rust_items) = self.parse_blocks();
-    Grammar{name: grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()}
-  }
-
-  fn parse_grammar_decl(&mut self) -> Ident
-  {
-    let outer_attrs = self.parse_attributes();
-    if !outer_attrs.is_empty() {
-      self.rp.span_err(outer_attrs.iter().next().unwrap().span,
-        "Unknown attribute. Use #![...] for global attributes.");
-    }
-    if !self.eat_grammar_keyword() {
-      let token_string = self.rp.this_token_to_string();
-      let span = self.rp.span;
-      panic!(self.rp.span_fatal(span,
-        format!("Expected grammar declaration (of the form: `grammar <grammar-name>;`), \
-                but found `{}`",
-          token_string).as_str()))
-    }
-    let grammar_name = self.rp.parse_ident().unwrap();
-    self.rp.expect(&rtok::Semi).unwrap();
-    grammar_name
-  }
-
-  fn eat_grammar_keyword(&mut self) -> bool
-  {
-    let is_grammar_kw = match self.rp.token {
-      rtok::Ident(sid, rust::IdentStyle::Plain) => "grammar" == id_to_string(sid).as_str(),
-      _ => false
-    };
-    if is_grammar_kw { self.bump() }
-    is_grammar_kw
+    Grammar{name: self.grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()}
   }
 
   fn bump(&mut self) {

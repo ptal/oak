@@ -310,9 +310,9 @@ fn main()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", box ntcc::ntcc::recognize_ntcc);
-  test_engine.register("type_name", box type_name::type_name::recognize_type_names);
-  test_engine.register("calculator", box calculator::calculator::recognize_expression);
+  test_engine.register("ntcc", box ntcc::recognize_ntcc);
+  test_engine.register("type_name", box type_name::recognize_type_names);
+  test_engine.register("calculator", box calculator::recognize_expression);
 
   test_engine.run();
 }
