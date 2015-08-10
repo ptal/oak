@@ -19,7 +19,7 @@ grammar!{
   // #![disable_code(ast)]
 
   #[start]
-  composed_type_name = (spacing type_name (lparen composed_type_name (comma composed_type_name)* rparen)?) -> (^)
+  type_names = (spacing type_name (lparen type_names (comma type_names)* rparen)?) -> (^)
 
   type_name = auto_infer_kw &(lparen / eof / comma)
             / ident

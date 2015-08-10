@@ -127,22 +127,8 @@ impl<'cx> CodeGenerator<'cx>
   fn compile_parser(&mut self, grammar: &Grammar) -> Vec<RItem>
   {
     self.compile_rules(grammar);
-
-    let parser_impl = self.compile_entry_point(grammar);
-
     let mut rust_code: Vec<RItem> = grammar.rust_items.values().cloned().collect();
-    rust_code.push(quote_item!(self.cx, pub struct Parser;).
-      expect("Quote the `Parser` declaration."));
-    rust_code.push(quote_item!(self.cx,
-        impl Parser
-        {
-          pub fn new() -> Parser
-          {
-            Parser
-          }
-        }).expect("Quote the `Parser` implementation."));
     rust_code.extend(self.function_gen.code().into_iter());
-    rust_code.push(parser_impl);
     rust_code
   }
 
@@ -152,21 +138,6 @@ impl<'cx> CodeGenerator<'cx>
       let expr_fn = self.compile_expression(&rule.def);
       self.function_gen.generate_rule(rule.def.kind(), self.current_rule_name, expr_fn);
     }
-  }
-
-  // TODO: decide whether we want to remove start attribute or not.
-  fn compile_entry_point(&mut self, grammar: &Grammar) -> RItem
-  {
-    let start_rule_name = self.function_gen.names_of_rule(grammar.attributes.starting_rule).recognizer;
-    (quote_item!(self.cx,
-      impl oak_runtime::Parser for Parser
-      {
-        fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>
-        {
-          oak_runtime::make_result(input,
-            &$start_rule_name(input, 0))
-        }
-      })).expect("Quote the implementation of `oak_runtime::Parser` for Parser.")
   }
 
   fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames

@@ -19,7 +19,7 @@ grammar!{
   // #![disable_code(ast)]
 
   #[start]
-  start = spacing expression
+  ntcc = spacing expression
 
   expression
     = (sum

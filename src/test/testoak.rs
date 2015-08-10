@@ -25,7 +25,7 @@ use std::io;
 use std::io::Read;
 use std::iter::FromIterator;
 
-use oak_runtime::Parser;
+use oak_runtime::ParseResult;
 
 use term::*;
 use ExpectedResult::*;
@@ -93,15 +93,15 @@ impl TestDisplay
     self.write_line(term::color::BLUE, "\n\n[ stats ] ", &msg);
   }
 
-  pub fn failure<'a>(&mut self, path: &Path, expectation: ExpectedResult,
-    result: &Result<Option<&'a str>, String>)
+  pub fn failure(&mut self, path: &Path, expectation: ExpectedResult,
+    result: ParseResult<()>, input: &str)
   {
     self.num_failure += 1;
     let test_name = self.file_stem(path);
     self.write_line(term::color::RED, "[ failed ] ", &test_name);
     self.path(path);
     self.expected(expectation);
-    self.wrong_result(result);
+    self.wrong_result(result, input);
   }
 
   fn expected(&mut self, expectation: ExpectedResult)
@@ -113,20 +113,20 @@ impl TestDisplay
     self.write_line(term::color::CYAN, "  [ expected ] ", &format!("{}", msg))
   }
 
-  fn wrong_result<'a>(&mut self, result: &Result<Option<&'a str>, String>)
+  fn wrong_result(&mut self, result: ParseResult<()>, input: &str)
   {
     let msg = match result {
-      &Ok(Some(input)) => format!("Partial match, stopped at `{}`.", self.code_snippet(input)),
-      &Ok(None) => format!("Fully matched."),
-      &Err(ref msg) => msg.clone()
+      Ok(ref state) if state.partial_read(input) => format!("Partial match, stopped at `{}`.", self.code_snippet(state.offset, input)),
+      Ok(_) => format!("Fully matched."),
+      Err(msg) => msg
     };
     self.error(&msg)
   }
 
-  fn code_snippet<'a>(&self, code: &'a str) -> &'a str
+  fn code_snippet<'a>(&self, stopped_at: usize, input: &'a str) -> &'a str
   {
-    let len = std::cmp::min(code.len()-1, self.code_snippet_len as usize);
-    &code[..len]
+    let len = std::cmp::min(input.len() - stopped_at, self.code_snippet_len as usize);
+    &input[stopped_at..len]
   }
 
   pub fn success(&mut self, path: &Path)
@@ -182,7 +182,7 @@ impl TestDisplay
 struct GrammarInfo
 {
   name: String,
-  parser: Box<Parser + 'static>
+  recognizer: Box<Fn(&str, usize) -> ParseResult<()>>
 }
 
 struct Test<'a>
@@ -239,12 +239,12 @@ impl<'a> Test<'a>
 
   fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
   {
-    match (expectation.clone(), self.info.parser.parse(input)) {
-      (Match, Ok(None))
-    | (Error, Ok(Some(_)))
-    | (Error, Err(_)) => self.display.success(test_path),
-      (_, ref res) => {
-        self.display.failure(test_path, expectation, res);
+    match (expectation.clone(), (self.info.recognizer)(input, 0)) {
+      (Match, Ok(ref state)) if state.full_read(input) => self.display.success(test_path),
+      (Error, Ok(ref state)) if state.partial_read(input) => self.display.success(test_path),
+      (Error, Err(_)) => self.display.success(test_path),
+      (_, state) => {
+        self.display.failure(test_path, expectation, state, input);
       }
     }
   }
@@ -271,14 +271,14 @@ impl TestEngine
     }
   }
 
-  fn register(&mut self, name: &str, parser: Box<Parser+'static>)
+  fn register(&mut self, name: &str, recognizer: Box<Fn(&str, usize) -> ParseResult<()>>)
   {
-    self.grammars.push(GrammarInfo{name: String::from(name), parser: parser});
+    self.grammars.push(GrammarInfo{name: String::from(name), recognizer: recognizer});
   }
 
   fn run(&mut self)
   {
-    self.display.title("    PEG library tests suite");
+    self.display.title("    Oak library tests suite");
     for grammar in self.grammars.iter() {
       let grammar_path = self.test_path.join(Path::new(grammar.name.as_str()));
       self.display.info(&format!("Start tests of the grammar `{}`", grammar.name));
@@ -310,9 +310,9 @@ fn main()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", box ntcc::ntcc::Parser::new());
-  test_engine.register("type_name", box type_name::type_name::Parser::new());
-  test_engine.register("calculator", box calculator::calculator::Parser::new());
+  test_engine.register("ntcc", box ntcc::ntcc::recognize_ntcc);
+  test_engine.register("type_name", box type_name::type_name::recognize_type_names);
+  test_engine.register("calculator", box calculator::calculator::recognize_expression);
 
   test_engine.run();
 }

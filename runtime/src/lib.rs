@@ -14,10 +14,7 @@
 
 #![feature(str_char)]
 
-pub trait Parser
-{
-  fn parse<'a>(&self, input: &'a str) -> Result<Option<&'a str>, String>;
-}
+pub type ParseResult<T> = Result<ParseState<T>, String>;
 
 pub struct ParseState<T>
 {
@@ -50,9 +47,20 @@ impl ParseState<()>
       offset: source.offset
     }
   }
+
+  pub fn full_read(&self, input: &str) -> bool
+  {
+    debug_assert!(self.offset <= input.len());
+    self.offset == input.len()
+  }
+
+  pub fn partial_read(&self, input: &str) -> bool
+  {
+    !self.full_read(input)
+  }
 }
 
-pub fn parse_any_single_char(input: &str, offset: usize) -> Result<ParseState<char>, String>
+pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char>
 {
   if offset < input.len() {
     let any = input.char_at(offset);
@@ -62,13 +70,13 @@ pub fn parse_any_single_char(input: &str, offset: usize) -> Result<ParseState<ch
   }
 }
 
-pub fn recognize_any_single_char(input: &str, offset: usize) -> Result<ParseState<()>, String>
+pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseResult<()>
 {
   parse_any_single_char(input, offset).map(|state| ParseState::erase(state))
 }
 
 pub fn parse_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
-  -> Result<ParseState<()>, String>
+  -> ParseResult<()>
 {
   if offset >= input.len() {
     Err(format!("End of input when matching the literal `{}`", lit))
@@ -80,13 +88,13 @@ pub fn parse_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize
 }
 
 pub fn recognize_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
-  -> Result<ParseState<()>, String>
+  -> ParseResult<()>
 {
   parse_match_literal(input, offset, lit, lit_len)
 }
 
-pub fn not_predicate(state: Result<ParseState<()>, String>, offset: usize)
-  -> Result<ParseState<()>, String>
+pub fn not_predicate(state: ParseResult<()>, offset: usize)
+  -> ParseResult<()>
 {
   match state {
     Ok(_) => Err(format!("An `!expr` failed.")),
@@ -94,39 +102,23 @@ pub fn not_predicate(state: Result<ParseState<()>, String>, offset: usize)
   }
 }
 
-pub fn and_predicate(state: Result<ParseState<()>, String>, offset: usize)
-  -> Result<ParseState<()>, String>
+pub fn and_predicate(state: ParseResult<()>, offset: usize)
+  -> ParseResult<()>
 {
   state.map(|_| ParseState::stateless(offset))
 }
 
-pub fn optional_recognizer(state: Result<ParseState<()>, String>, offset: usize)
-  -> Result<ParseState<()>, String>
+pub fn optional_recognizer(state: ParseResult<()>, offset: usize)
+  -> ParseResult<()>
 {
   state.or_else(|_| Ok(ParseState::stateless(offset)))
 }
 
-pub fn optional_parser<T>(state: Result<ParseState<T>, String>, offset: usize)
-  -> Result<ParseState<Option<T>>, String>
+pub fn optional_parser<T>(state: ParseResult<T>, offset: usize)
+  -> ParseResult<Option<T>>
 {
   match state {
     Ok(state) => Ok(ParseState::new(Some(state.data), state.offset)),
     Err(_) => Ok(ParseState::new(None, offset))
-  }
-}
-
-pub fn make_result<'a, T>(input: &'a str, parsing_res: &Result<ParseState<T>, String>)
- -> Result<Option<&'a str>, String>
-{
-  match parsing_res {
-    &Ok(ref state) => {
-      assert!(state.offset <= input.len());
-      if state.offset == input.len() {
-        Ok(None)
-      } else {
-        Ok(Some(&input[state.offset..]))
-      }
-    },
-    &Err(ref msg) => Err(msg.clone())
   }
 }
