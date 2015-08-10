@@ -19,7 +19,7 @@ use back::naming::*;
 pub struct FunctionGenerator<'cx>
 {
   cx: &'cx ExtCtxt<'cx>,
-  name_factory: NameFactory,
+  name_factory: NameFactory<'cx>,
   functions: HashMap<Ident, RItem>
 }
 
@@ -28,41 +28,41 @@ impl<'cx> FunctionGenerator<'cx>
   pub fn new(cx: &'cx ExtCtxt) -> FunctionGenerator<'cx> {
     FunctionGenerator {
       cx: cx,
-      name_factory: NameFactory::new(),
+      name_factory: NameFactory::new(cx),
       functions: HashMap::new()
     }
   }
 
-  fn generate_recognizer(&mut self, kind: FunctionKind, names: GenFunNames, recognizer_body: RExpr) {
+  fn generate_recognizer(&mut self, kind: FunctionKind, names: GenFunNames, recognizer_body: RExpr, public: bool) {
     if kind.is_recognizer() {
-      self.push_unit_fun(names.recognizer, recognizer_body);
+      self.push_unit_fun(names.recognizer, recognizer_body, public);
     }
   }
 
-  fn generate_parser_alias(&mut self, kind: FunctionKind, names: GenFunNames) -> bool {
+  fn generate_parser_alias(&mut self, kind: FunctionKind, names: GenFunNames, public: bool) -> bool {
     let GenFunNames{recognizer, parser} = names;
     if kind == ParserAlias {
       let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
-      self.push_unit_fun(parser, recognizer_call);
+      self.push_unit_fun(parser, recognizer_call, public);
       true
     } else {
       false
     }
   }
 
-  fn generate_parser(&mut self, kind: FunctionKind, names: GenFunNames, parser_body: RExpr) {
+  fn generate_parser(&mut self, kind: FunctionKind, names: GenFunNames, parser_body: RExpr, public: bool) {
     match kind {
       Parser(ty) | Both(ty) => {
-        self.push_fun(names.parser, parser_body, ty);
+        self.push_fun(names.parser, parser_body, ty, public);
       },
       _ => ()
     }
   }
 
-  fn generate(&mut self, names: GenFunNames, kind: FunctionKind, recognizer_body: RExpr, parser_body: RExpr) {
-    self.generate_recognizer(kind.clone(), names, recognizer_body);
-    if !self.generate_parser_alias(kind.clone(), names) {
-      self.generate_parser(kind, names, parser_body);
+  fn generate(&mut self, names: GenFunNames, kind: FunctionKind, recognizer_body: RExpr, parser_body: RExpr, public: bool) {
+    self.generate_recognizer(kind.clone(), names, recognizer_body, public);
+    if !self.generate_parser_alias(kind.clone(), names, public) {
+      self.generate_parser(kind, names, parser_body, public);
     }
   }
 
@@ -70,7 +70,7 @@ impl<'cx> FunctionGenerator<'cx>
     recognizer_body: RExpr, parser_body: RExpr) -> GenFunNames
   {
     let names = self.name_factory.expression_name(expr_desc, current_rule_id);
-    self.generate(names, kind, recognizer_body, parser_body);
+    self.generate(names, kind, recognizer_body, parser_body, false);
     names
   }
 
@@ -80,8 +80,8 @@ impl<'cx> FunctionGenerator<'cx>
     assert!(kind.is_unit(),
       format!("Unit_expr: Expression `{}` is expected to have an unit type but found `{:?}`.", expr_desc, kind));
     let names = self.name_factory.expression_name(expr_desc, current_rule_id);
-    self.generate_recognizer(kind.clone(), names, recognizer_body);
-    self.generate_parser_alias(kind.clone(), names);
+    self.generate_recognizer(kind.clone(), names, recognizer_body, false);
+    self.generate_parser_alias(kind.clone(), names, false);
     names
   }
 
@@ -92,6 +92,7 @@ impl<'cx> FunctionGenerator<'cx>
     self.generate(rule_name, kind,
       quote_expr!(cx, $recognizer(input, pos)),
       quote_expr!(cx, $parser(input, pos)),
+      true
     )
   }
 
@@ -99,9 +100,15 @@ impl<'cx> FunctionGenerator<'cx>
     self.name_factory.names_of_rule(rule_id)
   }
 
-  fn push_fun(&mut self, name: Ident, body: RExpr, ty: RTy) {
+  fn push_fun(&mut self, name: Ident, body: RExpr, ty: RTy, public: bool) {
+
+    let pub_kw = if public {
+      Some(quote_tokens!(self.cx, pub))
+    } else {
+      None
+    };
     let function = quote_item!(self.cx,
-      pub fn $name(input: &str, pos: usize) -> Result<oak_runtime::ParseState<$ty>, String>
+      $pub_kw fn $name(input: &str, pos: usize) -> Result<oak_runtime::ParseState<$ty>, String>
       {
         $body
       }
@@ -109,8 +116,8 @@ impl<'cx> FunctionGenerator<'cx>
     self.functions.insert(name, function);
   }
 
-  fn push_unit_fun(&mut self, name: Ident, body: RExpr) {
-    self.push_fun(name, body, quote_ty!(self.cx, ()));
+  fn push_unit_fun(&mut self, name: Ident, body: RExpr, public: bool) {
+    self.push_fun(name, body, quote_ty!(self.cx, ()), public);
   }
 
   pub fn code(&mut self) -> Vec<RItem> {

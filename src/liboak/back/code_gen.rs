@@ -78,7 +78,7 @@ impl<'cx> CodeGenerator<'cx>
     rust::MacEager::items(rust::SmallVector::one(grammar_module))
   }
 
-  fn compile_grammar_module(&self, grammar: &Grammar, parser: Option<Vec<rust::P<rust::Item>>>)
+  fn compile_grammar_module(&self, grammar: &Grammar, parser: Option<Vec<RItem>>)
     -> rust::P<rust::Item>
   {
     let grammar_name = grammar.name;
@@ -97,7 +97,7 @@ impl<'cx> CodeGenerator<'cx>
 
   // RUST BUG: We cannot quote `extern crate runtime;` before the grammar module, so we use this workaround
   // for adding the external crate after the creation of the module.
-  fn insert_runtime_crate(&self, grammar_module: rust::P<rust::Item>)
+  fn insert_runtime_crate(&self, grammar_module: RItem)
     -> rust::P<rust::Item>
   {
     let runtime_crate = quote_item!(self.cx,
