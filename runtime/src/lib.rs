@@ -35,11 +35,13 @@ impl<T> ParseState<T>
 
 impl ParseState<()>
 {
+  #[inline]
   pub fn stateless(offset: usize) -> ParseState<()>
   {
     ParseState::new((), offset)
   }
 
+  #[inline]
   pub fn erase<T>(source: ParseState<T>) -> ParseState<()>
   {
     ParseState {
@@ -60,6 +62,7 @@ impl ParseState<()>
   }
 }
 
+#[inline]
 pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char>
 {
   if offset < input.len() {
@@ -70,11 +73,13 @@ pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char>
   }
 }
 
+#[inline]
 pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseResult<()>
 {
   parse_any_single_char(input, offset).map(|state| ParseState::erase(state))
 }
 
+#[inline]
 pub fn parse_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
   -> ParseResult<()>
 {
@@ -87,12 +92,14 @@ pub fn parse_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize
   }
 }
 
+#[inline]
 pub fn recognize_match_literal(input: &str, offset: usize, lit: &str, lit_len: usize)
   -> ParseResult<()>
 {
   parse_match_literal(input, offset, lit, lit_len)
 }
 
+#[inline]
 pub fn not_predicate(state: ParseResult<()>, offset: usize)
   -> ParseResult<()>
 {
@@ -102,18 +109,21 @@ pub fn not_predicate(state: ParseResult<()>, offset: usize)
   }
 }
 
+#[inline]
 pub fn and_predicate(state: ParseResult<()>, offset: usize)
   -> ParseResult<()>
 {
   state.map(|_| ParseState::stateless(offset))
 }
 
+#[inline]
 pub fn optional_recognizer(state: ParseResult<()>, offset: usize)
   -> ParseResult<()>
 {
   state.or_else(|_| Ok(ParseState::stateless(offset)))
 }
 
+#[inline]
 pub fn optional_parser<T>(state: ParseResult<T>, offset: usize)
   -> ParseResult<Option<T>>
 {
