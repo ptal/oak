@@ -30,6 +30,8 @@ grammar! calculator{
     = ["0-9"]+ > to_digit
     / "(" expression ")"
 
+  pub type Digit = u32;
+
   fn add(x: Digit, rest: Vec<Digit>) -> Digit {
     rest.iter().fold(x, |x,y| x+y)
   }
@@ -43,6 +45,4 @@ grammar! calculator{
     let text: String = raw_text.into_iter().collect();
     u32::from_str(&*text).unwrap()
   }
-
-  pub type Digit = u32;
 }

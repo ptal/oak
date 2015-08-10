@@ -83,11 +83,10 @@ impl<'cx> CodeGenerator<'cx>
         $parser
       }
     ).expect("Quote the grammar module.");
-
     self.insert_runtime_crate(grammar_module)
   }
 
-  // RUST BUG: We cannot quote `extern crate runtime;` before the grammar module, so we use this workaround
+  // RUST BUG: We cannot quote `extern crate oak_runtime;` before the grammar module, so we use this workaround
   // for adding the external crate after the creation of the module.
   fn insert_runtime_crate(&self, grammar_module: RItem)
     -> rust::P<rust::Item>

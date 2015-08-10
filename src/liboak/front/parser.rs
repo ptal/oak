@@ -271,7 +271,9 @@ impl<'a> Parser<'a>
   fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
   {
     let token = self.rp.token.clone();
-    if token.is_keyword(rust::Keyword::Fn) { return None }
+    if token.is_any_keyword() {
+      return None
+    }
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.bump();
