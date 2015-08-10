@@ -85,6 +85,36 @@ pub fn recognize_match_literal(input: &str, offset: usize, lit: &str, lit_len: u
   parse_match_literal(input, offset, lit, lit_len)
 }
 
+pub fn not_predicate(state: Result<ParseState<()>, String>, offset: usize)
+  -> Result<ParseState<()>, String>
+{
+  match state {
+    Ok(_) => Err(format!("An `!expr` failed.")),
+    _ => Ok(ParseState::stateless(offset))
+  }
+}
+
+pub fn and_predicate(state: Result<ParseState<()>, String>, offset: usize)
+  -> Result<ParseState<()>, String>
+{
+  state.map(|_| ParseState::stateless(offset))
+}
+
+pub fn optional_recognizer(state: Result<ParseState<()>, String>, offset: usize)
+  -> Result<ParseState<()>, String>
+{
+  state.or_else(|_| Ok(ParseState::stateless(offset)))
+}
+
+pub fn optional_parser<T>(state: Result<ParseState<T>, String>, offset: usize)
+  -> Result<ParseState<Option<T>>, String>
+{
+  match state {
+    Ok(state) => Ok(ParseState::new(Some(state.data), state.offset)),
+    Err(_) => Ok(ParseState::new(None, offset))
+  }
+}
+
 pub fn make_result<'a, T>(input: &'a str, parsing_res: &Result<ParseState<T>, String>)
  -> Result<Option<&'a str>, String>
 {

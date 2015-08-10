@@ -273,10 +273,7 @@ impl<'cx> CodeGenerator<'cx>
   {
     let recognizer_name = self.compile_expression(expr).recognizer;
     let body = quote_expr!(self.cx,
-      match $recognizer_name(input, pos) {
-        Ok(_) => Err(format!("An `!expr` failed.")),
-        _ => Ok(oak_runtime::ParseState::stateless(pos))
-      }
+      oak_runtime::not_predicate($recognizer_name(input, pos), pos)
     );
     self.function_gen.generate_unit_expr(
       "not_predicate", self.current_rule_name, parent.kind(), body)
@@ -286,8 +283,7 @@ impl<'cx> CodeGenerator<'cx>
   {
     let recognizer_name = self.compile_expression(expr).recognizer;
     let body = quote_expr!(self.cx,
-      $recognizer_name(input, pos)
-      .map(|_| oak_runtime::ParseState::stateless(pos))
+      oak_runtime::and_predicate($recognizer_name(input, pos), pos)
     );
     self.function_gen.generate_unit_expr(
       "and_predicate", self.current_rule_name, parent.kind(), body)
@@ -297,14 +293,10 @@ impl<'cx> CodeGenerator<'cx>
   {
     let GenFunNames{recognizer, parser} = self.compile_expression(expr);
     let recognizer_body = quote_expr!(self.cx,
-      $recognizer(input, pos).or_else(
-        |_| Ok(oak_runtime::ParseState::stateless(pos)))
+      oak_runtime::optional_recognizer($recognizer(input, pos), pos)
     );
     let parser_body = quote_expr!(self.cx,
-      match $parser(input, pos) {
-        Ok(state) => Ok(oak_runtime::ParseState::new(Some(state.data), state.pos)),
-        Err(_) => Ok(oak_runtime::ParseState::new(None, pos))
-      }
+      oak_runtime::optional_parser($parser(input, pos), pos)
     );
     self.function_gen.generate_expr("optional", self.current_rule_name, parent.kind(),
       recognizer_body,
