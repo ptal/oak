@@ -35,7 +35,7 @@ mod monad;
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry)
 {
-  reg.register_macro("peg", expand)
+  reg.register_macro("grammar", expand)
 }
 
 fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, tts: &[rust::TokenTree]) -> Box<rust::MacResult + 'cx>
