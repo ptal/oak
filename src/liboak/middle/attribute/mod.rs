@@ -20,4 +20,3 @@ pub mod attribute;
 pub mod ast;
 pub mod visitor;
 mod code_printer;
-mod code_gen;

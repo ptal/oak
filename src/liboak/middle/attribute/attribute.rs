@@ -14,14 +14,12 @@
 
 pub use identifier::*;
 pub use middle::attribute::code_printer::*;
-pub use middle::attribute::code_gen::*;
 
 use rust::ExtCtxt;
 use attribute::model::{AttributeArray, access, DuplicateAttribute, AttributeMerger, AttributeInfo};
 
 pub struct GrammarAttributes
 {
-  pub code_gen: CodeGeneration,
   pub code_printer: CodePrinter,
   pub starting_rule: Ident
 }
@@ -30,16 +28,13 @@ impl GrammarAttributes
 {
   pub fn model() -> AttributeArray
   {
-    let mut model = CodeGeneration::model();
-    model.extend(CodePrinter::model().into_iter());
-    model
+    CodePrinter::model()
   }
 
   pub fn new(cx: &ExtCtxt, rules_attrs: Vec<(Ident, AttributeArray)>,
     grammar_attrs: AttributeArray) -> GrammarAttributes
   {
     GrammarAttributes {
-      code_gen: CodeGeneration::new(&grammar_attrs),
       code_printer: CodePrinter::new(&grammar_attrs),
       starting_rule: GrammarAttributes::starting_rule(cx, rules_attrs)
     }

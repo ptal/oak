@@ -18,7 +18,6 @@ pub use ntcc::ntcc::*;
 grammar! ntcc{
 
   // #![print(all)]
-  // #![disable_code(ast)]
 
   #[start]
   ntcc = spacing expression

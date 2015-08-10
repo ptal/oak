@@ -61,24 +61,16 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
   {
-    let parser =
-      if grammar.attributes.code_gen.parser {
-        Some(self.compile_parser(grammar))
-      } else {
-        None
-      };
-
+    let parser = self.compile_parser(grammar);
     let grammar_module = self.compile_grammar_module(grammar, parser);
-
     if grammar.attributes.code_printer.parser {
       self.cx.parse_sess.span_diagnostic.handler.note(
         rust::item_to_string(&*grammar_module).as_str());
     }
-
     rust::MacEager::items(rust::SmallVector::one(grammar_module))
   }
 
-  fn compile_grammar_module(&self, grammar: &Grammar, parser: Option<Vec<RItem>>)
+  fn compile_grammar_module(&self, grammar: &Grammar, parser: Vec<RItem>)
     -> rust::P<rust::Item>
   {
     let grammar_name = grammar.name;
