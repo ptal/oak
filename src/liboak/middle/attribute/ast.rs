@@ -39,16 +39,25 @@ pub struct Rule{
   pub def: Box<Expression>,
 }
 
+impl Rule
+{
+  fn new(name: SpannedIdent, def: Box<Expression>) -> Rule
+  {
+    Rule{
+      name: name,
+      def: def
+    }
+  }
+}
+
 pub struct GrammarAttributes
 {
-  pub starting_rule: Ident,
   pub code_printer: CodePrinter
 }
 
 impl GrammarAttributes {
-  pub fn new(starting_rule: Ident, code_printer: CodePrinter) -> GrammarAttributes {
+  pub fn new(code_printer: CodePrinter) -> GrammarAttributes {
     GrammarAttributes {
-      starting_rule: starting_rule,
       code_printer: code_printer
     }
   }
@@ -82,7 +91,7 @@ impl Grammar
 {
   pub fn new(cx: &ExtCtxt, sgrammar: SGrammar) -> Partial<Grammar>
   {
-    let starting_rule: Ident = Grammar::check_rules_attributes(cx, &sgrammar.rules);
+    Grammar::check_rules_attributes(cx, &sgrammar.rules);
     let code_printer = Grammar::check_grammar_attributes(cx, &sgrammar.attributes);
     let rules: HashMap<_,_> =
       sgrammar.rules.into_iter()
@@ -95,7 +104,7 @@ impl Grammar
       name: sgrammar.name,
       rules: rules,
       rust_items: sgrammar.rust_items,
-      attributes: GrammarAttributes::new(starting_rule, code_printer)
+      attributes: GrammarAttributes::new(code_printer)
     };
     Partial::Value(grammar)
   }
@@ -129,63 +138,25 @@ impl Grammar
     }
   }
 
-  fn check_rules_attributes(cx: &ExtCtxt, rules: &HashMap<Ident, SRule>) -> Ident
+  fn check_rules_attributes(cx: &ExtCtxt, rules: &HashMap<Ident, SRule>)
   {
-    let mut starting_rules = vec![];
     for (id, rule) in rules {
       for attr in &rule.attributes {
         let meta_item = attr.node.value.clone();
-        Grammar::check_rule_attr(cx, *id, meta_item, &mut starting_rules);
+        Grammar::check_rule_attr(cx, *id, meta_item);
       }
-    }
-
-    if starting_rules.len() == 0 {
-      Grammar::starting_rule_default(cx, rules)
-    }
-    else {
-      Grammar::check_start_duplicate(cx, &starting_rules);
-      starting_rules[0]
     }
   }
 
-  fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>, starting_rules: &mut Vec<Ident>)
+  fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>)
   {
     match &meta_item.node {
-      &MetaWord(ref name) if *name == "start" => {
-        starting_rules.push(rule_name);
-      },
         &MetaWord(ref name)
       | &MetaList(ref name, _)
       | &MetaNameValue(ref name, _) => {
         cx.parse_sess.span_diagnostic.handler.warn(
           format!("Unknown attribute `{}` attached to the rule `{}`: it will be ignored.", name, rule_name).as_str());
         }
-    }
-  }
-
-  fn check_start_duplicate(cx: &ExtCtxt, starting_rules: &Vec<Ident>)
-  {
-    if starting_rules.len() > 1 {
-      cx.parse_sess.span_diagnostic.handler.err(
-        "Multiple `#[start]` attributes is not allowed.");
-    }
-  }
-
-  fn starting_rule_default(cx: &ExtCtxt, rules: &HashMap<Ident, SRule>) -> Ident
-  {
-    cx.parse_sess.span_diagnostic.handler.err(
-      "No rule has been specified as the starting point (attribute `#[start]`).");
-    rules.keys().next().unwrap().clone()
-  }
-}
-
-impl Rule
-{
-  fn new(name: SpannedIdent, def: Box<Expression>) -> Rule
-  {
-    Rule{
-      name: name,
-      def: def
     }
   }
 }

@@ -19,7 +19,6 @@ grammar! ntcc{
 
   // #![debug_api]
 
-  #[start]
   ntcc = spacing expression
 
   expression

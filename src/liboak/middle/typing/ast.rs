@@ -45,7 +45,6 @@ pub struct Rule_<Expr>
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum EvaluationContext
 {
-  Valued,
   UnValued,
   Both
 }
@@ -55,23 +54,6 @@ impl EvaluationContext
   pub fn merge(self, other: EvaluationContext) -> EvaluationContext {
     if self != other { Both }
     else { self }
-  }
-}
-
-pub trait FlatMerge<T>
-{
-  fn flat_merge(self, a: T) -> T;
-}
-
-impl FlatMerge<EvaluationContext> for Option<EvaluationContext>
-{
-  fn flat_merge(self, context: EvaluationContext) -> EvaluationContext
-  {
-    match self {
-      None => context,
-      Some(Both) => Both,
-      Some(x) => x.merge(context)
-    }
   }
 }
 

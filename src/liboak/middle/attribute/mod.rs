@@ -15,4 +15,3 @@
 //! This module decorates the grammar with the attributes attached to items and gives them a semantics. It also checks for duplicate or unknown attributes.
 
 pub mod ast;
-pub mod visitor;

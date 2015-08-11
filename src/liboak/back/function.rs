@@ -33,10 +33,8 @@ impl<'cx> FunctionGenerator<'cx>
     }
   }
 
-  fn generate_recognizer(&mut self, kind: FunctionKind, names: GenFunNames, recognizer_body: RExpr, public: bool) {
-    if kind.is_recognizer() {
-      self.push_unit_fun(names.recognizer, recognizer_body, public);
-    }
+  fn generate_recognizer(&mut self, names: GenFunNames, recognizer_body: RExpr, public: bool) {
+    self.push_unit_fun(names.recognizer, recognizer_body, public);
   }
 
   fn generate_parser_alias(&mut self, kind: FunctionKind, names: GenFunNames, public: bool) -> bool {
@@ -52,7 +50,7 @@ impl<'cx> FunctionGenerator<'cx>
 
   fn generate_parser(&mut self, kind: FunctionKind, names: GenFunNames, parser_body: RExpr, public: bool) {
     match kind {
-      Parser(ty) | Both(ty) => {
+      Both(ty) => {
         self.push_fun(names.parser, parser_body, ty, public);
       },
       _ => ()
@@ -60,7 +58,7 @@ impl<'cx> FunctionGenerator<'cx>
   }
 
   fn generate(&mut self, names: GenFunNames, kind: FunctionKind, recognizer_body: RExpr, parser_body: RExpr, public: bool) {
-    self.generate_recognizer(kind.clone(), names, recognizer_body, public);
+    self.generate_recognizer(names, recognizer_body, public);
     if !self.generate_parser_alias(kind.clone(), names, public) {
       self.generate_parser(kind, names, parser_body, public);
     }
@@ -80,7 +78,7 @@ impl<'cx> FunctionGenerator<'cx>
     assert!(kind.is_unit(),
       format!("Unit_expr: Expression `{}` is expected to have an unit type but found `{:?}`.", expr_desc, kind));
     let names = self.name_factory.expression_name(expr_desc, current_rule_id);
-    self.generate_recognizer(kind.clone(), names, recognizer_body, false);
+    self.generate_recognizer(names, recognizer_body, false);
     self.generate_parser_alias(kind.clone(), names, false);
     names
   }

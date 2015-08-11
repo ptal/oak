@@ -121,9 +121,6 @@ impl<'a> ExpressionTyper<'a>
 
   fn function_kind(&self, expr: &Box<TExpression>, ty: RTy) -> FunctionKind {
     match expr.context {
-      EvaluationContext::Valued => {
-        FunctionKind::Parser(ty)
-      }
       EvaluationContext::UnValued => {
         FunctionKind::Recognizer
       }

@@ -14,151 +14,67 @@
 
 //! Top-down unit inference analyses the evaluation context of each expression. It prevents untypable expression to generate errors if the context does not expect the expression to construct a value other than unit.
 //! The type of the expression is not modified, so one is expected to examine the context before using the expression type.
-//! The calling context of the start rule is `UnValued` if its type is unit and is `Valued` otherwise. Semantics actions in an unvalued context won't be called.
+//! The calling context of the rules is `Both`. Semantics actions in an unvalued context won't be called.
 
 use middle::typing::ast::*;
 use middle::typing::ast::EvaluationContext::*;
 
 pub fn top_down_unit_inference(grammar: &mut Grammar)
 {
-  TopDownUnitInference::infer(&mut grammar.rules, grammar.attributes.starting_rule.clone());
+  TopDownUnitInference::visit_rules(&mut grammar.rules);
 }
 
-struct TopDownUnitInference
-{
-  visited: HashMap<Ident, Option<EvaluationContext>>,
-  to_visit: Vec<(Ident, EvaluationContext)>
-}
+struct TopDownUnitInference;
 
 impl TopDownUnitInference
 {
-  pub fn infer(rules: &mut HashMap<Ident, Rule>, start: Ident)
+  fn visit_rules(rules: &mut HashMap<Ident, Rule>)
   {
-    let mut engine = TopDownUnitInference::new(rules);
-    engine.rules_dfs(rules, start);
-  }
-
-  fn new(rules: &HashMap<Ident, Rule>) -> TopDownUnitInference
-  {
-    let mut visited = HashMap::with_capacity(rules.len());
-    for id in rules.keys() {
-      visited.insert(id.clone(), None);
-    }
-    TopDownUnitInference {
-      visited: visited,
-      to_visit: vec![]
+    for (_, rule) in rules.iter_mut() {
+      TopDownUnitInference::visit_rule(rule)
     }
   }
 
-  fn rules_dfs(&mut self, rules: &mut HashMap<Ident, Rule>, start: Ident)
+  fn visit_rule(rule: &mut Rule)
   {
-    self.to_visit.push((start, TopDownUnitInference::context_of_start_rule(rules, start.clone())));
-    while !self.to_visit.is_empty() {
-      let (rule_id, context) = self.to_visit.pop().unwrap();
-      self.visit_rule(rules, rule_id, context);
-    }
-  }
-
-  fn context_of_start_rule(rules: &HashMap<Ident, Rule>, start: Ident)
-    -> EvaluationContext
-  {
-    if rules[&start].def.is_unit() {
-      UnValued
-    }
-    else {
-      Valued
-    }
-  }
-
-  fn visit_rule(&mut self, rules: &mut HashMap<Ident, Rule>,
-    rule_id: Ident, context: EvaluationContext)
-  {
-    let first_visit = self.first_visit(rule_id);
-    if self.mark_if_not_visited(rule_id, context) {
-      let rule = rules.get_mut(&rule_id).unwrap();
-      let to_visit = ExpressionVisitor::visit(&mut rule.def, context, first_visit);
-      self.to_visit.push_all(&to_visit[..]);
-    }
-  }
-
-  fn first_visit(&mut self, rule_id: Ident) -> bool
-  {
-    self.visited[&rule_id].is_none()
-  }
-
-  fn mark_if_not_visited(&mut self, rule_id: Ident, context: EvaluationContext) -> bool
-  {
-    let visited = self.visited[&rule_id];
-    let new_visited = Some(visited.flat_merge(context));
-    let not_visited = new_visited != visited;
-    if not_visited {
-      *self.visited.get_mut(&rule_id).unwrap() = new_visited;
-    }
-    not_visited
+    ExpressionVisitor::visit_expr(&mut rule.def, Both);
   }
 }
 
-struct ExpressionVisitor
-{
-  to_visit: Vec<(Ident, EvaluationContext)>,
-  first_visit: bool
-}
+struct ExpressionVisitor;
 
 impl ExpressionVisitor
 {
-  fn visit(expr: &mut Expression, context: EvaluationContext, first_visit: bool)
-    -> Vec<(Ident, EvaluationContext)>
+  fn visit_expr(expr: &mut Expression, mut context: EvaluationContext)
   {
-    let mut visitor = ExpressionVisitor {
-      to_visit: vec![],
-      first_visit: first_visit
-    };
-    visitor.visit_expr(expr, context);
-    visitor.to_visit
+    // Expressions under this can not be called with a valued context. Indeed, even if the context of the current expression is `Both` the parser will be an alias to the recognizer.
+    if expr.is_unit() {
+      expr.context = context.merge(UnValued);
+      context = UnValued;
+    }
+    ExpressionVisitor::visit_expr_node(&mut expr.node, context);
   }
 
-  fn visit_expr(&mut self, expr: &mut Expression, context: EvaluationContext)
-  {
-    // For any `Valued |- e:()`, the context of `e` is both valued and unvalued, however the parser will be an alias to the recognizer.
-    let context =
-      if expr.is_unit() {
-        if !self.first_visit {
-          return ();
-        }
-        context.merge(UnValued)
-      } else {
-        expr.context.merge(context)
-      };
-    expr.context = context;
-    self.visit_expr_node(&mut expr.node, context);
-  }
-
-  fn visit_non_terminal_symbol(&mut self, ident: Ident, context: EvaluationContext)
-  {
-    self.to_visit.push((ident, context));
-  }
-
-  fn visit_expr_node(&mut self, expr: &mut ExpressionNode, context: EvaluationContext)
+  fn visit_expr_node(expr: &mut ExpressionNode, context: EvaluationContext)
   {
     match expr {
-      &mut NonTerminalSymbol(id) => self.visit_non_terminal_symbol(id, context),
         &mut Sequence(ref mut exprs)
-      | &mut Choice(ref mut exprs) => self.visit_exprs(&mut *exprs, context),
+      | &mut Choice(ref mut exprs) => ExpressionVisitor::visit_exprs(&mut *exprs, context),
         &mut ZeroOrMore(ref mut expr)
       | &mut OneOrMore(ref mut expr)
       | &mut Optional(ref mut expr)
-      | &mut SemanticAction(ref mut expr, _) => self.visit_expr(&mut *expr, context),
+      | &mut SemanticAction(ref mut expr, _) => ExpressionVisitor::visit_expr(&mut *expr, context),
         &mut NotPredicate(ref mut expr)
-      | &mut AndPredicate(ref mut expr) => self.visit_expr(&mut *expr, UnValued),
+      | &mut AndPredicate(ref mut expr) => ExpressionVisitor::visit_expr(&mut *expr, UnValued),
       _ => ()
     }
   }
 
-  fn visit_exprs(&mut self, exprs: &mut Vec<Box<Expression>>, context: EvaluationContext)
+  fn visit_exprs(exprs: &mut Vec<Box<Expression>>, context: EvaluationContext)
   {
     assert!(exprs.len() > 0);
     for expr in exprs.iter_mut() {
-      self.visit_expr(&mut *expr, context);
+      ExpressionVisitor::visit_expr(&mut *expr, context);
     }
   }
 }

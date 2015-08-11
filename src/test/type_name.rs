@@ -18,7 +18,6 @@ grammar! type_name{
 
   // #![debug_api]
 
-  #[start]
   type_names = (spacing type_name (lparen type_names (comma type_names)* rparen)?) -> (^)
 
   type_name = auto_infer_kw &(lparen / eof / comma)

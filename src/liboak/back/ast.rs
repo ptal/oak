@@ -61,8 +61,6 @@ pub enum FunctionKind
 {
   /// Only the recognizer is generated.
   Recognizer,
-  /// Only the parser is generated with the type specified.
-  Parser(RTy),
   /// The parser is an alias to the recognizer. Both functions are generated.
   ParserAlias,
   /// Recognizer and parser are both generated.
@@ -71,13 +69,6 @@ pub enum FunctionKind
 
 impl FunctionKind
 {
-  pub fn is_recognizer(&self) -> bool {
-    match self {
-      &Recognizer | &Both(_) | &ParserAlias => true,
-      _ => false
-    }
-  }
-
   pub fn is_unit(&self) -> bool {
     match self {
       &Recognizer | &ParserAlias => true,
@@ -87,7 +78,7 @@ impl FunctionKind
 
   pub fn to_type(&self, cx: &ExtCtxt) -> RTy {
     match self.clone() {
-      Parser(ty) | Both(ty) => ty,
+      Both(ty) => ty,
       _ => quote_ty!(cx, ())
     }
   }
