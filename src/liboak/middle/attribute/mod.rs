@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This module decorates the grammar with the attributes attached to the items and gives them a semantics. It also checks for duplicate or unknown attributes.
-//!
-//! It depends on an external library [attribute](attribute/index.html) because an attribute is just a tree that must be model checked. We would like to extend this external library to any tree-shaped structure.
+//! This module decorates the grammar with the attributes attached to items and gives them a semantics. It also checks for duplicate or unknown attributes.
 
-pub mod attribute;
 pub mod ast;
 pub mod visitor;
-mod code_printer;

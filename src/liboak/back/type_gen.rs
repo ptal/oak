@@ -22,7 +22,6 @@ use middle::ast::EvaluationContext;
 use middle::typing::visitor::*;
 use back::ast::*;
 use back::ast::Expression_::*;
-use std::iter::FromIterator;
 
 pub fn generate_rust_types(cx: &ExtCtxt, tgrammar: TGrammar) -> Grammar
 {
@@ -108,8 +107,9 @@ impl<'a> ExpressionTyper<'a>
   }
 
   fn visit_rules(&mut self, rules: &HashMap<Ident, TRule>) -> HashMap<Ident, Rule> {
-    FromIterator::from_iter(rules.iter()
-      .map(|(&id, rule)| (id, self.visit_rule(rule))))
+    rules.iter()
+    .map(|(&id, rule)| (id, self.visit_rule(rule)))
+    .collect()
   }
 
   fn visit_rule(&mut self, rule: &TRule) -> Rule {

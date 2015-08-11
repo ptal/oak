@@ -17,7 +17,7 @@ pub use ntcc::ntcc::*;
 
 grammar! ntcc{
 
-  // #![print(all)]
+  // #![debug_api]
 
   #[start]
   ntcc = spacing expression

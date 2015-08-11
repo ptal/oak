@@ -63,7 +63,7 @@ impl<'cx> CodeGenerator<'cx>
   {
     let parser = self.compile_parser(grammar);
     let grammar_module = self.compile_grammar_module(grammar, parser);
-    if grammar.attributes.code_printer.parser {
+    if grammar.attributes.code_printer.is_debug() {
       self.cx.parse_sess.span_diagnostic.handler.note(
         rust::item_to_string(&*grammar_module).as_str());
     }

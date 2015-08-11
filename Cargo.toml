@@ -16,8 +16,5 @@ plugin = true
 name = "testoak"
 path = "src/test/testoak.rs"
 
-[dependencies.attribute]
-git = "https://github.com/ptal/Rust.attribute"
-
 [dependencies.oak_runtime]
 path = "runtime"

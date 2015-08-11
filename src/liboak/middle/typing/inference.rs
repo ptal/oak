@@ -23,7 +23,6 @@ use front::ast::TypeAnnotation;
 use middle::typing::ast::*;
 use middle::typing::ast::ExprTy::*;
 use rust;
-use std::iter::FromIterator;
 
 pub struct InferenceEngine<'r>
 {
@@ -143,7 +142,7 @@ impl<'r> InferenceEngine<'r>
     if nodes.len() == 1 {
       nodes.into_iter().next().unwrap()
     } else {
-      let tys:Vec<usize> = FromIterator::from_iter(0..nodes.len());
+      let tys:Vec<usize> = (0..nodes.len()).collect();
       box Expression::new(sp, Sequence(nodes), Tuple(tys))
     }
   }

@@ -15,9 +15,8 @@
 pub use front::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
 pub use front::ast::Expression_::*;
 
-pub use rust::{ExtCtxt,P,Item};
+pub use rust::{ExtCtxt,P,Item,Attribute};
 pub use identifier::*;
-pub use attribute::model::Attribute;
 pub use front::ast::Rule;
 pub use monad::partial::Partial;
 

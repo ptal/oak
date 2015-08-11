@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassExpr};
+pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassExpr, GrammarAttributes};
 pub use middle::attribute::ast::Expression_::*;
 
-pub use middle::attribute::attribute::*;
-
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
+pub use identifier::*;
 
 pub use std::collections::HashMap;
 pub use std::cell::RefCell;

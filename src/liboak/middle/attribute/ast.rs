@@ -15,18 +15,17 @@
 pub use front::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
 pub use front::ast::Expression_::*;
 
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
-pub use middle::attribute::attribute::*;
+pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent, Attribute};
+pub use identifier::*;
 pub use middle::analysis::ast::Grammar as SGrammar;
 pub use middle::analysis::ast::Rule as SRule;
 
 use rust;
-use attribute::model_checker;
-use attribute::model::{AttributeArray, Attribute};
+use rust::{P, MetaItem};
+use rust::MetaItem_::*;
 use monad::partial::Partial;
 
 pub use std::collections::HashMap;
-pub use std::iter::FromIterator;
 
 pub struct Grammar{
   pub name: Ident,
@@ -35,44 +34,149 @@ pub struct Grammar{
   pub attributes: GrammarAttributes
 }
 
+pub struct Rule{
+  pub name: SpannedIdent,
+  pub def: Box<Expression>,
+}
+
+pub struct GrammarAttributes
+{
+  pub starting_rule: Ident,
+  pub code_printer: CodePrinter
+}
+
+impl GrammarAttributes {
+  pub fn new(starting_rule: Ident, code_printer: CodePrinter) -> GrammarAttributes {
+    GrammarAttributes {
+      starting_rule: starting_rule,
+      code_printer: code_printer
+    }
+  }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CodePrinter
+{
+  DebugApi,
+  ShowApi,
+  Nothing
+}
+
+impl CodePrinter {
+  pub fn merge(self, other: CodePrinter) -> CodePrinter {
+    use self::CodePrinter::*;
+    match (self, other) {
+        (Nothing, DebugApi)
+      | (ShowApi, DebugApi) => DebugApi,
+      (Nothing, ShowApi) => ShowApi,
+      _ => Nothing
+    }
+  }
+
+  pub fn is_debug(self) -> bool {
+    self == CodePrinter::DebugApi
+  }
+}
+
 impl Grammar
 {
   pub fn new(cx: &ExtCtxt, sgrammar: SGrammar) -> Partial<Grammar>
   {
-    let grammar_model = GrammarAttributes::model();
-    let grammar_model = model_checker::check_all(cx, grammar_model, sgrammar.attributes);
-
-    let rules_models: Vec<(Ident, AttributeArray)> =
-       sgrammar.rules.iter()
-      .map(|(id, r)| (id.clone(), r.attributes.clone()))
-      .map(|(id, a)| (id, Grammar::make_rule_model(cx, a)))
-      .collect();
-
-    let rules = FromIterator::from_iter(
+    let starting_rule: Ident = Grammar::check_rules_attributes(cx, &sgrammar.rules);
+    let code_printer = Grammar::check_grammar_attributes(cx, &sgrammar.attributes);
+    let rules: HashMap<_,_> =
       sgrammar.rules.into_iter()
-      .map(|(id, rule)| (id, Rule::new(rule.name, rule.def)))
-    );
-
-    let attributes = GrammarAttributes::new(cx, rules_models, grammar_model);
+      .map(|(id, rule)| {
+        (id, Rule::new(rule.name, rule.def))
+      })
+      .collect();
 
     let grammar = Grammar{
       name: sgrammar.name,
       rules: rules,
       rust_items: sgrammar.rust_items,
-      attributes: attributes
+      attributes: GrammarAttributes::new(starting_rule, code_printer)
     };
     Partial::Value(grammar)
   }
 
-  fn make_rule_model(cx: &ExtCtxt, attrs: Vec<Attribute>) -> AttributeArray {
-    let rule_model = RuleAttributes::model();
-    model_checker::check_all(cx, rule_model, attrs)
+  fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> CodePrinter
+  {
+    let mut code_printer = CodePrinter::Nothing;
+    for attr in attrs {
+      let meta_item = attr.node.value.clone();
+      code_printer = code_printer.merge(Grammar::check_grammar_attr(cx, meta_item));
+    }
+    code_printer
   }
-}
 
-pub struct Rule{
-  pub name: SpannedIdent,
-  pub def: Box<Expression>,
+  fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> CodePrinter
+  {
+    match &meta_item.node {
+      &MetaWord(ref name) if *name == "debug_api" => {
+        CodePrinter::DebugApi
+      },
+      &MetaWord(ref name) if *name == "show_api" => {
+        CodePrinter::ShowApi
+      },
+        &MetaWord(ref name)
+      | &MetaList(ref name, _)
+      | &MetaNameValue(ref name, _) => {
+        cx.parse_sess.span_diagnostic.handler.warn(
+          format!("Unknown attribute `{}`: it will be ignored.", name).as_str());
+        CodePrinter::Nothing
+      }
+    }
+  }
+
+  fn check_rules_attributes(cx: &ExtCtxt, rules: &HashMap<Ident, SRule>) -> Ident
+  {
+    let mut starting_rules = vec![];
+    for (id, rule) in rules {
+      for attr in &rule.attributes {
+        let meta_item = attr.node.value.clone();
+        Grammar::check_rule_attr(cx, *id, meta_item, &mut starting_rules);
+      }
+    }
+
+    if starting_rules.len() == 0 {
+      Grammar::starting_rule_default(cx, rules)
+    }
+    else {
+      Grammar::check_start_duplicate(cx, &starting_rules);
+      starting_rules[0]
+    }
+  }
+
+  fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>, starting_rules: &mut Vec<Ident>)
+  {
+    match &meta_item.node {
+      &MetaWord(ref name) if *name == "start" => {
+        starting_rules.push(rule_name);
+      },
+        &MetaWord(ref name)
+      | &MetaList(ref name, _)
+      | &MetaNameValue(ref name, _) => {
+        cx.parse_sess.span_diagnostic.handler.warn(
+          format!("Unknown attribute `{}` attached to the rule `{}`: it will be ignored.", name, rule_name).as_str());
+        }
+    }
+  }
+
+  fn check_start_duplicate(cx: &ExtCtxt, starting_rules: &Vec<Ident>)
+  {
+    if starting_rules.len() > 1 {
+      cx.parse_sess.span_diagnostic.handler.err(
+        "Multiple `#[start]` attributes is not allowed.");
+    }
+  }
+
+  fn starting_rule_default(cx: &ExtCtxt, rules: &HashMap<Ident, SRule>) -> Ident
+  {
+    cx.parse_sess.span_diagnostic.handler.err(
+      "No rule has been specified as the starting point (attribute `#[start]`).");
+    rules.keys().next().unwrap().clone()
+  }
 }
 
 impl Rule

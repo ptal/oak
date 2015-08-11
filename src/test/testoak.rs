@@ -23,7 +23,6 @@ use std::path::{PathBuf, Path};
 use std::fs::{File, read_dir, PathExt};
 use std::io;
 use std::io::Read;
-use std::iter::FromIterator;
 
 use oak_runtime::ParseResult;
 
@@ -298,7 +297,7 @@ impl TestEngine
 
 fn main()
 {
-  let args: Vec<String> = FromIterator::from_iter(std::env::args());
+  let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
     panic!(format!("usage: {} <data-dir>", args[0]));
   }
