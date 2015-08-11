@@ -14,7 +14,6 @@
 
 //! This module performs analysis on the PEG and transforms the `front::ast` into the typed AST `middle::ast`. Submodules are specifics to each step of the analysis, the ultimate goal being that the AST passed to the `back` module only generates valid Rust code.
 
-use middle::lint::unused_rule::UnusedRule;
 use middle::ast::*;
 use monad::partial::Partial;
 
@@ -23,7 +22,6 @@ pub use middle::attribute::ast::Rule as ARule;
 pub use front::ast::Grammar as FGrammar;
 
 mod analysis;
-mod lint;
 mod attribute;
 pub mod typing;
 pub mod ast;
@@ -37,7 +35,6 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
   Partial::Value(fgrammar)
     .and_then(|grammar| analysis::analyse(cx, grammar))
     .and_then(|grammar| AGrammar::new(cx, grammar))
-    .and_then(|grammar| UnusedRule::analyse(cx, grammar))
     .and_then(|grammar| typing::type_inference(grammar))
     .and_then(|grammar| typing::type_analysis(cx, grammar))
 }
