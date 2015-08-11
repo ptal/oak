@@ -17,6 +17,7 @@ mod naming;
 mod function;
 mod type_gen;
 mod code_gen;
+mod code_printer;
 
 use middle::ast::Grammar as TGrammar;
 use back;

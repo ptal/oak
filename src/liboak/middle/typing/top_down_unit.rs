@@ -47,7 +47,6 @@ impl ExpressionVisitor
 {
   fn visit_expr(expr: &mut Expression, mut context: EvaluationContext)
   {
-    // Expressions under this can not be called with a valued context. Indeed, even if the context of the current expression is `Both` the parser will be an alias to the recognizer.
     if expr.is_unit() {
       expr.context = context.merge(UnValued);
       context = UnValued;

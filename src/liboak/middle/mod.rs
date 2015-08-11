@@ -22,7 +22,7 @@ pub use middle::attribute::ast::Rule as ARule;
 pub use front::ast::Grammar as FGrammar;
 
 mod analysis;
-mod attribute;
+pub mod attribute;
 pub mod typing;
 pub mod ast;
 

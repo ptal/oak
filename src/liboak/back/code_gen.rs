@@ -22,6 +22,7 @@ use back::ast::*;
 use back::ast::Expression_::*;
 use back::naming::*;
 use back::function::*;
+use back::code_printer::*;
 
 use std::iter::*;
 
@@ -63,15 +64,11 @@ impl<'cx> CodeGenerator<'cx>
   {
     let parser = self.compile_parser(grammar);
     let grammar_module = self.compile_grammar_module(grammar, parser);
-    if grammar.attributes.code_printer.is_debug() {
-      self.cx.parse_sess.span_diagnostic.handler.note(
-        rust::item_to_string(&*grammar_module).as_str());
-    }
+    print_code(self.cx, grammar.attributes.print_attr, &grammar_module);
     rust::MacEager::items(rust::SmallVector::one(grammar_module))
   }
 
-  fn compile_grammar_module(&self, grammar: &Grammar, parser: Vec<RItem>)
-    -> rust::P<rust::Item>
+  fn compile_grammar_module(&self, grammar: &Grammar, parser: Vec<RItem>) -> RItem
   {
     let grammar_name = grammar.name;
     let grammar_module = quote_item!(self.cx,

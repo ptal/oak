@@ -52,28 +52,28 @@ impl Rule
 
 pub struct GrammarAttributes
 {
-  pub code_printer: CodePrinter
+  pub print_attr: PrintAttribute
 }
 
 impl GrammarAttributes {
-  pub fn new(code_printer: CodePrinter) -> GrammarAttributes {
+  pub fn new(print_attr: PrintAttribute) -> GrammarAttributes {
     GrammarAttributes {
-      code_printer: code_printer
+      print_attr: print_attr
     }
   }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum CodePrinter
+pub enum PrintAttribute
 {
   DebugApi,
   ShowApi,
   Nothing
 }
 
-impl CodePrinter {
-  pub fn merge(self, other: CodePrinter) -> CodePrinter {
-    use self::CodePrinter::*;
+impl PrintAttribute {
+  pub fn merge(self, other: PrintAttribute) -> PrintAttribute {
+    use self::PrintAttribute::*;
     match (self, other) {
         (Nothing, DebugApi)
       | (ShowApi, DebugApi) => DebugApi,
@@ -82,8 +82,12 @@ impl CodePrinter {
     }
   }
 
-  pub fn is_debug(self) -> bool {
-    self == CodePrinter::DebugApi
+  pub fn debug_api(self) -> bool {
+    self == PrintAttribute::DebugApi
+  }
+
+  pub fn show_api(self) -> bool {
+    self == PrintAttribute::ShowApi
   }
 }
 
@@ -92,7 +96,7 @@ impl Grammar
   pub fn new(cx: &ExtCtxt, sgrammar: SGrammar) -> Partial<Grammar>
   {
     Grammar::check_rules_attributes(cx, &sgrammar.rules);
-    let code_printer = Grammar::check_grammar_attributes(cx, &sgrammar.attributes);
+    let print_attr = Grammar::check_grammar_attributes(cx, &sgrammar.attributes);
     let rules: HashMap<_,_> =
       sgrammar.rules.into_iter()
       .map(|(id, rule)| {
@@ -104,36 +108,36 @@ impl Grammar
       name: sgrammar.name,
       rules: rules,
       rust_items: sgrammar.rust_items,
-      attributes: GrammarAttributes::new(code_printer)
+      attributes: GrammarAttributes::new(print_attr)
     };
     Partial::Value(grammar)
   }
 
-  fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> CodePrinter
+  fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttribute
   {
-    let mut code_printer = CodePrinter::Nothing;
+    let mut print_attr = PrintAttribute::Nothing;
     for attr in attrs {
       let meta_item = attr.node.value.clone();
-      code_printer = code_printer.merge(Grammar::check_grammar_attr(cx, meta_item));
+      print_attr = print_attr.merge(Grammar::check_grammar_attr(cx, meta_item));
     }
-    code_printer
+    print_attr
   }
 
-  fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> CodePrinter
+  fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute
   {
     match &meta_item.node {
       &MetaWord(ref name) if *name == "debug_api" => {
-        CodePrinter::DebugApi
+        PrintAttribute::DebugApi
       },
       &MetaWord(ref name) if *name == "show_api" => {
-        CodePrinter::ShowApi
+        PrintAttribute::ShowApi
       },
         &MetaWord(ref name)
       | &MetaList(ref name, _)
       | &MetaNameValue(ref name, _) => {
         cx.parse_sess.span_diagnostic.handler.warn(
           format!("Unknown attribute `{}`: it will be ignored.", name).as_str());
-        CodePrinter::Nothing
+        PrintAttribute::Nothing
       }
     }
   }
