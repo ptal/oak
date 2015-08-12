@@ -14,10 +14,10 @@
 
 //! AST of a PEG expression that is shared across all the compiling steps.
 
-
 #![macro_use]
 
 pub use identifier::*;
+pub use rust::Span;
 
 #[derive(Clone, Debug)]
 pub enum Expression_<SubExpr>{
@@ -44,6 +44,14 @@ pub struct CharacterClassExpr {
 pub struct CharacterInterval {
   pub lo: char,
   pub hi: char
+}
+
+pub trait ItemIdent {
+  fn ident(&self) -> Ident;
+}
+
+pub trait ItemSpan {
+  fn span(&self) -> Span;
 }
 
 pub trait ExprNode

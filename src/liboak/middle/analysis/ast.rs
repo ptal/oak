@@ -13,19 +13,20 @@
 // limitations under the License.
 
 pub use ast::*;
-pub use front::ast::{Expression, Rule};
-
-pub use rust::{ExtCtxt,P,Item,Attribute};
+pub use front::ast::Expression;
+pub use rust::{ExtCtxt,P,Item,Attribute,SpannedIdent};
 pub use monad::partial::Partial;
 
 use front::ast::Grammar as FGrammar;
 use std::collections::HashMap;
+use std::default::Default;
 
-pub struct Grammar{
+pub struct Grammar
+{
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
   pub rust_items: HashMap<Ident, P<Item>>,
-  pub attributes: Vec<Attribute>
+  pub attributes: GrammarAttributes
 }
 
 impl Grammar
@@ -38,28 +39,77 @@ impl Grammar
       name: fgrammar.name.clone(),
       rules: HashMap::with_capacity(rules_len),
       rust_items: HashMap::with_capacity(rust_items_len),
-      attributes: fgrammar.attributes.clone()
+      attributes: GrammarAttributes::default()
     };
     Partial::Value(grammar)
   }
+}
 
-  pub fn with_rules(self, rules: HashMap<Ident, Rule>) -> Grammar
+#[derive(Default)]
+pub struct GrammarAttributes
+{
+  pub print_attr: PrintAttribute
+}
+
+impl GrammarAttributes
+{
+  pub fn new(print_attr: PrintAttribute) -> GrammarAttributes
   {
-    Grammar {
-      name: self.name,
-      rules: rules,
-      rust_items: self.rust_items,
-      attributes: self.attributes
+    GrammarAttributes {
+      print_attr: print_attr
+    }
+  }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PrintAttribute
+{
+  DebugApi,
+  ShowApi,
+  Nothing
+}
+
+impl PrintAttribute
+{
+  pub fn merge(self, other: PrintAttribute) -> PrintAttribute {
+    use self::PrintAttribute::*;
+    match (self, other) {
+        (Nothing, DebugApi)
+      | (ShowApi, DebugApi) => DebugApi,
+      (Nothing, ShowApi) => ShowApi,
+      _ => Nothing
     }
   }
 
-  pub fn with_rust_items(self, rust_items: HashMap<Ident, P<Item>>) -> Grammar
+  pub fn debug_api(self) -> bool {
+    self == PrintAttribute::DebugApi
+  }
+
+  pub fn show_api(self) -> bool {
+    self == PrintAttribute::ShowApi
+  }
+}
+
+impl Default for PrintAttribute
+{
+  fn default() -> PrintAttribute {
+    PrintAttribute::Nothing
+  }
+}
+
+pub struct Rule
+{
+  pub name: SpannedIdent,
+  pub def: Box<Expression>,
+}
+
+impl Rule
+{
+  pub fn new(name: SpannedIdent, def: Box<Expression>) -> Rule
   {
-    Grammar {
-      name: self.name,
-      rules: self.rules,
-      rust_items: rust_items,
-      attributes: self.attributes
+    Rule{
+      name: name,
+      def: def
     }
   }
 }

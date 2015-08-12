@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::attribute::ast::GrammarAttributes;
+pub use middle::analysis::ast::GrammarAttributes;
 pub use ast::*;
 pub use ast::Expression_::*;
 
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
+pub use rust::{ExtCtxt, Spanned, SpannedIdent};
 
 pub use std::collections::HashMap;
 pub use std::cell::RefCell;

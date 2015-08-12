@@ -15,7 +15,7 @@
 use rust;
 use rust::{State, Visibility, Mod};
 use back::ast::*;
-use middle::attribute::ast::PrintAttribute;
+use middle::analysis::ast::PrintAttribute;
 use std::io;
 
 pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RItem) {

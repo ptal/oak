@@ -17,12 +17,9 @@
 use middle::ast::*;
 use monad::partial::Partial;
 
-pub use middle::attribute::ast::Grammar as AGrammar;
-pub use middle::attribute::ast::Rule as ARule;
 pub use front::ast::Grammar as FGrammar;
 
-mod analysis;
-pub mod attribute;
+pub mod analysis;
 pub mod typing;
 pub mod ast;
 
@@ -34,7 +31,6 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
 
   Partial::Value(fgrammar)
     .and_then(|grammar| analysis::analyse(cx, grammar))
-    .and_then(|grammar| AGrammar::new(cx, grammar))
     .and_then(|grammar| typing::type_inference(grammar))
     .and_then(|grammar| typing::type_analysis(cx, grammar))
 }

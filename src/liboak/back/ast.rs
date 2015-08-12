@@ -16,7 +16,7 @@ use rust;
 use back::ast::FunctionKind::*;
 
 pub use std::collections::HashMap;
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
+pub use rust::{ExtCtxt, Spanned, SpannedIdent};
 pub use middle::ast::{Grammar_, Rule_, ExprTy};
 pub use ast::*;
 

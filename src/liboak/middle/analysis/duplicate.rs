@@ -12,34 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::Span;
-use rust;
 pub use std::collections::HashMap;
+use front::ast::Rule as FRule;
 
 use middle::analysis::ast::*;
 use monad::partial::Partial::*;
+
+use rust;
 use std::ops::Deref;
 
-pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
-  rules: Vec<Rule>) -> Partial<Grammar>
+pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
+  rules: Vec<FRule>) -> Partial<Grammar>
 {
   DuplicateItem::analyse(cx, rules.into_iter(), String::from("rule"))
-    .map(move |rules| grammar.with_rules(rules))
+  .map(|rules|
+    rules.into_iter().map(|(id, frule)| (id, Rule::new(frule.name, frule.def))).collect())
+  .map(move |rules| { grammar.rules = rules; grammar })
 }
 
-pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
+pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
   items: Vec<P<Item>>) -> Partial<Grammar>
 {
   DuplicateItem::analyse(cx, items.into_iter(), String::from("rust item"))
-    .map(move |rust_items| grammar.with_rust_items(rust_items))
-}
-
-trait ItemIdent {
-  fn ident(&self) -> Ident;
-}
-
-trait ItemSpan {
-  fn span(&self) -> Span;
+    .map(move |rust_items| { grammar.rust_items = rust_items; grammar })
 }
 
 impl ItemIdent for rust::Item {
@@ -83,7 +78,7 @@ struct DuplicateItem<'a, Item>
   cx: &'a ExtCtxt<'a>,
   items: HashMap<Ident, Item>,
   has_duplicate: bool,
-  what_is_duplicate: String
+  what_is_duplicated: String
 }
 
 impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
@@ -95,7 +90,7 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
       cx: cx,
       items: HashMap::with_capacity(min_size),
       has_duplicate: false,
-      what_is_duplicate: item_kind
+      what_is_duplicated: item_kind
     }.populate(iter)
      .make()
   }
@@ -118,10 +113,10 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
   {
     self.cx.span_err(current.span(), format!(
       "duplicate definition of {} `{}`",
-      self.what_is_duplicate, current.ident()).as_str());
+      self.what_is_duplicated, current.ident()).as_str());
     self.cx.span_note(pre.span(), format!(
       "previous definition of {} `{}` here",
-      self.what_is_duplicate, pre.ident()).as_str());
+      self.what_is_duplicated, pre.ident()).as_str());
   }
 
   fn make(self) -> Partial<HashMap<Ident, Item>>

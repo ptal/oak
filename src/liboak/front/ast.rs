@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{SpannedIdent, Spanned, Span, Attribute, BytePos, mk_sp};
+pub use rust::{SpannedIdent, Spanned, Attribute, BytePos, mk_sp};
 pub use ast::*;
 use rust;
 
@@ -28,6 +28,20 @@ pub struct Rule{
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
   pub def: Box<Expression>
+}
+
+impl ItemIdent for Rule
+{
+  fn ident(&self) -> Ident {
+    self.name.node
+  }
+}
+
+impl ItemSpan for Rule
+{
+  fn span(&self) -> Span {
+    self.name.span
+  }
 }
 
 #[derive(Clone)]

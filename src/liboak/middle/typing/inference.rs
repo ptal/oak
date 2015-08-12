@@ -15,9 +15,9 @@
 //! Give a type to any expression of the grammar. There are only three types, see `typing::ast` for explanations. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modify the type accordingly. It does not propagate the invisible types, this step is done in `typing::bottom_up_unit`.
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
-pub use middle::attribute::ast::Grammar as AGrammar;
-pub use middle::attribute::ast::Rule as ARule;
-pub use middle::attribute::ast::Expression as AExpression;
+pub use middle::analysis::ast::Grammar as AGrammar;
+pub use middle::analysis::ast::Rule as ARule;
+pub use middle::analysis::ast::Expression as AExpression;
 
 use front::ast::TypeAnnotation;
 use middle::typing::ast::*;

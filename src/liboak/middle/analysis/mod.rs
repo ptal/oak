@@ -16,11 +16,13 @@ use middle::analysis::ast::*;
 use middle::analysis::duplicate::*;
 use middle::analysis::undeclared_rule::*;
 use middle::analysis::undeclared_action::*;
+use middle::analysis::attribute::*;
 use front::ast::Grammar as FGrammar;
 
 mod duplicate;
 mod undeclared_rule;
 mod undeclared_action;
+mod attribute;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
@@ -30,4 +32,5 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
     .and_then(|grammar| rust_item_duplicate(cx, grammar, fgrammar.rust_items.clone()))
     .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
     .and_then(|grammar| UndeclaredAction::analyse(cx, grammar))
+    .and_then(|grammar| decorate_with_attributes(cx, &fgrammar, grammar))
 }
