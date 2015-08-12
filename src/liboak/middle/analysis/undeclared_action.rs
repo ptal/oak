@@ -24,8 +24,7 @@ pub struct UndeclaredAction<'a>
 
 impl<'a> UndeclaredAction<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar>
-  {
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar> {
     if UndeclaredAction::has_undeclared(cx, &grammar) {
       Partial::Nothing
     } else {
@@ -33,8 +32,7 @@ impl<'a> UndeclaredAction<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool
-  {
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
     let mut analyser = UndeclaredAction {
       cx: cx,
       grammar: grammar,
@@ -55,8 +53,7 @@ impl<'a> Visitor<Expression, ()> for UndeclaredAction<'a>
   unit_visitor_impl!(Expression, choice);
   unit_visitor_impl!(Expression, non_terminal);
 
-  fn visit_semantic_action(&mut self, parent: &Box<Expression>, _expr: &Box<Expression>, id: Ident)
-  {
+  fn visit_semantic_action(&mut self, parent: &Box<Expression>, _expr: &Box<Expression>, id: Ident) {
     if !self.grammar.rust_items.contains_key(&id) {
       self.cx.span_err(parent.span, "Undeclared action. This must be a function declared in the grammar scope.");
       self.has_undeclared = true;

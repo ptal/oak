@@ -27,15 +27,13 @@ pub struct RecursiveType<'a>
 
 impl<'a> RecursiveType<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt, start_rule: Ident, rules: &'a HashMap<Ident, Rule>) -> bool
-  {
+  pub fn analyse(cx: &'a ExtCtxt, start_rule: Ident, rules: &'a HashMap<Ident, Rule>) -> bool {
     let mut inlining_loop = RecursiveType::new(cx, rules);
     inlining_loop.visit_rule(rules.get(&start_rule).unwrap());
     inlining_loop.cycle_detected
   }
 
-  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a>
-  {
+  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a> {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
       visited.insert(id.clone(), false);
@@ -49,8 +47,7 @@ impl<'a> RecursiveType<'a>
     }
   }
 
-  fn loop_detected(&mut self)
-  {
+  fn loop_detected(&mut self) {
     self.cycle_detected = true;
     let in_cycle = self.current_inline_path.pop().unwrap();
     // Consider the smallest cycle.
@@ -74,8 +71,7 @@ impl<'a> RecursiveType<'a>
 
 impl<'a> Visitor for RecursiveType<'a>
 {
-  fn visit_rule(&mut self, rule: &Rule)
-  {
+  fn visit_rule(&mut self, rule: &Rule) {
     let ident = rule.name.node.clone();
     *self.visited.get_mut(&ident).unwrap() = true;
     if rule.is_inline() {
@@ -90,8 +86,7 @@ impl<'a> Visitor for RecursiveType<'a>
     }
   }
 
-  fn visit_non_terminal_symbol(&mut self, _sp: Span, ident: Ident)
-  {
+  fn visit_non_terminal_symbol(&mut self, _sp: Span, ident: Ident) {
     if !self.cycle_detected {
       let rule = self.rules.get(&ident).unwrap();
       let ident = rule.name.node.clone();
@@ -107,8 +102,7 @@ impl<'a> Visitor for RecursiveType<'a>
 
   // Semantic action breaks cycles because the action is already typed by the user.
   // character, unit and unit_propagate do not generate loops (trivial cases).
-  fn visit_expr(&mut self, expr: &Box<Expression>)
-  {
+  fn visit_expr(&mut self, expr: &Box<Expression>) {
     if !expr.ty.borrow().is_leaf() {
       walk_expr(self, expr);
     }

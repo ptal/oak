@@ -15,23 +15,19 @@
 pub use std::string::String;
 pub use rust::{Ident, Name};
 
-pub fn id_to_string(id: Ident) -> String
-{
+pub fn id_to_string(id: Ident) -> String {
   id.to_string()
 }
 
-pub fn name_to_string(name: Name) -> String
-{
+pub fn name_to_string(name: Name) -> String {
  name.to_string()
 }
 
-pub fn string_to_lowercase(s: &String) -> String
-{
+pub fn string_to_lowercase(s: &String) -> String {
   s.chars().flat_map(char::to_lowercase).collect()
 }
 
-pub fn ident_to_lowercase(ident: Ident) -> String
-{
+pub fn ident_to_lowercase(ident: Ident) -> String {
   let ident = id_to_string(ident);
   string_to_lowercase(&ident)
 }

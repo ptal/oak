@@ -29,16 +29,14 @@ pub struct NameFactory<'cx>
 
 impl<'cx> NameFactory<'cx>
 {
-  pub fn new(cx: &'cx ExtCtxt) -> NameFactory<'cx>
-  {
+  pub fn new(cx: &'cx ExtCtxt) -> NameFactory<'cx> {
     NameFactory {
       cx: cx,
       unique_id: 0
     }
   }
 
-  pub fn expression_name(&mut self, expr_desc: &str, current_rule: Ident) -> GenFunNames
-  {
+  pub fn expression_name(&mut self, expr_desc: &str, current_rule: Ident) -> GenFunNames {
     let uid = self.gen_uid();
     self.from_base_name(
       format!("{}_in_rule_{}_{}",
@@ -48,27 +46,23 @@ impl<'cx> NameFactory<'cx>
       ))
   }
 
-  pub fn names_of_rule(&mut self, rule_name: Ident) -> GenFunNames
-  {
+  pub fn names_of_rule(&mut self, rule_name: Ident) -> GenFunNames {
     self.from_base_name(ident_to_lowercase(rule_name))
   }
 
-  fn gen_uid(&mut self) -> u32
-  {
+  fn gen_uid(&mut self) -> u32 {
     self.unique_id += 1;
     self.unique_id - 1
   }
 
-  fn from_base_name(&self, base_name: String) -> GenFunNames
-  {
+  fn from_base_name(&self, base_name: String) -> GenFunNames {
     GenFunNames {
       recognizer: self.ident_of("recognize", &base_name),
       parser: self.ident_of("parse", &base_name)
     }
   }
 
-  fn ident_of(&self, prefix: &str, base_name: &String) -> Ident
-  {
+  fn ident_of(&self, prefix: &str, base_name: &String) -> Ident {
     self.cx.ident_of(format!("{}_{}", prefix, base_name).as_str())
   }
 }

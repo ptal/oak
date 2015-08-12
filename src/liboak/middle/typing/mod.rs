@@ -26,8 +26,7 @@ mod top_down_unit;
 // mod printer;
 // mod analysis;
 
-pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
-{
+pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar> {
   let mut grammar = Grammar {
     name: agrammar.name,
     rules: HashMap::with_capacity(agrammar.rules.len()),
@@ -41,7 +40,6 @@ pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar>
   Partial::Value(grammar)
 }
 
-pub fn type_analysis(_cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
-{
+pub fn type_analysis(_cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar> {
   Partial::Value(grammar)
 }

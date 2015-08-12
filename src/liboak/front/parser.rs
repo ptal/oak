@@ -43,8 +43,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  pub fn parse_grammar(&mut self) -> Grammar
-  {
+  pub fn parse_grammar(&mut self) -> Grammar {
     let (rules, rust_items) = self.parse_blocks();
     Grammar{name: self.grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()}
   }
@@ -53,8 +52,7 @@ impl<'a> Parser<'a>
     self.rp.bump().unwrap()
   }
 
-  fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<RItem>)
-  {
+  fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<RItem>) {
     let mut rules = vec![];
     let mut rust_items = vec![];
     while self.rp.token != rtok::Eof
@@ -72,8 +70,7 @@ impl<'a> Parser<'a>
     (rules, rust_items)
   }
 
-  fn parse_rule(&mut self) -> Rule
-  {
+  fn parse_rule(&mut self) -> Rule {
     let outer_attrs = self.parse_attributes();
     let name = self.parse_rule_decl();
     self.rp.expect(&rtok::Eq).unwrap();
@@ -83,26 +80,22 @@ impl<'a> Parser<'a>
 
   // Outer attributes are attached to the next item.
   // Inner attributes are attached to the englobing item.
-  fn parse_attributes(&mut self) -> Vec<rust::Attribute>
-  {
+  fn parse_attributes(&mut self) -> Vec<rust::Attribute> {
     let inners = self.rp.parse_inner_attributes();
     self.inner_attrs.push_all(inners.as_slice());
     self.rp.parse_outer_attributes()
   }
 
-  fn parse_rule_decl(&mut self) -> rust::SpannedIdent
-  {
+  fn parse_rule_decl(&mut self) -> rust::SpannedIdent {
     let sp = self.rp.span;
     respan(sp, self.rp.parse_ident().unwrap())
   }
 
-  fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression>
-  {
+  fn parse_rule_rhs(&mut self, rule_name: &str) -> Box<Expression> {
     self.parse_rule_choice(rule_name)
   }
 
-  fn parse_rule_choice(&mut self, rule_name: &str) -> Box<Expression>
-  {
+  fn parse_rule_choice(&mut self, rule_name: &str) -> Box<Expression> {
     let lo = self.rp.span.lo;
     let mut choices = Vec::new();
     loop{
@@ -123,8 +116,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_semantic_action(&mut self, expr: Box<Expression>) -> Box<Expression>
-  {
+  fn parse_semantic_action(&mut self, expr: Box<Expression>) -> Box<Expression> {
     let token = self.rp.token.clone();
     match token {
       rtok::Gt => {
@@ -136,8 +128,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression>
-  {
+  fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression> {
     let lo = self.rp.span.lo;
     let mut seq = Vec::new();
     loop{
@@ -160,8 +151,7 @@ impl<'a> Parser<'a>
   }
 
   // `e -> ty`
-  fn parse_type_annotation(&mut self, expr: Box<Expression>, rule_name: &str) -> Box<Expression>
-  {
+  fn parse_type_annotation(&mut self, expr: Box<Expression>, rule_name: &str) -> Box<Expression> {
     let token = self.rp.token.clone();
     match token {
       rtok::RArrow => {
@@ -173,8 +163,7 @@ impl<'a> Parser<'a>
   }
 
   // `()` or `(^)`
-  fn parse_type(&mut self, mut expr: Box<Expression>, rule_name: &str) -> Box<Expression>
-  {
+  fn parse_type(&mut self, mut expr: Box<Expression>, rule_name: &str) -> Box<Expression> {
     let token = self.rp.token.clone();
     match token {
       rtok::OpenDelim(rust::DelimToken::Paren) => {
@@ -201,8 +190,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
-  {
+  fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>> {
     let token = self.rp.token.clone();
     match token {
       rtok::Not => {
@@ -237,8 +225,7 @@ impl<'a> Parser<'a>
     Some(spanned_expr(lo, hi, make_prefix(expr)))
   }
 
-  fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>>
-  {
+  fn parse_rule_suffixed(&mut self, rule_name: &str) -> Option<Box<Expression>> {
     let lo = self.rp.span.lo;
     let expr = match self.parse_rule_atom(rule_name){
       Some(expr) => expr,
@@ -263,13 +250,11 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn last_respan(&self, expr: ExpressionNode) -> Box<Expression>
-  {
+  fn last_respan(&self, expr: ExpressionNode) -> Box<Expression> {
     respan_expr(self.rp.last_span, expr)
   }
 
-  fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>>
-  {
+  fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>> {
     let token = self.rp.token.clone();
     if token.is_any_keyword() {
       return None
@@ -319,8 +304,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_char_class(&mut self, rule_name: &str) -> Option<Box<Expression>>
-  {
+  fn parse_char_class(&mut self, rule_name: &str) -> Option<Box<Expression>> {
     let token = self.rp.token.clone();
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
@@ -340,8 +324,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_set_of_char_range(&mut self, ranges: &String, rule_name: &str) -> Option<Box<Expression>>
-  {
+  fn parse_set_of_char_range(&mut self, ranges: &String, rule_name: &str) -> Option<Box<Expression>> {
     let mut ranges = ranges.chars().peekable();
     let mut intervals = vec![];
     match ranges.peek() {
@@ -360,8 +343,7 @@ impl<'a> Parser<'a>
     Some(respan_expr(self.rp.span, CharacterClass(CharacterClassExpr{intervals: intervals})))
   }
 
-  fn parse_char_range<'b>(&mut self, ranges: &mut Peekable<Chars<'b>>, rule_name: &str) -> Option<Vec<CharacterInterval>>
-  {
+  fn parse_char_range<'b>(&mut self, ranges: &mut Peekable<Chars<'b>>, rule_name: &str) -> Option<Vec<CharacterInterval>> {
     let mut res = vec![];
     let separator_err = format!(
       "In rule {}: Unexpected separator `-`. Put it in the start or the end if you want \
@@ -403,8 +385,7 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn is_rule_lhs(&mut self) -> bool
-  {
+  fn is_rule_lhs(&mut self) -> bool {
     self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
   }
 }

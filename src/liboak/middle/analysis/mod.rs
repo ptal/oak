@@ -25,8 +25,7 @@ mod undeclared_action;
 mod attribute;
 pub mod ast;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
-{
+pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
   Grammar::new(&fgrammar)
     .and_then(|grammar| rule_duplicate(cx, grammar, fgrammar.rules.clone()))
     .and_then(|grammar| rust_item_duplicate(cx, grammar, fgrammar.rust_items.clone()))

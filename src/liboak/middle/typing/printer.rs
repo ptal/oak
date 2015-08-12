@@ -16,8 +16,7 @@
 
 use middle::typing::ast::*;
 
-pub fn print_annotated_rules(grammar: &Grammar)
-{
+pub fn print_annotated_rules(grammar: &Grammar) {
   Printer::print(grammar);
 }
 
@@ -25,27 +24,23 @@ struct Printer;
 
 impl Printer
 {
-  pub fn print(grammar: &Grammar)
-  {
+  pub fn print(grammar: &Grammar) {
     let mut printer = Printer;
     printer.visit_grammar(grammar)
   }
 
-  fn visit_grammar(&mut self, grammar: &Grammar)
-  {
+  fn visit_grammar(&mut self, grammar: &Grammar) {
     println!("Grammar: {}", grammar.name);
     self.visit_rules(&grammar.rules);
   }
 
-  fn visit_rules(&mut self, rules: &HashMap<Ident, Rule>)
-  {
+  fn visit_rules(&mut self, rules: &HashMap<Ident, Rule>) {
     for rule in rules.values() {
       self.visit_rule(rule);
     }
   }
 
-  fn visit_rule(&mut self, rule: &Rule)
-  {
+  fn visit_rule(&mut self, rule: &Rule) {
     println!("{}:({:?}, {:?})", rule.name.node, rule.def.ty, rule.def.context);
   }
 }

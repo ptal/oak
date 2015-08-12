@@ -71,16 +71,14 @@ pub struct Expression
 
 impl ExprNode for Expression
 {
-  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
-  {
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode {
     &self.node
   }
 }
 
 impl Expression
 {
-  pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression
-  {
+  pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression {
     let expr = Expression {
       span: sp,
       node: node,
@@ -106,19 +104,16 @@ impl Expression
     self.ty.borrow().clone()
   }
 
-  pub fn to_unit_type(&self)
-  {
+  pub fn to_unit_type(&self) {
     *self.ty.borrow_mut() = ExprTy::unit();
   }
 
-  pub fn to_invisible_type(&self)
-  {
+  pub fn to_invisible_type(&self) {
     *self.invisible.borrow_mut() = true;
     self.to_unit_type();
   }
 
-  pub fn to_tuple_type(&self, indexes: Vec<usize>)
-  {
+  pub fn to_tuple_type(&self, indexes: Vec<usize>) {
     *self.ty.borrow_mut() = Tuple(indexes);
   }
 

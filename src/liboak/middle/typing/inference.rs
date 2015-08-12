@@ -38,16 +38,14 @@ impl<'r> InferenceEngine<'r>
     engine.infer_rules_type(arules);
   }
 
-  fn infer_rules_type(&mut self, arules: HashMap<Ident, ARule>)
-  {
+  fn infer_rules_type(&mut self, arules: HashMap<Ident, ARule>) {
     for (id, rule) in arules.into_iter() {
       let typed_rule = self.infer_rule_type(rule);
       self.grammar.rules.insert(id, typed_rule);
     }
   }
 
-  fn infer_rule_type(&self, rule: ARule) -> Rule
-  {
+  fn infer_rule_type(&self, rule: ARule) -> Rule {
     let expr = self.infer_expr_type(rule.def);
     Rule{
       name: rule.name,
@@ -55,8 +53,7 @@ impl<'r> InferenceEngine<'r>
     }
   }
 
-  fn infer_expr_type(&self, expr: Box<AExpression>) -> Box<Expression>
-  {
+  fn infer_expr_type(&self, expr: Box<AExpression>) -> Box<Expression> {
     let sp = expr.span.clone();
     let ty = expr.ty.clone();
     let typed_expr = match expr.node {
@@ -82,8 +79,7 @@ impl<'r> InferenceEngine<'r>
     self.type_annotation(typed_expr, ty)
   }
 
-  fn type_annotation(&self, expr: Box<Expression>, ty: Option<TypeAnnotation>) -> Box<Expression>
-  {
+  fn type_annotation(&self, expr: Box<Expression>, ty: Option<TypeAnnotation>) -> Box<Expression> {
     if let Some(ty) = ty {
       match ty {
         TypeAnnotation::Invisible => {
@@ -97,13 +93,11 @@ impl<'r> InferenceEngine<'r>
     expr
   }
 
-  fn infer_identity_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
-  {
+  fn infer_identity_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression> {
     box Expression::new(sp, node, Identity)
   }
 
-  fn infer_unit_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression>
-  {
+  fn infer_unit_expr(&self, sp: Span, node: ExpressionNode) -> Box<Expression> {
     box Expression::new(sp, node, ExprTy::unit())
   }
 
@@ -113,8 +107,7 @@ impl<'r> InferenceEngine<'r>
     self.infer_unit_expr(sp, make_node(self.infer_expr_type(sub)))
   }
 
-  fn infer_rule_type_ph(&self, sp: Span, ident: Ident) -> Box<Expression>
-  {
+  fn infer_rule_type_ph(&self, sp: Span, ident: Ident) -> Box<Expression> {
     box Expression::new(sp,
       NonTerminalSymbol(ident.clone()),
       Identity)
@@ -136,8 +129,7 @@ impl<'r> InferenceEngine<'r>
       .collect()
   }
 
-  fn infer_tuple_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
-  {
+  fn infer_tuple_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression> {
     let nodes = self.infer_list_expr(subs);
     if nodes.len() == 1 {
       nodes.into_iter().next().unwrap()
@@ -147,13 +139,13 @@ impl<'r> InferenceEngine<'r>
     }
   }
 
-  fn infer_choice_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression>
-  {
+  fn infer_choice_expr(&self, sp: Span, subs: Vec<Box<AExpression>>) -> Box<Expression> {
     let nodes = self.infer_list_expr(subs);
     box Expression::new(sp, Choice(nodes), Identity)
   }
 
-  fn infer_semantic_action(&self, sp: Span, expr: Box<AExpression>, action_name: Ident) -> Box<Expression>
+  fn infer_semantic_action(&self, sp: Span, expr: Box<AExpression>,
+    action_name: Ident) -> Box<Expression>
   {
     let sub_expr = self.infer_expr_type(expr);
     let action_ty = match &self.grammar.rust_items.get(&action_name).unwrap().node {

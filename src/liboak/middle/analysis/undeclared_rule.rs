@@ -26,8 +26,7 @@ pub struct UndeclaredRule<'a>
 
 impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar>
-  {
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar> {
     if UndeclaredRule::has_undeclared(cx, &grammar) {
       Nothing
     } else {
@@ -35,8 +34,7 @@ impl<'a> UndeclaredRule<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool
-  {
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
     let mut analyser = UndeclaredRule {
       cx: cx,
       rules: &grammar.rules,
@@ -56,8 +54,7 @@ impl<'a> Visitor<Expression, ()> for UndeclaredRule<'a>
   unit_visitor_impl!(Expression, sequence);
   unit_visitor_impl!(Expression, choice);
 
-  fn visit_non_terminal_symbol(&mut self, parent: &Box<Expression>, id: Ident)
-  {
+  fn visit_non_terminal_symbol(&mut self, parent: &Box<Expression>, id: Ident) {
     if !self.rules.contains_key(&id) {
       self.cx.span_err(parent.span, "Undeclared rule.");
       self.has_undeclared = true;

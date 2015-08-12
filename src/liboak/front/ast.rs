@@ -62,19 +62,16 @@ pub struct Expression
 
 impl ExprNode for Expression
 {
-  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
-  {
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode {
     &self.node
   }
 }
 
-pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
-{
+pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression> {
   respan_expr(mk_sp(lo, hi), expr)
 }
 
-pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression>
-{
+pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression> {
   box Expression {span : sp, node: expr, ty: None}
 }
 

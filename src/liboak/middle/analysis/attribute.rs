@@ -19,7 +19,8 @@ use front::ast::Rule as FRule;
 use rust::MetaItem;
 use rust::MetaItem_::*;
 
-pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar, mut grammar: Grammar) -> Partial<Grammar>
+pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar,
+  mut grammar: Grammar) -> Partial<Grammar>
 {
   check_rules_attributes(cx, &fgrammar.rules);
   let print_attr = check_grammar_attributes(cx, &fgrammar.attributes);
@@ -27,8 +28,7 @@ pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar, mut grammar: 
   Partial::Value(grammar)
 }
 
-fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttribute
-{
+fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttribute {
   let mut print_attr = PrintAttribute::Nothing;
   for attr in attrs {
     let meta_item = attr.node.value.clone();
@@ -37,8 +37,7 @@ fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttrib
   print_attr
 }
 
-fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute
-{
+fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
   match &meta_item.node {
     &MetaWord(ref name) if *name == "debug_api" => {
       PrintAttribute::DebugApi
@@ -56,8 +55,7 @@ fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute
   }
 }
 
-fn check_rules_attributes(cx: &ExtCtxt, rules: &Vec<FRule>)
-{
+fn check_rules_attributes(cx: &ExtCtxt, rules: &Vec<FRule>) {
   for rule in rules {
     for attr in &rule.attributes {
       let meta_item = attr.node.value.clone();
@@ -66,8 +64,7 @@ fn check_rules_attributes(cx: &ExtCtxt, rules: &Vec<FRule>)
   }
 }
 
-fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>)
-{
+fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>) {
   match &meta_item.node {
       &MetaWord(ref name)
     | &MetaList(ref name, _)

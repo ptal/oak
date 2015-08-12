@@ -31,8 +31,7 @@ pub struct Grammar
 
 impl Grammar
 {
-  pub fn new(fgrammar: &FGrammar) -> Partial<Grammar>
-  {
+  pub fn new(fgrammar: &FGrammar) -> Partial<Grammar> {
     let rules_len = fgrammar.rules.len();
     let rust_items_len = fgrammar.rust_items.len();
     let grammar = Grammar {
@@ -53,8 +52,7 @@ pub struct GrammarAttributes
 
 impl GrammarAttributes
 {
-  pub fn new(print_attr: PrintAttribute) -> GrammarAttributes
-  {
+  pub fn new(print_attr: PrintAttribute) -> GrammarAttributes {
     GrammarAttributes {
       print_attr: print_attr
     }
@@ -105,8 +103,7 @@ pub struct Rule
 
 impl Rule
 {
-  pub fn new(name: SpannedIdent, def: Box<Expression>) -> Rule
-  {
+  pub fn new(name: SpannedIdent, def: Box<Expression>) -> Rule {
     Rule{
       name: name,
       def: def

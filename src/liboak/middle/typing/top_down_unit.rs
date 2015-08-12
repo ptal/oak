@@ -19,8 +19,7 @@
 use middle::typing::ast::*;
 use middle::typing::ast::EvaluationContext::*;
 
-pub fn top_down_unit_inference(grammar: &mut Grammar)
-{
+pub fn top_down_unit_inference(grammar: &mut Grammar) {
   TopDownUnitInference::visit_rules(&mut grammar.rules);
 }
 
@@ -28,15 +27,13 @@ struct TopDownUnitInference;
 
 impl TopDownUnitInference
 {
-  fn visit_rules(rules: &mut HashMap<Ident, Rule>)
-  {
+  fn visit_rules(rules: &mut HashMap<Ident, Rule>) {
     for (_, rule) in rules.iter_mut() {
       TopDownUnitInference::visit_rule(rule)
     }
   }
 
-  fn visit_rule(rule: &mut Rule)
-  {
+  fn visit_rule(rule: &mut Rule) {
     ExpressionVisitor::visit_expr(&mut rule.def, Both);
   }
 }
@@ -45,8 +42,7 @@ struct ExpressionVisitor;
 
 impl ExpressionVisitor
 {
-  fn visit_expr(expr: &mut Expression, mut context: EvaluationContext)
-  {
+  fn visit_expr(expr: &mut Expression, mut context: EvaluationContext) {
     if expr.is_unit() {
       expr.context = context.merge(UnValued);
       context = UnValued;
@@ -57,8 +53,7 @@ impl ExpressionVisitor
     ExpressionVisitor::visit_expr_node(&mut expr.node, context);
   }
 
-  fn visit_expr_node(expr: &mut ExpressionNode, context: EvaluationContext)
-  {
+  fn visit_expr_node(expr: &mut ExpressionNode, context: EvaluationContext) {
     match expr {
         &mut Sequence(ref mut exprs)
       | &mut Choice(ref mut exprs) => ExpressionVisitor::visit_exprs(&mut *exprs, context),
@@ -72,8 +67,7 @@ impl ExpressionVisitor
     }
   }
 
-  fn visit_exprs(exprs: &mut Vec<Box<Expression>>, context: EvaluationContext)
-  {
+  fn visit_exprs(exprs: &mut Vec<Box<Expression>>, context: EvaluationContext) {
     assert!(exprs.len() > 0);
     for expr in exprs.iter_mut() {
       ExpressionVisitor::visit_expr(&mut *expr, context);

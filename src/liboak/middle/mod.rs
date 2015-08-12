@@ -23,8 +23,7 @@ pub mod analysis;
 pub mod typing;
 pub mod ast;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
-{
+pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
   if !at_least_one_rule_declared(cx, &fgrammar) {
     return Partial::Nothing
   }
@@ -35,8 +34,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
     .and_then(|grammar| typing::type_analysis(cx, grammar))
 }
 
-fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool
-{
+fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool {
   if fgrammar.rules.len() == 0 {
     cx.parse_sess.span_diagnostic.handler.err(
       "At least one rule must be declared.");

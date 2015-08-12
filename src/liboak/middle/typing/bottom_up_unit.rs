@@ -41,8 +41,7 @@
 use middle::typing::ast::*;
 use middle::typing::ast::ExprTy::*;
 
-pub fn bottom_up_unit_inference(grammar: &mut Grammar)
-{
+pub fn bottom_up_unit_inference(grammar: &mut Grammar) {
   IntraRule::propagate(&grammar.rules);
   InterRule::propagate(&grammar.rules);
 }
@@ -74,8 +73,7 @@ trait BottomUpAnalysis
     }
   }
 
-  fn propagate_from_inner(&mut self, parent: &Box<Expression>, expr: &Box<Expression>)
-  {
+  fn propagate_from_inner(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) {
     self.visit_expr(expr);
     if expr.is_invisible() {
       parent.to_invisible_type();
@@ -84,28 +82,23 @@ trait BottomUpAnalysis
 
   fn visit_non_terminal(&mut self, _parent: &Box<Expression>, _ident: Ident) {}
 
-  fn visit_semantic_action(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>, _ident: Ident)
-  {
+  fn visit_semantic_action(&mut self, _parent: &Box<Expression>,expr: &Box<Expression>, _ident: Ident) {
     self.visit_expr(expr);
   }
 
-  fn visit_syntactic_predicate(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>)
-  {
+  fn visit_syntactic_predicate(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>) {
     self.visit_expr(expr);
   }
 
-  fn all_invisible(&self, exprs: &Vec<Box<Expression>>) -> bool
-  {
+  fn all_invisible(&self, exprs: &Vec<Box<Expression>>) -> bool {
     exprs.iter().all(|expr| expr.is_invisible())
   }
 
-  fn all_unit(&self, exprs: &Vec<Box<Expression>>) -> bool
-  {
+  fn all_unit(&self, exprs: &Vec<Box<Expression>>) -> bool {
     exprs.iter().all(|expr| expr.is_unit())
   }
 
-  fn propagate_invisibility(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool
-  {
+  fn propagate_invisibility(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool {
     let all_invisible = self.all_invisible(exprs);
     if all_invisible {
       parent.to_invisible_type();
@@ -113,8 +106,7 @@ trait BottomUpAnalysis
     all_invisible
   }
 
-  fn propagate_unit(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool
-  {
+  fn propagate_unit(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool {
     let all_unit = self.all_unit(&exprs);
     if all_unit {
       parent.to_unit_type();
@@ -122,8 +114,7 @@ trait BottomUpAnalysis
     all_unit
   }
 
-  fn visit_choice(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
-  {
+  fn visit_choice(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) {
     self.visit_exprs(exprs);
     if !self.propagate_invisibility(parent, &exprs)
     {
@@ -131,8 +122,7 @@ trait BottomUpAnalysis
     }
   }
 
-  fn visit_sequence(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>)
-  {
+  fn visit_sequence(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) {
     self.visit_exprs(exprs);
     let parent_ty = parent.ty_clone();
     if let Tuple(inners) = parent_ty {
@@ -152,8 +142,7 @@ trait BottomUpAnalysis
     }
   }
 
-  fn visit_exprs(&mut self, exprs: &Vec<Box<Expression>>)
-  {
+  fn visit_exprs(&mut self, exprs: &Vec<Box<Expression>>) {
     for expr in exprs {
       self.visit_expr(expr);
     }
@@ -164,8 +153,7 @@ struct IntraRule;
 
 impl IntraRule
 {
-  pub fn propagate(rules: &HashMap<Ident, Rule>)
-  {
+  pub fn propagate(rules: &HashMap<Ident, Rule>) {
     IntraRule.visit_rules(rules);
   }
 }
@@ -180,8 +168,7 @@ struct InterRule<'a>
 
 impl<'a> InterRule<'a>
 {
-  pub fn propagate(rules: &'a HashMap<Ident, Rule>)
-  {
+  pub fn propagate(rules: &'a HashMap<Ident, Rule>) {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
       visited.insert(*id, false);
@@ -204,8 +191,7 @@ impl<'a> InterRule<'a>
 
 impl<'a> BottomUpAnalysis for InterRule<'a>
 {
-  fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident)
-  {
+  fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident) {
     let rule = self.rules.get(&id).unwrap();
     self.visit_rule(rule);
     if rule.def.is_invisible() {

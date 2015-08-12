@@ -51,11 +51,13 @@ pub struct CharacterInterval {
   pub hi: char
 }
 
-pub trait ItemIdent {
+pub trait ItemIdent
+{
   fn ident(&self) -> Ident;
 }
 
-pub trait ItemSpan {
+pub trait ItemSpan
+{
   fn span(&self) -> Span;
 }
 

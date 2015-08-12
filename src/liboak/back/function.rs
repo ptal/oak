@@ -99,7 +99,6 @@ impl<'cx> FunctionGenerator<'cx>
   }
 
   fn push_fun(&mut self, name: Ident, body: RExpr, ty: RTy, public: bool) {
-
     let pub_kw = if public {
       Some(quote_tokens!(self.cx, pub))
     } else {

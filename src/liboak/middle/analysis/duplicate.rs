@@ -83,7 +83,8 @@ struct DuplicateItem<'a, Item>
 
 impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
 {
-  pub fn analyse<ItemIter: Iterator<Item=Item>>(cx: &'a ExtCtxt<'a>, iter: ItemIter, item_kind: String) -> Partial<HashMap<Ident, Item>>
+  pub fn analyse<ItemIter: Iterator<Item=Item>>(cx: &'a ExtCtxt<'a>,
+    iter: ItemIter, item_kind: String) -> Partial<HashMap<Ident, Item>>
   {
     let (min_size, _) = iter.size_hint();
     DuplicateItem {
@@ -95,7 +96,8 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
      .make()
   }
 
-  fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter) -> DuplicateItem<'a, Item>
+  fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter)
+    -> DuplicateItem<'a, Item>
   {
     for item in iter {
       let ident = item.ident();
@@ -109,8 +111,7 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
     self
   }
 
-  fn duplicate_items(&self, pre: &Item, current: Item)
-  {
+  fn duplicate_items(&self, pre: &Item, current: Item) {
     self.cx.span_err(current.span(), format!(
       "duplicate definition of {} `{}`",
       self.what_is_duplicated, current.ident()).as_str());
@@ -119,8 +120,7 @@ impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
       self.what_is_duplicated, pre.ident()).as_str());
   }
 
-  fn make(self) -> Partial<HashMap<Ident, Item>>
-  {
+  fn make(self) -> Partial<HashMap<Ident, Item>> {
     if self.has_duplicate {
       Fake(self.items)
     } else {

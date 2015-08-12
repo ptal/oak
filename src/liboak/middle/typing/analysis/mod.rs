@@ -17,7 +17,6 @@ mod recursive_type;
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
-pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar>
-{
+pub fn analyse(cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar> {
   Partial::Value(grammar)
 }

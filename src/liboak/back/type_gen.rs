@@ -22,8 +22,7 @@ use middle::ast::EvaluationContext;
 use back::ast::*;
 use back::ast::Expression_::*;
 
-pub fn generate_rust_types(cx: &ExtCtxt, tgrammar: TGrammar) -> Grammar
-{
+pub fn generate_rust_types(cx: &ExtCtxt, tgrammar: TGrammar) -> Grammar {
   let mut grammar = Grammar {
     name: tgrammar.name,
     rules: HashMap::with_capacity(tgrammar.rules.len()),
@@ -230,8 +229,7 @@ struct RuleTyper<'a>
 
 impl<'a> RuleTyper<'a>
 {
-  fn type_rules(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, TRule>) -> HashMap<Ident, RTy>
-  {
+  fn type_rules(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, TRule>) -> HashMap<Ident, RTy> {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
       visited.insert(*id, false);
