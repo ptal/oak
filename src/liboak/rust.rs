@@ -16,6 +16,7 @@ pub use syntax::ptr::P;
 pub use syntax::ast;
 pub use syntax::ast::*;
 pub use syntax::print::pprust::*;
+pub use syntax::print::pp;
 pub use syntax::util::small_vector::SmallVector;
 pub use syntax::codemap::{DUMMY_SP, Span, Spanned, spanned, mk_sp, respan, BytePos};
 pub use syntax::ext::base::{ExtCtxt,MacResult,MacEager,DummyResult};

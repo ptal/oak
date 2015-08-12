@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use rust;
+use rust::{State, Visibility, Mod};
 use back::ast::*;
 use middle::attribute::ast::PrintAttribute;
+use std::io;
 
 pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RItem) {
   if print_attr.debug_api() {
@@ -23,22 +25,41 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
   }
   else if print_attr.show_api() {
     if let &rust::Item_::ItemMod(ref module) = &grammar_module.node {
-      let mut res = String::new();
-      for item in &module.items {
-        if item.vis == rust::Visibility::Public {
-          if let &rust::Item_::ItemFn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
-            res.extend(rust::to_string(|s| {
-              try!(s.head("\n"));
-              try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, item.vis));
-              try!(s.end());
-              s.end()
-            }).chars());
-          }
-        }
-      }
+      let res = rust::to_string(|s| {
+        print_module(s, module, grammar_module.ident, grammar_module.vis, grammar_module.span)
+      });
       cx.parse_sess.span_diagnostic.handler.note(res.as_str());
     } else {
-      panic!("Expected the grammar module.")
+      panic!("Expected the grammar module.");
     }
   }
+}
+
+fn print_module(s: &mut State, module: &Mod, ident: Ident, vis: Visibility, span: Span)
+  -> io::Result<()>
+{
+  try!(s.head(&rust::visibility_qualified(vis, "mod")));
+  try!(s.print_ident(ident));
+  try!(s.nbsp());
+  try!(s.bopen());
+
+  for item in &module.items {
+    try!(print_visible_fn(s, item));
+  }
+  s.bclose(span)
+}
+
+fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()>
+{
+  if item.vis == rust::Visibility::Public {
+    if let &rust::Item_::ItemFn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
+      try!(s.hardbreak_if_not_bol());
+      try!(s.head(""));
+      try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, item.vis));
+      try!(s.end()); // end head-ibox
+      try!(rust::pp::word(&mut s.s, ";"));
+      try!(s.end()); // end the outer fn box
+    }
+  }
+  Ok(())
 }

@@ -16,9 +16,9 @@ pub use type_name::type_name::*;
 
 grammar! type_name{
 
-  #![debug_api]
+  #![show_api]
 
-  type_names = spacing type_name (lparen type_names (comma type_names)* rparen)?
+  type_names = (spacing type_name (lparen type_names (comma type_names)* rparen)?) -> (^)
 
   type_name = auto_infer_kw &(lparen / not_eof / comma)
             / ident
