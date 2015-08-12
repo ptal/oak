@@ -14,7 +14,19 @@
 
 //! The main goal of RecursiveType is to ensure that mutual recursive rules that need to be typed can actually be typed.
 
-use middle::typing::visitor::*;
+use middle::typing::ast::*;
+use monad::partial::Partial;
+
+pub fn recursive_type_analysis(cx: &ExtCtxt, grammar: Grammar)
+  -> Partial<Grammar>
+{
+  if RecursiveType::analyse(cx, &grammar.rules) {
+    Partial::Value(grammar)
+  }
+  else {
+    Partial::Nothing
+  }
+}
 
 pub struct RecursiveType<'a>
 {
@@ -27,10 +39,10 @@ pub struct RecursiveType<'a>
 
 impl<'a> RecursiveType<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt, start_rule: Ident, rules: &'a HashMap<Ident, Rule>) -> bool {
+  fn analyse(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> bool {
     let mut inlining_loop = RecursiveType::new(cx, rules);
-    inlining_loop.visit_rule(rules.get(&start_rule).unwrap());
-    inlining_loop.cycle_detected
+    inlining_loop.visit_rules();
+    !inlining_loop.cycle_detected
   }
 
   fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a> {
@@ -47,10 +59,30 @@ impl<'a> RecursiveType<'a>
     }
   }
 
+  fn visit_rules(&mut self) {
+    for rule in self.rules.values() {
+      if self.cycle_detected {
+        break;
+      }
+      self.current_inline_path.clear();
+      self.visit_rule(rule);
+    }
+  }
+
+  fn visit_rule(&mut self, rule: &Rule) {
+    let ident = rule.name.node;
+    *self.visited.get_mut(&ident).unwrap() = true;
+    if !rule.def.is_unit() {
+      self.current_inline_path.push(ident);
+      self.visit_expr(&rule.def);
+      self.current_inline_path.pop();
+    }
+  }
+
   fn loop_detected(&mut self) {
     self.cycle_detected = true;
     let in_cycle = self.current_inline_path.pop().unwrap();
-    // Consider the smallest cycle.
+    // Consider the smallest cycle which is garantee since we extract the element that closed the cycle.
     let mut trimmed_cycle = vec![in_cycle];
     for id in self.current_inline_path.iter().rev() {
       if *id == in_cycle {
@@ -58,39 +90,31 @@ impl<'a> RecursiveType<'a>
       }
       trimmed_cycle.push(id.clone());
     }
+
     self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. \
       The type of a rule must be inlined into itself (indirectly or not), which is impossible.");
-    self.cx.span_note(self.rules.get(&in_cycle).unwrap().name.span, "Recursive data type are not handled automatically, \
-      you must create it yourself with a semantic action and a function. If you don't care about the value of this rule,
-      annotate it with #[invisible_type].");
-    for cycle_node in trimmed_cycle.iter().rev() {
-      self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span, "This rule is in the inlining loop.");
+    for cycle_node in trimmed_cycle.iter() {
+      self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span,
+        "This rule is part of the recursive type.");
     }
+    self.cx.parse_sess.span_diagnostic.handler.note("Recursive data types are not handled automatically, \
+      you must create it yourself with a semantic action.\nIf you don't care about the value of this rule, \
+      annotate it with `rule = (e) -> ()` or annotate leaf rules that produce values with `rule = (e) -> (^)`.");
   }
 }
 
-impl<'a> Visitor for RecursiveType<'a>
+impl<'a> Visitor<Expression, ()> for RecursiveType<'a>
 {
-  fn visit_rule(&mut self, rule: &Rule) {
-    let ident = rule.name.node.clone();
-    *self.visited.get_mut(&ident).unwrap() = true;
-    if rule.is_inline() {
-      self.current_inline_path.push(ident);
-      walk_rule(self, rule);
-      self.current_inline_path.pop();
-    } else {
-      let current_inline_path = self.current_inline_path.clone();
-      self.current_inline_path.clear();
-      walk_rule(self, rule);
-      self.current_inline_path = current_inline_path;
-    }
-  }
+  unit_visitor_impl!(Expression, str_literal);
+  unit_visitor_impl!(Expression, character);
+  unit_visitor_impl!(Expression, sequence);
+  unit_visitor_impl!(Expression, choice);
 
-  fn visit_non_terminal_symbol(&mut self, _sp: Span, ident: Ident) {
+  fn visit_non_terminal_symbol(&mut self, _parent: &Box<Expression>, ident: Ident) {
     if !self.cycle_detected {
       let rule = self.rules.get(&ident).unwrap();
-      let ident = rule.name.node.clone();
-      if rule.is_inline() && self.current_inline_path.contains(&ident) {
+      let ident = rule.name.node;
+      if !rule.def.is_unit() && self.current_inline_path.contains(&ident) {
         self.current_inline_path.push(ident);
         self.loop_detected();
       }
@@ -100,11 +124,15 @@ impl<'a> Visitor for RecursiveType<'a>
     }
   }
 
-  // Semantic action breaks cycles because the action is already typed by the user.
-  // character, unit and unit_propagate do not generate loops (trivial cases).
+  // Base case: Expression with a unit type does not generate a recursive type.
   fn visit_expr(&mut self, expr: &Box<Expression>) {
-    if !expr.ty.borrow().is_leaf() {
+    if !expr.is_unit() {
       walk_expr(self, expr);
     }
   }
+
+  // Base case: Semantic actions always have type given by the user, so recursivity is handled by the user.
+  fn visit_semantic_action(&mut self, _parent: &Box<Expression>,
+    _expr: &Box<Expression>, _id: Ident)
+  {}
 }

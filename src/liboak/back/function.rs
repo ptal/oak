@@ -98,6 +98,7 @@ impl<'cx> FunctionGenerator<'cx>
     self.name_factory.names_of_rule(rule_id)
   }
 
+  #[allow(unused_imports)] // `quote_tokens` generates a warning.
   fn push_fun(&mut self, name: Ident, body: RExpr, ty: RTy, public: bool) {
     let pub_kw = if public {
       Some(quote_tokens!(self.cx, pub))

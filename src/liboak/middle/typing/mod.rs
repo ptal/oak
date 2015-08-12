@@ -17,16 +17,17 @@ use middle::typing::bottom_up_unit::*;
 use middle::typing::top_down_unit::*;
 // use middle::typing::printer::*;
 use middle::typing::ast::*;
+use middle::typing::recursive_type::*;
 use monad::partial::Partial;
 
 pub mod ast;
 mod inference;
 mod bottom_up_unit;
 mod top_down_unit;
+mod recursive_type;
 // mod printer;
-// mod analysis;
 
-pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar> {
+pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar> {
   let mut grammar = Grammar {
     name: agrammar.name,
     rules: HashMap::with_capacity(agrammar.rules.len()),
@@ -37,9 +38,5 @@ pub fn type_inference(agrammar: AGrammar) -> Partial<Grammar> {
   bottom_up_unit_inference(&mut grammar);
   top_down_unit_inference(&mut grammar);
   // print_annotated_rules(&grammar);
-  Partial::Value(grammar)
-}
-
-pub fn type_analysis(_cx: &ExtCtxt, grammar: Grammar) -> Partial<Grammar> {
-  Partial::Value(grammar)
+  recursive_type_analysis(cx, grammar)
 }

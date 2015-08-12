@@ -21,8 +21,9 @@ grammar! ntcc{
 
   ntcc = spacing expression
 
-  expression
-    = (sum
+  expression = expression2 -> (^)
+  expression2
+    = sum
     / par
     / tell
     / next
@@ -30,7 +31,7 @@ grammar! ntcc{
     / rep
     / unless
     / let_in
-    / skip_kw) -> (^)
+    / skip_kw
 
   sum
     = pick_kw or? when sum_body* end_kw?

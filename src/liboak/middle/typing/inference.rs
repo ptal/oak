@@ -109,7 +109,7 @@ impl<'r> InferenceEngine<'r>
 
   fn infer_rule_type_ph(&self, sp: Span, ident: Ident) -> Box<Expression> {
     box Expression::new(sp,
-      NonTerminalSymbol(ident.clone()),
+      NonTerminalSymbol(ident),
       Identity)
   }
 

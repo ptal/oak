@@ -30,8 +30,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
 
   Partial::Value(fgrammar)
     .and_then(|grammar| analysis::analyse(cx, grammar))
-    .and_then(|grammar| typing::type_inference(grammar))
-    .and_then(|grammar| typing::type_analysis(cx, grammar))
+    .and_then(|grammar| typing::type_inference(cx, grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool {
