@@ -289,6 +289,7 @@ impl<'a> Visitor<RTy> for RuleTyper<'a>
   fn visit_non_terminal_symbol(&mut self, _parent: &Box<TExpression>, id: Ident) -> RTy {
     let rule = self.rules.get(&id).unwrap();
     self.visit_rule(rule);
+    debug_assert!(self.rules_ty.contains_key(&id), "Try to use a type not yet computed. Probably a recursive type loop.");
     self.rules_ty[&id].clone()
   }
 

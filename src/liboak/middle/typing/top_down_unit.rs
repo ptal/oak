@@ -51,6 +51,9 @@ impl ExpressionVisitor
       expr.context = context.merge(UnValued);
       context = UnValued;
     }
+    else {
+      expr.context = context;
+    }
     ExpressionVisitor::visit_expr_node(&mut expr.node, context);
   }
 

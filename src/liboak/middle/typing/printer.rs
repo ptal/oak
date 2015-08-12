@@ -33,7 +33,7 @@ impl Printer
 
   fn visit_grammar(&mut self, grammar: &Grammar)
   {
-    println!("Grammar: {}", grammar.name.as_str());
+    println!("Grammar: {}", grammar.name);
     self.visit_rules(&grammar.rules);
   }
 
@@ -46,6 +46,6 @@ impl Printer
 
   fn visit_rule(&mut self, rule: &Rule)
   {
-    println!("{}:({:?}, {:?})", rule.name.node.as_str(), rule.def.ty, rule.def.context);
+    println!("{}:({:?}, {:?})", rule.name.node, rule.def.ty, rule.def.context);
   }
 }

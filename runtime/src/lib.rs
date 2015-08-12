@@ -24,6 +24,7 @@ pub struct ParseState<T>
 
 impl<T> ParseState<T>
 {
+  #[inline]
   pub fn new(data: T, offset: usize) -> ParseState<T>
   {
     ParseState {
