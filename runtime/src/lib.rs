@@ -25,8 +25,7 @@ pub struct ParseState<T>
 impl<T> ParseState<T>
 {
   #[inline]
-  pub fn new(data: T, offset: usize) -> ParseState<T>
-  {
+  pub fn new(data: T, offset: usize) -> ParseState<T> {
     ParseState {
       data: data,
       offset: offset
@@ -37,35 +36,30 @@ impl<T> ParseState<T>
 impl ParseState<()>
 {
   #[inline]
-  pub fn stateless(offset: usize) -> ParseState<()>
-  {
+  pub fn stateless(offset: usize) -> ParseState<()> {
     ParseState::new((), offset)
   }
 
   #[inline]
-  pub fn erase<T>(source: ParseState<T>) -> ParseState<()>
-  {
+  pub fn erase<T>(source: ParseState<T>) -> ParseState<()> {
     ParseState {
       data: (),
       offset: source.offset
     }
   }
 
-  pub fn full_read(&self, input: &str) -> bool
-  {
+  pub fn full_read(&self, input: &str) -> bool {
     debug_assert!(self.offset <= input.len());
     self.offset == input.len()
   }
 
-  pub fn partial_read(&self, input: &str) -> bool
-  {
+  pub fn partial_read(&self, input: &str) -> bool {
     !self.full_read(input)
   }
 }
 
 #[inline]
-pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char>
-{
+pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char> {
   if offset < input.len() {
     let any = input.char_at(offset);
     Ok(ParseState::new(any, offset + any.len_utf8()))
@@ -75,8 +69,7 @@ pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char>
 }
 
 #[inline]
-pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseResult<()>
-{
+pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseResult<()> {
   parse_any_single_char(input, offset).map(|state| ParseState::erase(state))
 }
 

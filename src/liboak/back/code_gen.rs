@@ -26,7 +26,8 @@ use back::code_printer::*;
 
 use std::iter::*;
 
-pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
+pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar)
+  -> Box<rust::MacResult + 'cx>
 {
   CodeGenerator::compile(cx, grammar)
 }
@@ -50,8 +51,7 @@ struct CodeGenerator<'cx>
 
 impl<'cx> CodeGenerator<'cx>
 {
-  fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx>
-  {
+  fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx> {
     let mut compiler = CodeGenerator {
       cx: cx,
       function_gen: FunctionGenerator::new(cx),
@@ -60,16 +60,14 @@ impl<'cx> CodeGenerator<'cx>
     compiler.compile_peg(&grammar)
   }
 
-  fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx>
-  {
+  fn compile_peg(&mut self, grammar: &Grammar) -> Box<rust::MacResult + 'cx> {
     let parser = self.compile_parser(grammar);
     let grammar_module = self.compile_grammar_module(grammar, parser);
     print_code(self.cx, grammar.attributes.print_attr, &grammar_module);
     rust::MacEager::items(rust::SmallVector::one(grammar_module))
   }
 
-  fn compile_grammar_module(&self, grammar: &Grammar, parser: Vec<RItem>) -> RItem
-  {
+  fn compile_grammar_module(&self, grammar: &Grammar, parser: Vec<RItem>) -> RItem {
     let grammar_name = grammar.name;
     let grammar_module = quote_item!(self.cx,
       pub mod $grammar_name
@@ -85,8 +83,7 @@ impl<'cx> CodeGenerator<'cx>
 
   // RUST BUG: We cannot quote `extern crate oak_runtime;` before the grammar module, so we use this workaround
   // for adding the external crate after the creation of the module.
-  fn insert_runtime_crate(&self, grammar_module: RItem) -> RItem
-  {
+  fn insert_runtime_crate(&self, grammar_module: RItem) -> RItem {
     let runtime_crate = quote_item!(self.cx,
       extern crate oak_runtime;
     ).expect("Quote the extern PEG crate.");
@@ -111,8 +108,7 @@ impl<'cx> CodeGenerator<'cx>
     }
   }
 
-  fn compile_parser(&mut self, grammar: &Grammar) -> Vec<RItem>
-  {
+  fn compile_parser(&mut self, grammar: &Grammar) -> Vec<RItem> {
     self.compile_rules(grammar);
     let mut rust_code: Vec<RItem> = grammar.rust_items.values().cloned().collect();
     rust_code.extend(self.function_gen.code().into_iter());
@@ -127,8 +123,7 @@ impl<'cx> CodeGenerator<'cx>
     }
   }
 
-  fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_expression(&mut self, expr: &Box<Expression>) -> GenFunNames {
     match &expr.node {
       &StrLiteral(ref lit_str) => {
         self.compile_str_literal(expr, lit_str)
@@ -169,27 +164,23 @@ impl<'cx> CodeGenerator<'cx>
     }
   }
 
-  fn compile_exprs(&mut self, exprs: &[Box<Expression>]) -> Vec<GenFunNames>
-  {
+  fn compile_exprs(&mut self, exprs: &[Box<Expression>]) -> Vec<GenFunNames> {
     let res: Vec<_> = exprs.iter().map(|expr| self.compile_expression(expr)).collect();
     res
   }
 
-  fn compile_non_terminal_symbol(&mut self, rule_id: Ident) -> GenFunNames
-  {
+  fn compile_non_terminal_symbol(&mut self, rule_id: Ident) -> GenFunNames {
     self.function_gen.names_of_rule(rule_id)
   }
 
-  fn compile_any_single_char(&mut self, parent: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_any_single_char(&mut self, parent: &Box<Expression>) -> GenFunNames {
     self.function_gen.generate_expr("any_single_char", self.current_rule_name, parent.kind(),
       quote_expr!(self.cx, oak_runtime::recognize_any_single_char(input, pos)),
       quote_expr!(self.cx, oak_runtime::parse_any_single_char(input, pos))
     )
   }
 
-  fn compile_str_literal(&mut self, parent: &Box<Expression>, lit_str: &String) -> GenFunNames
-  {
+  fn compile_str_literal(&mut self, parent: &Box<Expression>, lit_str: &String) -> GenFunNames {
     let lit_str = lit_str.as_str();
     let lit_len = lit_str.len();
     self.function_gen.generate_expr("str_literal", self.current_rule_name, parent.kind(),
@@ -198,8 +189,7 @@ impl<'cx> CodeGenerator<'cx>
     )
   }
 
-  fn compile_character_class(&mut self, parent: &Box<Expression>, classes: &CharacterClassExpr) -> GenFunNames
-  {
+  fn compile_character_class(&mut self, parent: &Box<Expression>, classes: &CharacterClassExpr) -> GenFunNames {
     let cx = self.cx;
     let mut seq_it = classes.intervals.iter();
 
@@ -227,8 +217,7 @@ impl<'cx> CodeGenerator<'cx>
     )
   }
 
-  fn compile_not_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_not_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let recognizer_name = self.compile_expression(expr).recognizer;
     let body = quote_expr!(self.cx,
       oak_runtime::not_predicate($recognizer_name(input, pos), pos)
@@ -237,8 +226,7 @@ impl<'cx> CodeGenerator<'cx>
       "not_predicate", self.current_rule_name, parent.kind(), body)
   }
 
-  fn compile_and_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_and_predicate(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let recognizer_name = self.compile_expression(expr).recognizer;
     let body = quote_expr!(self.cx,
       oak_runtime::and_predicate($recognizer_name(input, pos), pos)
@@ -247,8 +235,7 @@ impl<'cx> CodeGenerator<'cx>
       "and_predicate", self.current_rule_name, parent.kind(), body)
   }
 
-  fn compile_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let GenFunNames{recognizer, parser} = self.compile_expression(expr);
     let recognizer_body = quote_expr!(self.cx,
       oak_runtime::optional_recognizer($recognizer(input, pos), pos)
@@ -261,51 +248,14 @@ impl<'cx> CodeGenerator<'cx>
       parser_body)
   }
 
-  fn compile_star(&mut self, parent: &Box<Expression>, expr: &Box<Expression>,
-    recognizer_res: RExpr, parser_res: RExpr) -> GenFunNames
-  {
-    let GenFunNames{recognizer, parser} = self.compile_expression(expr);
-
-    let recognizer_body = quote_expr!(self.cx, {
-      let mut current = pos;
-      while current < input.len() {
-        match $recognizer(input, current) {
-          Ok(state) => { current = state.offset; }
-          _ => break
-        }
-      }
-      $recognizer_res
-    });
-
-    let parser_body = quote_expr!(self.cx, {
-      let mut data = vec![];
-      let mut current = pos;
-      while current < input.len() {
-        match $parser(input, current) {
-          Ok(state) => {
-            data.push(state.data);
-            current = state.offset;
-          }
-          _ => break
-        }
-      }
-      $parser_res
-    });
-    self.function_gen.generate_expr("star", self.current_rule_name, parent.kind(),
-      recognizer_body,
-      parser_body)
-  }
-
-  fn compile_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let cx = self.cx;
     self.compile_star(parent, expr,
       quote_expr!(cx, Ok(oak_runtime::ParseState::stateless(current))),
       quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current))))
   }
 
-  fn compile_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames
-  {
+  fn compile_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let cx = self.cx;
     let make_result = |res:RExpr| {
       quote_expr!(cx, {
@@ -321,66 +271,116 @@ impl<'cx> CodeGenerator<'cx>
       make_result(quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current)))))
   }
 
-  fn compile_sequence(&mut self, parent: &Box<Expression>, seq: &[Box<Expression>]) -> GenFunNames
+  fn compile_star(&mut self, parent: &Box<Expression>, expr: &Box<Expression>,
+    recognizer_res: RExpr, parser_res: RExpr) -> GenFunNames
   {
-    let seq = self.compile_exprs(seq);
+    let GenFunNames{recognizer, parser} = self.compile_expression(expr);
+    let recognizer_body = self.compile_star_recognizer_body(recognizer, recognizer_res);
+    let parser_body = self.compile_star_parser_body(parser, parser_res);
+    self.function_gen.generate_expr("star", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
+  }
 
-    let cx = self.cx;
-    let recognizer_body = map_foldr(seq.clone(),
-      quote_expr!(cx, Ok(state)),
+  fn compile_star_recognizer_body(&self, expr_recognizer: Ident, result: RExpr) -> RExpr {
+    quote_expr!(self.cx, {
+      let mut current = pos;
+      while current < input.len() {
+        match $expr_recognizer(input, current) {
+          Ok(state) => { current = state.offset; }
+          _ => break
+        }
+      }
+      $result
+    })
+  }
+
+  fn compile_star_parser_body(&self, expr_parser: Ident, result: RExpr) -> RExpr {
+    quote_expr!(self.cx, {
+      let mut data = vec![];
+      let mut current = pos;
+      while current < input.len() {
+        match $expr_parser(input, current) {
+          Ok(state) => {
+            data.push(state.data);
+            current = state.offset;
+          }
+          _ => break
+        }
+      }
+      $result
+    })
+  }
+
+  fn compile_sequence(&mut self, parent: &Box<Expression>, seq: &[Box<Expression>]) -> GenFunNames {
+    let exprs = self.compile_exprs(seq);
+
+    let recognizer_body = self.compile_sequence_recognizer_body(exprs.clone());
+    let parser_body = self.compile_sequence_parser_body(parent, exprs);
+
+    self.function_gen.generate_expr("sequence", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
+  }
+
+  fn compile_sequence_recognizer_body(&self, exprs: Vec<GenFunNames>) -> RExpr {
+    map_foldr(exprs,
+      quote_expr!(self.cx, Ok(state)),
       |name| name.recognizer,
       |accu: RExpr, name: Ident| {
-        quote_expr!(cx, $name(input, pos).and_then(|state| {
+        quote_expr!(self.cx, $name(input, pos).and_then(|state| {
           let pos = state.offset;
           $accu
         }))
       }
-    );
+    )
+  }
 
-    let state_names: Vec<Ident> = seq.iter().enumerate()
+  fn compile_sequence_parser_body(&self, parent: &Box<Expression>, exprs: Vec<GenFunNames>) -> RExpr {
+    let state_names: Vec<Ident> = exprs.iter().enumerate()
       .map(|(idx, _)| {
         rust::gensym_ident(format!("state{}", idx).as_str())
       })
       .rev()
       .collect();
 
-    let tuple_indexes = parent.tuple_indexes();
+    let return_value = self.compile_sequence_result(parent, &state_names);
 
-    let mut tuple_result: Vec<RExpr> = tuple_indexes.into_iter()
-      .map(|idx| state_names[idx])
-      .map(|name| quote_expr!(cx, $name.data))
-      .collect();
-
-    let value =
-      if tuple_result.len() == 1 {
-        tuple_result.pop().unwrap()
-      } else {
-        cx.expr_tuple(parent.span, tuple_result)
-      };
-    let value = quote_expr!(cx, Ok(oak_runtime::ParseState::new($value, pos)));
-
-    let parser_body = map_foldr(seq,
-      (value, state_names.len()),
+    map_foldr(exprs,
+      (return_value, state_names.len()),
       |name| name.parser,
       |(accu, state_idx): (RExpr, usize), name: Ident| {
         let state_idx = state_idx - 1;
         let state_name = state_names[state_idx];
         (
-          quote_expr!(cx, $name(input, pos).and_then(|$state_name| {
+          quote_expr!(self.cx, $name(input, pos).and_then(|$state_name| {
             let pos = $state_name.offset;
             $accu
           })),
           state_idx
         )
       }
-    ).0;
-    self.function_gen.generate_expr("sequence", self.current_rule_name, parent.kind(),
-      recognizer_body,
-      parser_body)
+    ).0
   }
 
-  fn compile_choice(&mut self, parent: &Box<Expression>, choices: &[Box<Expression>]) -> GenFunNames
-  {
+  fn compile_sequence_result(&self, parent: &Box<Expression>, state_names: &Vec<Ident>) -> RExpr {
+    let tuple_indexes = parent.tuple_indexes();
+
+    let mut tuple_result: Vec<RExpr> = tuple_indexes.into_iter()
+      .map(|idx| state_names[idx])
+      .map(|name| quote_expr!(self.cx, $name.data))
+      .collect();
+
+    let result =
+      if tuple_result.len() == 1 {
+        tuple_result.pop().unwrap()
+      } else {
+        self.cx.expr_tuple(parent.span, tuple_result)
+      };
+    quote_expr!(self.cx, Ok(oak_runtime::ParseState::new($result, pos)))
+  }
+
+  fn compile_choice(&mut self, parent: &Box<Expression>, choices: &[Box<Expression>]) -> GenFunNames {
     let choices = self.compile_exprs(choices);
 
     let cx = self.cx;
@@ -403,7 +403,8 @@ impl<'cx> CodeGenerator<'cx>
       parser_body)
   }
 
-  fn compile_semantic_action(&mut self, parent: &Box<Expression>, expr: &Box<Expression>, action_name: Ident) -> GenFunNames
+  fn compile_semantic_action(&mut self, parent: &Box<Expression>,
+    expr: &Box<Expression>, action_name: Ident) -> GenFunNames
   {
     let GenFunNames{recognizer, parser} = self.compile_expression(expr);
 
@@ -411,6 +412,21 @@ impl<'cx> CodeGenerator<'cx>
       $recognizer(input, pos)
     );
 
+    let action_call = self.compile_semantic_action_call(parent, expr, action_name);
+    let parser_body = quote_expr!(self.cx,
+      $parser(input, pos).map(|state| {
+        let data = $action_call;
+        oak_runtime::ParseState::new(data, state.offset)
+      })
+    );
+    self.function_gen.generate_expr("semantic_action", self.current_rule_name, parent.kind(),
+      recognizer_body,
+      parser_body)
+  }
+
+  fn compile_semantic_action_call(&self, parent: &Box<Expression>,
+    expr: &Box<Expression>, action_name: Ident) -> RExpr
+  {
     let ty = expr.ty.clone();
     let state_data = quote_expr!(self.cx, state.data);
     let action_params = match ty {
@@ -426,17 +442,6 @@ impl<'cx> CodeGenerator<'cx>
         vec![state_data]
       }
     };
-
-    let action_call = self.cx.expr_call_ident(parent.span, action_name, action_params);
-
-    let parser_body = quote_expr!(self.cx,
-      $parser(input, pos).map(|state| {
-        let data = $action_call;
-        oak_runtime::ParseState::new(data, state.offset)
-      })
-    );
-    self.function_gen.generate_expr("semantic_action", self.current_rule_name, parent.kind(),
-      recognizer_body,
-      parser_body)
+    self.cx.expr_call_ident(parent.span, action_name, action_params)
   }
 }

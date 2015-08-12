@@ -34,8 +34,7 @@ pub struct Expression
 
 impl ExprNode for Expression
 {
-  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
-  {
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode {
     &self.node
   }
 }
