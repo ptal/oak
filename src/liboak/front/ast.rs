@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use rust::{SpannedIdent, Spanned, Span, Attribute, BytePos, mk_sp};
-pub use identifier::*;
+pub use ast::*;
 use rust;
 
 pub struct Grammar{
@@ -28,33 +28,6 @@ pub struct Rule{
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
   pub def: Box<Expression>
-}
-
-#[derive(Clone)]
-pub enum Expression_<SubExpr>{
-  StrLiteral(String), // "match me"
-  AnySingleChar, // .
-  CharacterClass(CharacterClassExpr), // [0-9]
-  NonTerminalSymbol(Ident), // a_rule
-  Sequence(Vec<Box<SubExpr>>), // a_rule next_rule
-  Choice(Vec<Box<SubExpr>>), // try_this / or_try_this_one
-  ZeroOrMore(Box<SubExpr>), // space*
-  OneOrMore(Box<SubExpr>), // space+
-  Optional(Box<SubExpr>), // space?
-  NotPredicate(Box<SubExpr>), // !space
-  AndPredicate(Box<SubExpr>), // &space
-  SemanticAction(Box<SubExpr>, Ident) // rule > function
-}
-
-#[derive(Clone)]
-pub struct CharacterClassExpr {
-  pub intervals: Vec<CharacterInterval>
-}
-
-#[derive(Clone)]
-pub struct CharacterInterval {
-  pub lo: char,
-  pub hi: char
 }
 
 #[derive(Clone)]

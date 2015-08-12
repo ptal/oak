@@ -24,6 +24,7 @@ use rustc::plugin::Registry;
 use front::parser;
 use monad::partial::Partial;
 
+mod ast;
 mod front;
 mod middle;
 mod back;
