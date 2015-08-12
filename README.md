@@ -3,33 +3,40 @@
 ## Super quick example
 
 ```rust
-peg!{
-  grammar calculator;
+grammar! calculator{
+  #![show_api]
 
-  #[start]
   expression = sum
 
-  sum = product ("+" product)* > add
+  sum
+    = product ("+" product)* > add
 
-  product = value ("*" value)* > mult
+  product
+    = value ("*" value)* > mult
 
   value
     = ["0-9"]+ > to_digit
     / "(" expression ")"
 
-  fn add(x: u32, rest: Vec<u32>) -> u32 {
+  pub type Digit = u32;
+
+  fn add(x: Digit, rest: Vec<Digit>) -> Digit {
     rest.iter().fold(x, |x,y| x+y)
   }
 
-  fn mult(x: u32, rest: Vec<u32>) -> u32 {
+  fn mult(x: Digit, rest: Vec<Digit>) -> Digit {
     rest.iter().fold(x, |x,y| x*y)
   }
 
-  fn to_digit(raw_text: Vec<char>) -> u32 {
+  fn to_digit(raw_text: Vec<char>) -> Digit {
     use std::str::FromStr;
     let text: String = raw_text.into_iter().collect();
     u32::from_str(&*text).unwrap()
   }
+}
+
+fn main() {
+  assert_eq!(calculator::parse_expression("7+(7*2)", 0).unwrap().data, 21);
 }
 ```
 
