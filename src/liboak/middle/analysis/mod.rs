@@ -25,7 +25,6 @@ mod duplicate_rust_item;
 mod undeclared_rule;
 mod undeclared_action;
 pub mod ast;
-pub mod visitor;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar>
 {

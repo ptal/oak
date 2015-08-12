@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-use middle::analysis::visitor::*;
+use middle::analysis::ast::*;
 use monad::partial::Partial::*;
 use std::collections::HashMap;
 
@@ -42,17 +42,24 @@ impl<'a> UndeclaredRule<'a>
       rules: &grammar.rules,
       has_undeclared: false
     };
-    analyser.visit_grammar(grammar);
+    for rule in grammar.rules.values() {
+      analyser.visit_expr(&rule.def);
+    }
     analyser.has_undeclared
   }
 }
 
-impl<'a> Visitor for UndeclaredRule<'a>
+impl<'a> Visitor<Expression, ()> for UndeclaredRule<'a>
 {
-  fn visit_non_terminal_symbol(&mut self, sp: Span, id: Ident)
+  unit_visitor_impl!(Expression, str_literal);
+  unit_visitor_impl!(Expression, character);
+  unit_visitor_impl!(Expression, sequence);
+  unit_visitor_impl!(Expression, choice);
+
+  fn visit_non_terminal_symbol(&mut self, parent: &Box<Expression>, id: Ident)
   {
     if !self.rules.contains_key(&id) {
-      self.cx.span_err(sp, "Undeclared rule.");
+      self.cx.span_err(parent.span, "Undeclared rule.");
       self.has_undeclared = true;
     }
   }

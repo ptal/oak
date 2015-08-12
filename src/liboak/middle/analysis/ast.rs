@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use front::ast::{Expression_, Expression, CharacterInterval, CharacterClassExpr};
-pub use front::ast::Expression_::*;
+pub use ast::*;
+pub use front::ast::{Expression, Rule};
 
 pub use rust::{ExtCtxt,P,Item,Attribute};
-pub use identifier::*;
-pub use front::ast::Rule;
 pub use monad::partial::Partial;
 
 use front::ast::Grammar as FGrammar;

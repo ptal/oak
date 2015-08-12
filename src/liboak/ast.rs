@@ -14,6 +14,9 @@
 
 //! AST of a PEG expression that is shared across all the compiling steps.
 
+
+#![macro_use]
+
 pub use identifier::*;
 
 #[derive(Clone, Debug)]
@@ -56,7 +59,6 @@ pub trait Visitor<Node: ExprNode, R>
 
   fn visit_str_literal(&mut self, _parent: &Box<Node>, _lit: &String) -> R;
   fn visit_non_terminal_symbol(&mut self, _parent: &Box<Node>, _id: Ident) -> R;
-
   fn visit_character(&mut self, _parent: &Box<Node>) -> R;
 
   fn visit_any_single_char(&mut self, parent: &Box<Node>) -> R {
@@ -101,6 +103,23 @@ pub trait Visitor<Node: ExprNode, R>
   fn visit_semantic_action(&mut self, _parent: &Box<Node>, expr: &Box<Node>, _id: Ident) -> R {
     walk_expr(self, expr)
   }
+}
+
+/// We need this macro for factorizing the code since we can not specialize a trait on specific type parameter (we would need to specialize on `()` here).
+macro_rules! unit_visitor_impl {
+  ($Node:ty, str_literal) => (fn visit_str_literal(&mut self, _parent: &Box<$Node>, _lit: &String) -> () {});
+  ($Node:ty, non_terminal) => (fn visit_non_terminal_symbol(&mut self, _parent: &Box<$Node>, _id: Ident) -> () {});
+  ($Node:ty, character) => (fn visit_character(&mut self, _parent: &Box<$Node>) -> () {});
+  ($Node:ty, sequence) => (
+    fn visit_sequence(&mut self, _parent: &Box<$Node>, exprs: &Vec<Box<$Node>>) -> () {
+      walk_exprs(self, exprs);
+    }
+  );
+  ($Node:ty, choice) => (
+    fn visit_choice(&mut self, _parent: &Box<$Node>, exprs: &Vec<Box<$Node>>) -> () {
+      walk_exprs(self, exprs);
+    }
+  );
 }
 
 pub fn walk_expr<Node, R, V: ?Sized>(visitor: &mut V, parent: &Box<Node>) -> R where

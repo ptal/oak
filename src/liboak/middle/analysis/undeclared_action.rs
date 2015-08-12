@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::analysis::visitor::*;
+use middle::analysis::ast::*;
 use monad::partial::Partial::*;
-
 
 pub struct UndeclaredAction<'a>
 {
@@ -41,17 +40,25 @@ impl<'a> UndeclaredAction<'a>
       grammar: grammar,
       has_undeclared: false
     };
-    analyser.visit_grammar(grammar);
+    for rule in grammar.rules.values() {
+      analyser.visit_expr(&rule.def);
+    }
     analyser.has_undeclared
   }
 }
 
-impl<'a> Visitor for UndeclaredAction<'a>
+impl<'a> Visitor<Expression, ()> for UndeclaredAction<'a>
 {
-  fn visit_semantic_action(&mut self, sp: Span, _expr: &Box<Expression>, id: Ident)
+  unit_visitor_impl!(Expression, str_literal);
+  unit_visitor_impl!(Expression, character);
+  unit_visitor_impl!(Expression, sequence);
+  unit_visitor_impl!(Expression, choice);
+  unit_visitor_impl!(Expression, non_terminal);
+
+  fn visit_semantic_action(&mut self, parent: &Box<Expression>, _expr: &Box<Expression>, id: Ident)
   {
     if !self.grammar.rust_items.contains_key(&id) {
-      self.cx.span_err(sp, "Undeclared action. This must be a function declared in the grammar scope.");
+      self.cx.span_err(parent.span, "Undeclared action. This must be a function declared in the grammar scope.");
       self.has_undeclared = true;
     }
   }
