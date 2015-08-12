@@ -13,15 +13,12 @@
 // limitations under the License.
 
 use middle::analysis::ast::*;
-use middle::analysis::duplicate_rule::*;
-use middle::analysis::duplicate_rust_item::*;
+use middle::analysis::duplicate::*;
 use middle::analysis::undeclared_rule::*;
 use middle::analysis::undeclared_action::*;
 use front::ast::Grammar as FGrammar;
 
 mod duplicate;
-mod duplicate_rule;
-mod duplicate_rust_item;
 mod undeclared_rule;
 mod undeclared_action;
 pub mod ast;

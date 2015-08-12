@@ -20,11 +20,25 @@ use middle::analysis::ast::*;
 use monad::partial::Partial::*;
 use std::ops::Deref;
 
-pub trait ItemIdent {
+pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
+  rules: Vec<Rule>) -> Partial<Grammar>
+{
+  DuplicateItem::analyse(cx, rules.into_iter(), String::from("rule"))
+    .map(move |rules| grammar.with_rules(rules))
+}
+
+pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar,
+  items: Vec<P<Item>>) -> Partial<Grammar>
+{
+  DuplicateItem::analyse(cx, items.into_iter(), String::from("rust item"))
+    .map(move |rust_items| grammar.with_rust_items(rust_items))
+}
+
+trait ItemIdent {
   fn ident(&self) -> Ident;
 }
 
-pub trait ItemSpan {
+trait ItemSpan {
   fn span(&self) -> Span;
 }
 
@@ -64,7 +78,7 @@ impl ItemSpan for Rule {
   }
 }
 
-pub struct DuplicateItem<'a, Item>
+struct DuplicateItem<'a, Item>
 {
   cx: &'a ExtCtxt<'a>,
   items: HashMap<Ident, Item>,
