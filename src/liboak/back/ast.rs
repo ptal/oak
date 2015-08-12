@@ -12,17 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust;
-use back::ast::FunctionKind::*;
-
+pub use ast::*;
+pub use middle::ast::{Grammar_, Rule_, ExprTy};
 pub use std::collections::HashMap;
 pub use rust::{ExtCtxt, Spanned, SpannedIdent};
-pub use middle::ast::{Grammar_, Rule_, ExprTy};
-pub use ast::*;
 
-pub type RTy = rust::P<rust::Ty>;
-pub type RExpr = rust::P<rust::Expr>;
-pub type RItem = rust::P<rust::Item>;
+use back::ast::FunctionKind::*;
 
 pub type Grammar = Grammar_<Expression>;
 pub type Rule = Rule_<Expression>;

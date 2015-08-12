@@ -53,7 +53,7 @@ impl<'a> Parser<'a>
     self.rp.bump().unwrap()
   }
 
-  fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<rust::P<rust::Item>>)
+  fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<RItem>)
   {
     let mut rules = vec![];
     let mut rust_items = vec![];

@@ -19,6 +19,11 @@
 pub use identifier::*;
 pub use rust::Span;
 
+use rust;
+pub type RTy = rust::P<rust::Ty>;
+pub type RExpr = rust::P<rust::Expr>;
+pub type RItem = rust::P<rust::Item>;
+
 #[derive(Clone, Debug)]
 pub enum Expression_<SubExpr>{
   StrLiteral(String), // "match me"

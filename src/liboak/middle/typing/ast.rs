@@ -32,7 +32,7 @@ pub struct Grammar_<Expr>
 {
   pub name: Ident,
   pub rules: HashMap<Ident, Rule_<Expr>>,
-  pub rust_items: HashMap<Ident, rust::P<rust::Item>>,
+  pub rust_items: HashMap<Ident, RItem>,
   pub attributes: GrammarAttributes
 }
 

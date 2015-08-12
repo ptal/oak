@@ -85,8 +85,7 @@ impl<'cx> CodeGenerator<'cx>
 
   // RUST BUG: We cannot quote `extern crate oak_runtime;` before the grammar module, so we use this workaround
   // for adding the external crate after the creation of the module.
-  fn insert_runtime_crate(&self, grammar_module: RItem)
-    -> rust::P<rust::Item>
+  fn insert_runtime_crate(&self, grammar_module: RItem) -> RItem
   {
     let runtime_crate = quote_item!(self.cx,
       extern crate oak_runtime;

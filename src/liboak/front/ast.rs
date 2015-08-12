@@ -14,12 +14,11 @@
 
 pub use rust::{SpannedIdent, Spanned, Attribute, BytePos, mk_sp};
 pub use ast::*;
-use rust;
 
 pub struct Grammar{
   pub name: Ident,
   pub rules: Vec<Rule>,
-  pub rust_items: Vec<rust::P<rust::Item>>,
+  pub rust_items: Vec<RItem>,
   pub attributes: Vec<Attribute>
 }
 
