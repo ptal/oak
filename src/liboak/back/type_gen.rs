@@ -19,7 +19,6 @@ use middle::ast::Grammar as TGrammar;
 use middle::ast::Rule as TRule;
 use middle::ast::Expression as TExpression;
 use middle::ast::EvaluationContext;
-use middle::typing::visitor::*;
 use back::ast::*;
 use back::ast::Expression_::*;
 
@@ -156,7 +155,7 @@ impl<'a> ExpressionTyper<'a>
   }
 }
 
-impl<'a> Visitor<Box<Expression>> for ExpressionTyper<'a>
+impl<'a> Visitor<TExpression, Box<Expression>> for ExpressionTyper<'a>
 {
   fn visit_str_literal(&mut self, parent: &Box<TExpression>, lit: &String) -> Box<Expression> {
     let ty = TypeGenerator::unit_ty(self.cx);
@@ -263,7 +262,7 @@ impl<'a> RuleTyper<'a>
   }
 }
 
-impl<'a> Visitor<RTy> for RuleTyper<'a>
+impl<'a> Visitor<TExpression, RTy> for RuleTyper<'a>
 {
   fn visit_expr(&mut self, expr: &Box<TExpression>) -> RTy {
     if expr.context == EvaluationContext::UnValued || expr.is_unit() {

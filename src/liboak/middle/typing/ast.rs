@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::attribute::ast::{Expression_, CharacterInterval, CharacterClassExpr, GrammarAttributes};
-pub use middle::attribute::ast::Expression_::*;
+pub use middle::attribute::ast::GrammarAttributes;
+pub use ast::*;
+pub use ast::Expression_::*;
 
 pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
-pub use identifier::*;
 
 pub use std::collections::HashMap;
 pub use std::cell::RefCell;
@@ -67,6 +67,14 @@ pub struct Expression
   pub invisible: RefCell<bool>,
   pub ty: RefCell<ExprTy>,
   pub context: EvaluationContext
+}
+
+impl ExprNode for Expression
+{
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
+  {
+    &self.node
+  }
 }
 
 impl Expression

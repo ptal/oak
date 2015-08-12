@@ -20,7 +20,6 @@ use middle::typing::ast::*;
 use monad::partial::Partial;
 
 pub mod ast;
-pub mod visitor;
 mod inference;
 mod bottom_up_unit;
 mod top_down_unit;

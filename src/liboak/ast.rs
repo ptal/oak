@@ -42,3 +42,116 @@ pub struct CharacterInterval {
   pub lo: char,
   pub hi: char
 }
+
+pub trait ExprNode
+{
+  fn expr_node<'a>(&'a self) -> &'a Expression_<Self>;
+}
+
+pub trait Visitor<Node: ExprNode, R>
+{
+  fn visit_expr(&mut self, expr: &Box<Node>) -> R {
+    walk_expr(self, expr)
+  }
+
+  fn visit_str_literal(&mut self, _parent: &Box<Node>, _lit: &String) -> R;
+  fn visit_non_terminal_symbol(&mut self, _parent: &Box<Node>, _id: Ident) -> R;
+
+  fn visit_character(&mut self, _parent: &Box<Node>) -> R;
+
+  fn visit_any_single_char(&mut self, parent: &Box<Node>) -> R {
+    self.visit_character(parent)
+  }
+
+  fn visit_character_class(&mut self, parent: &Box<Node>, _expr: &CharacterClassExpr) -> R {
+    self.visit_character(parent)
+  }
+
+  fn visit_sequence(&mut self, _parent: &Box<Node>, exprs: &Vec<Box<Node>>) -> R;
+  fn visit_choice(&mut self, _parent: &Box<Node>, exprs: &Vec<Box<Node>>) -> R;
+
+  fn visit_repeat(&mut self, _parent: &Box<Node>, expr: &Box<Node>) -> R {
+    walk_expr(self, expr)
+  }
+
+  fn visit_zero_or_more(&mut self, parent: &Box<Node>, expr: &Box<Node>) -> R {
+    self.visit_repeat(parent, expr)
+  }
+
+  fn visit_one_or_more(&mut self, parent: &Box<Node>, expr: &Box<Node>) -> R {
+    self.visit_repeat(parent, expr)
+  }
+
+  fn visit_optional(&mut self, _parent: &Box<Node>, expr: &Box<Node>) -> R {
+    walk_expr(self, expr)
+  }
+
+  fn visit_syntactic_predicate(&mut self, _parent: &Box<Node>, expr: &Box<Node>) -> R {
+    walk_expr(self, expr)
+  }
+
+  fn visit_not_predicate(&mut self, parent: &Box<Node>, expr: &Box<Node>) -> R {
+    self.visit_syntactic_predicate(parent, expr)
+  }
+
+  fn visit_and_predicate(&mut self, parent: &Box<Node>, expr: &Box<Node>) -> R {
+    self.visit_syntactic_predicate(parent, expr)
+  }
+
+  fn visit_semantic_action(&mut self, _parent: &Box<Node>, expr: &Box<Node>, _id: Ident) -> R {
+    walk_expr(self, expr)
+  }
+}
+
+pub fn walk_expr<Node, R, V: ?Sized>(visitor: &mut V, parent: &Box<Node>) -> R where
+  Node: ExprNode,
+  V: Visitor<Node, R>
+{
+  use self::Expression_::*;
+  match parent.expr_node() {
+    &StrLiteral(ref lit) => {
+      visitor.visit_str_literal(parent, lit)
+    }
+    &AnySingleChar => {
+      visitor.visit_any_single_char(parent)
+    }
+    &NonTerminalSymbol(id) => {
+      visitor.visit_non_terminal_symbol(parent, id)
+    }
+    &Sequence(ref seq) => {
+      visitor.visit_sequence(parent, seq)
+    }
+    &Choice(ref choices) => {
+      visitor.visit_choice(parent, choices)
+    }
+    &ZeroOrMore(ref expr) => {
+      visitor.visit_zero_or_more(parent, expr)
+    }
+    &OneOrMore(ref expr) => {
+      visitor.visit_one_or_more(parent, expr)
+    }
+    &Optional(ref expr) => {
+      visitor.visit_optional(parent, expr)
+    }
+    &NotPredicate(ref expr) => {
+      visitor.visit_not_predicate(parent, expr)
+    }
+    &AndPredicate(ref expr) => {
+      visitor.visit_and_predicate(parent, expr)
+    }
+    &CharacterClass(ref char_class) => {
+      visitor.visit_character_class(parent, char_class)
+    }
+    &SemanticAction(ref expr, id) => {
+      visitor.visit_semantic_action(parent, expr, id)
+    }
+  }
+}
+
+pub fn walk_exprs<Node, R, V: ?Sized>(visitor: &mut V, exprs: &Vec<Box<Node>>) -> Vec<R> where
+  Node: ExprNode,
+  V: Visitor<Node, R>
+{
+  exprs.iter().map(|expr| visitor.visit_expr(expr)).collect()
+}
+

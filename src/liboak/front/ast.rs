@@ -36,6 +36,8 @@ pub enum TypeAnnotation {
   Unit
 }
 
+pub type ExpressionNode = Expression_<Expression>;
+
 // Implicitly typed expression.
 #[derive(Clone)]
 pub struct Expression
@@ -43,6 +45,14 @@ pub struct Expression
   pub span: Span,
   pub node: ExpressionNode,
   pub ty: Option<TypeAnnotation>
+}
+
+impl ExprNode for Expression
+{
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
+  {
+    &self.node
+  }
 }
 
 pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression>
@@ -55,4 +65,3 @@ pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression>
   box Expression {span : sp, node: expr, ty: None}
 }
 
-pub type ExpressionNode = Expression_<Expression>;

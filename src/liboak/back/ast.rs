@@ -16,8 +16,9 @@ use rust;
 use back::ast::FunctionKind::*;
 
 pub use std::collections::HashMap;
-pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent, Ident};
-pub use middle::ast::{Grammar_, Rule_, Expression_, ExprTy, CharacterInterval, CharacterClassExpr};
+pub use rust::{ExtCtxt, Span, Spanned, SpannedIdent};
+pub use middle::ast::{Grammar_, Rule_, ExprTy};
+pub use ast::*;
 
 pub type RTy = rust::P<rust::Ty>;
 pub type RExpr = rust::P<rust::Expr>;
@@ -34,6 +35,14 @@ pub struct Expression
   pub node: ExpressionNode,
   pub ty: ExprTy,
   pub kind: FunctionKind
+}
+
+impl ExprNode for Expression
+{
+  fn expr_node<'a>(&'a self) -> &'a ExpressionNode
+  {
+    &self.node
+  }
 }
 
 impl Expression
