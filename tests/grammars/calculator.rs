@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use calculator::calculator::*;
+pub use grammars::calculator::calculator::*;
 
 grammar! calculator{
   // #![show_api]

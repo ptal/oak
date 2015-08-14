@@ -11,10 +11,5 @@ path = "src/liboak/lib.rs"
 crate_type = ["dylib"]
 plugin = true
 
-[[bin]]
-
-name = "testoak"
-path = "src/test/testoak.rs"
-
 [dependencies.oak_runtime]
 path = "runtime"

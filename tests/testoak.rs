@@ -19,19 +19,18 @@
 extern crate oak_runtime;
 extern crate term;
 
+use oak_runtime::ParseResult;
+use grammars::*;
+
 use std::path::{PathBuf, Path};
 use std::fs::{File, read_dir, PathExt};
 use std::io;
 use std::io::Read;
 
-use oak_runtime::ParseResult;
-
 use term::*;
 use ExpectedResult::*;
 
-mod ntcc;
-mod type_name;
-mod calculator;
+mod grammars;
 
 #[derive(Clone)]
 enum ExpectedResult {
@@ -90,6 +89,13 @@ impl TestDisplay
         self.num_success, self.num_failure, self.num_system_failure,
         system_failure_plural);
     self.write_line(term::color::BLUE, "\n\n[ stats ] ", &msg);
+  }
+
+  pub fn panic_if_failure(&self)
+  {
+    if self.num_failure > 0 || self.num_system_failure > 0 {
+      panic!("");
+    }
   }
 
   pub fn failure(&mut self, path: &Path, expectation: ExpectedResult,
@@ -292,16 +298,14 @@ impl TestEngine
         &grammar_path.join(Path::new("run-fail")), Error);
     }
     self.display.stats();
+    self.display.panic_if_failure();
   }
 }
 
+#[test]
 fn main()
 {
-  let args: Vec<String> = std::env::args().collect();
-  if args.len() != 2 {
-    panic!(format!("usage: {} <data-dir>", args[0]));
-  }
-  let data_path = Path::new(args[1].as_str());
+  let data_path = Path::new("data/");
   if !data_path.is_dir() {
     panic!(format!("`{}` is not a valid data directory.", data_path.display()));
   }

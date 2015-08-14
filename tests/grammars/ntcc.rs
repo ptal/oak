@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-pub use ntcc::ntcc::*;
+pub use grammars::ntcc::ntcc::*;
 
 grammar! ntcc{
 

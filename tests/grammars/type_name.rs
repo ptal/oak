@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use type_name::type_name::*;
+pub use grammars::type_name::type_name::*;
 
 grammar! type_name{
 
