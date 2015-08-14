@@ -5,9 +5,16 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
+## Usage
+
+We are using [syntax extension](https://doc.rust-lang.org/book/compiler-plugins.html) that are only supported on nighly Rust for the moment. If it is okay for you
+
 ## Super quick example
 
 ```rust
+#![feature(plugin, str_char)]
+#![plugin(oak)]
+
 grammar! calculator{
   #![show_api]
 
@@ -43,6 +50,17 @@ grammar! calculator{
 fn main() {
   assert_eq!(calculator::parse_expression("7+(7*2)", 0).unwrap().data, 21);
 }
+```
+
+Add these lines in your `Cargo.toml`:
+
+```
+[dependencies.oak]
+git = "https://github.com/ptal/oak.git"
+
+[dependencies.oak_runtime]
+git = "https://github.com/ptal/oak.git"
+path = "runtime"
 ```
 
 ## Syntax cheat sheet
@@ -159,7 +177,7 @@ That is for the story of typing parsing expressions but don't be sad! It continu
 
 ## What's next?
 
-For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism, probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
+For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism ([#63](https://github.com/ptal/oak/issues/63)), probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
 
 * Automatic wrapping of values into `Spanned<T>` structure to get location information ([#13](https://github.com/ptal/Rust.peg/issues/13)).
 * Closest relation between host language types and grammar expression types, for example `e1 > A / e2 > B` with `A` and `B` being variants ([#41](https://github.com/ptal/Rust.peg/issues/41), [#53](https://github.com/ptal/Rust.peg/issues/53), [#54](https://github.com/ptal/Rust.peg/issues/54)).
