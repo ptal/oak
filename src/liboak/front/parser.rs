@@ -100,8 +100,7 @@ impl<'a> Parser<'a>
     let mut choices = Vec::new();
     loop{
       let seq = self.parse_rule_seq(rule_name);
-      let semantic_action = self.parse_semantic_action(seq);
-      choices.push(semantic_action);
+      choices.push(self.parse_semantic_action_or_ty(seq, rule_name));
       let token = self.rp.token.clone();
       match token {
         rtok::BinOp(rbtok::Slash) => self.bump(),
@@ -116,48 +115,18 @@ impl<'a> Parser<'a>
     }
   }
 
-  fn parse_semantic_action(&mut self, expr: Box<Expression>) -> Box<Expression> {
+  fn parse_semantic_action_or_ty(&mut self, expr: Box<Expression>, rule_name: &str) -> Box<Expression> {
     let token = self.rp.token.clone();
     match token {
       rtok::Gt => {
         self.bump();
         let fun_name = self.rp.parse_ident().unwrap();
         self.last_respan(SemanticAction(expr, fun_name))
-      }
-      _ => expr
-    }
-  }
-
-  fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression> {
-    let lo = self.rp.span.lo;
-    let mut seq = Vec::new();
-    loop{
-      match self.parse_rule_prefixed(rule_name){
-        Some(expr) => {
-          let expr = self.parse_type_annotation(expr, rule_name);
-          seq.push(expr)
-        },
-        None => break
-      }
-    }
-    let hi = self.rp.last_span.hi;
-    if seq.len() == 0 {
-      self.rp.span_err(
-        mk_sp(lo, hi),
-        format!("In rule {}: must defined at least one expression.",
-          rule_name).as_str());
-    }
-    spanned_expr(lo, hi, Sequence(seq))
-  }
-
-  // `e -> ty`
-  fn parse_type_annotation(&mut self, expr: Box<Expression>, rule_name: &str) -> Box<Expression> {
-    let token = self.rp.token.clone();
-    match token {
+      },
       rtok::RArrow => {
         self.bump();
         self.parse_type(expr, rule_name)
-      },
+      }
       _ => expr
     }
   }
@@ -188,6 +157,22 @@ impl<'a> Parser<'a>
         expr
       }
     }
+  }
+
+  fn parse_rule_seq(&mut self, rule_name: &str) -> Box<Expression> {
+    let lo = self.rp.span.lo;
+    let mut seq = Vec::new();
+    while let Some(expr) = self.parse_rule_prefixed(rule_name) {
+      seq.push(expr);
+    }
+    let hi = self.rp.last_span.hi;
+    if seq.len() == 0 {
+      self.rp.span_err(
+        mk_sp(lo, hi),
+        format!("In rule {}: must defined at least one expression.",
+          rule_name).as_str());
+    }
+    spanned_expr(lo, hi, Sequence(seq))
   }
 
   fn parse_rule_prefixed(&mut self, rule_name: &str) -> Option<Box<Expression>> {

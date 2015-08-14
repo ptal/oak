@@ -101,9 +101,9 @@ grammar! ntcc{
   min_bound = min_kw var_ident
   max_bound = max_kw var_ident
 
-  integer = (["0-9"]+ spacing) -> (^)
+  integer = ["0-9"]+ spacing -> (^)
 
-  var_ident = (!["0-9"] ["a-zA-Z0-9_"]+ spacing) -> (^)
+  var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing -> (^)
 
   pick_kw = "pick" spacing
   when_kw = "when" spacing

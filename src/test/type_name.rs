@@ -18,7 +18,7 @@ grammar! type_name{
 
   #![show_api]
 
-  type_names = (spacing type_name (lparen type_names (comma type_names)* rparen)?) -> (^)
+  type_names = spacing type_name (lparen type_names (comma type_names)* rparen)? -> (^)
 
 
   type_name = auto_infer_kw &(lparen / not_eof / comma)
@@ -26,7 +26,7 @@ grammar! type_name{
 
   spacing = [" \n\t"]* -> (^)
 
-  ident = (!["0-9"] ["a-zA-Z0-9_"]+ spacing) -> (^)
+  ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing -> (^)
   auto_infer_kw = "_" spacing
   lparen = "(" spacing
   rparen = ")" spacing

@@ -56,11 +56,11 @@ fn main() {
 | `e+`            | `Vec<T>`              | 1                | (Greedy) Match one or more `e`. |
 | `&e`            | `(^)`                 | 2                | Try to match `e` and succeed if `e` succeeds. It does not consume any input. |
 | `!e`            | `(^)`                 | 2                | Try to match `e` and succeed if `e` fails. It does not consume any input. |
-| `e -> ()`       | `()`                  | 3                | Force the type of `e` to be `()`. |
-| `e -> (^)`      | `(^)`                 | 3                | Force the type of `e` to be `(^)`. |
-| `e1 e2 e3`      | `(T1, T2, T3)`        | 4                | Match `e1 e2 e3` in sequence. Immediately fails when one fails. |
-| `e > f`         | Return type of `f`    | 5                | Match `e` and if it succeeds, call `f(v)` where `v` is the value of `e`. |
-| `e1 / e2 / e3`  | Type of any `e`       | 6                | Match `e1 e2 e3` in sequence. Immediately succeeds when one succeeds. |
+| `e1 e2 e3`      | `(T1, T2, T3)`        | 3                | Match `e1 e2 e3` in sequence. Immediately fails when one fails. |
+| `e > f`         | Return type of `f`    | 4                | Match `e` and if it succeeds, call `f(v)` where `v` is the value of `e`. |
+| `e -> ()`       | `()`                  | 4                | Force the type of `e` to be `()`. |
+| `e -> (^)`      | `(^)`                 | 4                | Force the type of `e` to be `(^)`. |
+| `e1 / e2 / e3`  | Type of any `e`       | 5                | Match `e1 e2 e3` in sequence. Immediately succeeds when one succeeds. |
 
 ## Introduction to expressions types and `(^)`
 
