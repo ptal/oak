@@ -15,10 +15,10 @@
 use rust;
 use rust::ast::FunctionRetTy::*;
 use rust::AstBuilder;
-use middle::ast::Grammar as TGrammar;
-use middle::ast::Rule as TRule;
-use middle::ast::Expression as TExpression;
-use middle::ast::EvaluationContext;
+use middle::typing::ast::Grammar as TGrammar;
+use middle::typing::ast::Rule as TRule;
+use middle::typing::ast::Expression as TExpression;
+use middle::typing::ast::EvaluationContext;
 use back::ast::*;
 use back::ast::Expression_::*;
 

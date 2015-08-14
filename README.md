@@ -66,7 +66,7 @@ fn main() {
 
 The full explanation of the what and why of types is available in the next section. A goal of this library is to give a type to any expression grammar. This permits to call a semantic action without naming expressions. In some cases, for example with the spacing rule `spacing = [" \n\t"]*`, the grammar compiler will not generate the expected type, here the rule `spacing` has type `Vec<char>` instead of `()` — we usually do not care about spaces. Therefore, users must annotate expressions with `e -> ()` to force their types to be `()`. It works and is enough for most cases. However, we sometimes want to propagate unit type up in the expression tree because these expressions are only of syntactic interest. The fact is that `e?` has type `Option<T>` even if `T = ()`. It is expected since `Option<()>` carries a boolean information about the presence of something. If we do not care, we can annotate `e` with `(^)` and the unit type will automatically be propagated, and even `e1? e2*` will have type `(^)` if `e1` and `e2` have type `(^)`. In the end, the goal is really to give an expression the type that you expect it to have!
 
-## The story of Rust.peg
+## The story of Oak
 
 _This section explains the novelties of this library and is not a tutorial to parsing expression grammar. It supposes the reader knowledgeable on the subject so if you are not, you can consult tutorial on Parsing Expression Grammar on the internet. We might provide one later._
 

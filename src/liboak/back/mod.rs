@@ -19,7 +19,7 @@ mod type_gen;
 mod code_gen;
 mod code_printer;
 
-use middle::ast::Grammar as TGrammar;
+use middle::typing::ast::Grammar as TGrammar;
 use back;
 use rust;
 use rust::ExtCtxt;

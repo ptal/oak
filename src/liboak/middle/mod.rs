@@ -14,14 +14,13 @@
 
 //! This module performs analysis on the PEG and transforms the `front::ast` into the typed AST `middle::ast`. Submodules are specifics to each step of the analysis, the ultimate goal being that the AST passed to the `back` module only generates valid Rust code.
 
-use middle::ast::*;
+use middle::typing::ast::*;
 use monad::partial::Partial;
 
 pub use front::ast::Grammar as FGrammar;
 
 pub mod analysis;
 pub mod typing;
-pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
   if !at_least_one_rule_declared(cx, &fgrammar) {

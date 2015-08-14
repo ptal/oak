@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use ast::*;
-pub use middle::ast::{Grammar_, Rule_, ExprTy};
+pub use middle::typing::ast::{Grammar_, Rule_, ExprTy};
 pub use std::collections::HashMap;
 pub use rust::{ExtCtxt, Spanned, SpannedIdent};
 
