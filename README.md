@@ -5,10 +5,6 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
-## Usage
-
-We are using [syntax extension](https://doc.rust-lang.org/book/compiler-plugins.html) that are only supported on nighly Rust for the moment. If it is okay for you
-
 ## Super quick example
 
 ```rust
