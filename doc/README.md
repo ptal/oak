@@ -1,3 +1,3 @@
 % The Oak Parser Generator
 
-Hello!
+Hello! Oak is a parser generator based on [_Parsing Expression Grammar_ (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). This project has been started to explore the idea of _typing_ parsing expressions. It is written as a [syntax extension](https://doc.rust-lang.org/book/compiler-plugins.html) and can be embedded in your Rust code without complicating the build system.

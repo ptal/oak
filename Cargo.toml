@@ -4,6 +4,12 @@ name = "oak"
 version = "0.1.0"
 authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
+description = "A typed parser generator syntax extension for Parsing Expression Grammar (PEG)."
+repository = "https://github.com/ptal/oak"
+readme = "README.md"
+keywords = ["parser", "peg", "grammar", "typing", "parsing"]
+license = "Apache-2.0"
+
 [lib]
 
 name = "oak"
@@ -13,3 +19,4 @@ plugin = true
 
 [dependencies.oak_runtime]
 path = "runtime"
+version = "0.1.0"

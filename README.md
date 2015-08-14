@@ -51,6 +51,14 @@ fn main() {
 Add these lines in your `Cargo.toml`:
 
 ```
+[dependencies]
+oak = "*"
+oak_runtime = "*"
+```
+
+Add these lines if you want to depend on the git repository:
+
+```
 [dependencies.oak]
 git = "https://github.com/ptal/oak.git"
 
