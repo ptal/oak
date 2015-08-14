@@ -34,13 +34,13 @@ impl TopDownUnitInference
   }
 
   fn visit_rule(rule: &mut Rule) {
-    ExpressionVisitor::visit_expr(&mut rule.def, Both);
+    ContextExprVisitor::visit_expr(&mut rule.def, Both);
   }
 }
 
-struct ExpressionVisitor;
+struct ContextExprVisitor;
 
-impl ExpressionVisitor
+impl ContextExprVisitor
 {
   fn visit_expr(expr: &mut Expression, mut context: EvaluationContext) {
     if expr.is_unit() {
@@ -50,19 +50,19 @@ impl ExpressionVisitor
     else {
       expr.context = context;
     }
-    ExpressionVisitor::visit_expr_node(&mut expr.node, context);
+    ContextExprVisitor::visit_expr_node(&mut expr.node, context);
   }
 
   fn visit_expr_node(expr: &mut ExpressionNode, context: EvaluationContext) {
     match expr {
         &mut Sequence(ref mut exprs)
-      | &mut Choice(ref mut exprs) => ExpressionVisitor::visit_exprs(&mut *exprs, context),
+      | &mut Choice(ref mut exprs) => ContextExprVisitor::visit_exprs(&mut *exprs, context),
         &mut ZeroOrMore(ref mut expr)
       | &mut OneOrMore(ref mut expr)
       | &mut Optional(ref mut expr)
-      | &mut SemanticAction(ref mut expr, _) => ExpressionVisitor::visit_expr(&mut *expr, context),
+      | &mut SemanticAction(ref mut expr, _) => ContextExprVisitor::visit_expr(&mut *expr, context),
         &mut NotPredicate(ref mut expr)
-      | &mut AndPredicate(ref mut expr) => ExpressionVisitor::visit_expr(&mut *expr, UnValued),
+      | &mut AndPredicate(ref mut expr) => ContextExprVisitor::visit_expr(&mut *expr, UnValued),
       _ => ()
     }
   }
@@ -70,7 +70,7 @@ impl ExpressionVisitor
   fn visit_exprs(exprs: &mut Vec<Box<Expression>>, context: EvaluationContext) {
     assert!(exprs.len() > 0);
     for expr in exprs.iter_mut() {
-      ExpressionVisitor::visit_expr(&mut *expr, context);
+      ContextExprVisitor::visit_expr(&mut *expr, context);
     }
   }
 }
