@@ -16,7 +16,7 @@ pub use type_name::type_name::*;
 
 grammar! type_name{
 
-  #![show_api]
+  // #![show_api]
 
   type_names = spacing type_name (lparen type_names (comma type_names)* rparen)? -> (^)
 
