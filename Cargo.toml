@@ -6,6 +6,7 @@ authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
 description = "A typed parser generator syntax extension for Parsing Expression Grammar (PEG)."
 repository = "https://github.com/ptal/oak"
+documentation = "http://hyc.io/oak"
 readme = "README.md"
 keywords = ["parser", "peg", "grammar", "typing", "parsing"]
 license = "Apache-2.0"
