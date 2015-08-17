@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Compile the typed AST into Rust code.
+
+//! It generates a recognizer and parser function for each rules. It builds the result value and type with the information provided by the AST.
+
 mod ast;
 mod naming;
 mod function;

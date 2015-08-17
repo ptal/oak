@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The main goal of RecursiveType is to ensure that mutual recursive rules that need to be typed can actually be typed.
+//! The recursive type analysis ensures that mutual recursive rules that need to be typed can actually be typed.
 
 use middle::typing::ast::*;
 use monad::partial::Partial;

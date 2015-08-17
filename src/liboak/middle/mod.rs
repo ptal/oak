@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This module performs analysis on the PEG and transforms the `front::ast` into the typed AST `middle::ast`. Submodules are specifics to each step of the analysis, the ultimate goal being that the AST passed to the `back` module only generates valid Rust code.
+//! This module performs analysis on the PEG and gives a type to each expressions in the AST.
+
+//! The `analysis` module performs some verifications on the grammar description and the `typing` module gives a type to each rule and expression.
 
 use middle::typing::ast::*;
 use monad::partial::Partial;
