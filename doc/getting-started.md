@@ -5,7 +5,7 @@ Before starting playing with Oak, let's create a skeleton project. There are som
 * We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension that is only available in nightly build of Rust. It is simple to install but you need to build from source the Rust compiler. Instructions are available in the [Rust book](http://doc.rust-lang.org/book/nightly-rust.html).
 * The Rust packages manager [Cargo](http://doc.crates.io/) is highly recommended. If you followed the Rust book for installing the nightly build, you have nothing to do! Cargo comes installed with the Rust compiler.
 
-Once you both are installed, we can set up a project using Oak. We first need a `Cargo.toml` for Oak dependencies:
+Once both are installed, we can set up a project using Oak. We first need a `Cargo.toml` for Oak dependencies:
 
 ```
 [package]

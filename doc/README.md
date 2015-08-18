@@ -4,6 +4,8 @@ Hello! Oak is a parser generator based on [_Parsing Expression Grammar_ (PEG)](h
 
 Independently of your programming experience with parser generators, a first step is to consult the [Getting Started](getting-started.md) section. If you are new to parser generator or PEG, the section [Learn Oak](learn-oak.md) is a smooth tutorial to Oak for incrementally building a small language with arithmetic expressions and variable bindings. The section [Syntax and Semantics](syntax-and-semantics.md) gives a short summary of the Oak constructions. For more informal and in-depth discussion about the design rational of Oak and to find out why it is different from other parser generators, please consult [The Story of Oak](the-story-of-oak.md).
 
+The code is on [github](https://github.com/ptal/oak).
+
 ## Oak status
 
 My goal is to propose a complete library to ease the development of *Embedded Domain Specific Language* (EDSL) in Rust with procedural macros. For the moment my priority is to stabilize/test things and to add a decent error reporting mechanism ([#63](https://github.com/ptal/oak/issues/63)), probably something based on the article [Error reporting in parsing expression grammars](http://arxiv.org/abs/1405.6646). Next I want to add more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what's wrong?) Here some other wanted features:
