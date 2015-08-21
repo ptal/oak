@@ -27,7 +27,7 @@ pub type RExpr = rust::P<rust::Expr>;
 pub type RItem = rust::P<rust::Item>;
 
 #[derive(Clone, Debug)]
-pub enum Expression_<SubExpr>{
+pub enum Expression_<SubExpr: ?Sized>{
   StrLiteral(String), // "match me"
   AnySingleChar, // .
   CharacterClass(CharacterClassExpr), // [0-9]
