@@ -86,13 +86,16 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
       }
     );
 
+    let classes_desc = format!("{}", classes);
+    let classes_desc_str = classes_desc.as_str();
+
     let make_char_class_body = |result: RExpr| quote_expr!(cx, {
       let char_range = input.char_range_at(pos);
       let current = char_range.ch;
       if $cond {
         Ok($result)
       } else {
-        Err(format!("It doesn't match the character class."))
+        Err(oak_runtime::ParseError::unique(pos, $classes_desc_str))
       }}
     );
 
@@ -117,9 +120,10 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     let exprs = walk_exprs(self, choices);
 
     let cx = self.cx;
-    let error = quote_expr!(cx, Err(err));
+    let error = quote_expr!(cx, Err(err.clone()));
     let make_body = |accu:RExpr, name:Ident| {
-      quote_expr!(cx, $name(input, pos).or_else(|err| $accu))
+      quote_expr!(cx, $name(input, pos)
+        .or_else(|err| $accu.or_else(|err2| Err(err.join(err2)))))
     };
     let recognizer_body = map_foldr(exprs.clone(),
       error.clone(),
@@ -148,7 +152,7 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     let make_result = |res:RExpr| {
       quote_expr!(cx, {
         if current == pos {
-          Err(format!("Expected at least one occurrence of an expression in `e+`."))
+          Err(_error)
         } else {
           $res
         }
@@ -297,10 +301,11 @@ impl<'cx> CodeGenerator<'cx>
   fn compile_star_recognizer_body(&self, expr_recognizer: Ident, result: RExpr) -> RExpr {
     quote_expr!(self.cx, {
       let mut current = pos;
+      let mut _error = oak_runtime::ParseError::empty(pos);
       while current < input.len() {
         match $expr_recognizer(input, current) {
           Ok(state) => { current = state.offset; }
-          _ => break
+          Err(err) => { _error = err; break; }
         }
       }
       $result
@@ -311,13 +316,14 @@ impl<'cx> CodeGenerator<'cx>
     quote_expr!(self.cx, {
       let mut data = vec![];
       let mut current = pos;
+      let mut _error = oak_runtime::ParseError::empty(pos);
       while current < input.len() {
         match $expr_parser(input, current) {
           Ok(state) => {
             data.push(state.data);
             current = state.offset;
           }
-          _ => break
+          Err(err) => { _error = err; break; }
         }
       }
       $result

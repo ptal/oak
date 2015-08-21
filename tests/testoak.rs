@@ -123,7 +123,7 @@ impl TestDisplay
     let msg = match result {
       Ok(ref state) if state.partial_read(input) => format!("Partial match, stopped at `{}`.", self.code_snippet(state.offset, input)),
       Ok(_) => format!("Fully matched."),
-      Err(msg) => msg
+      Err(err) => err.description(input)
     };
     self.error(&msg)
   }

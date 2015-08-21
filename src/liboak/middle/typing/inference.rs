@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Give a naive type to any expression of the grammar.
-
+//!
 //! There are only three types, see `typing::ast` for explanations. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modify the type accordingly. It does not propagate the invisible types, this step is done in `typing::bottom_up_unit`.
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 

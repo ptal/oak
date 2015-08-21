@@ -20,6 +20,8 @@ pub use identifier::*;
 pub use rust::Span;
 
 use rust;
+use std::fmt::{Formatter, Write, Display, Error};
+
 pub type RTy = rust::P<rust::Ty>;
 pub type RExpr = rust::P<rust::Expr>;
 pub type RItem = rust::P<rust::Item>;
@@ -45,10 +47,31 @@ pub struct CharacterClassExpr {
   pub intervals: Vec<CharacterInterval>
 }
 
+impl Display for CharacterClassExpr {
+  fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
+    try!(formatter.write_str("[\""));
+    for interval in &self.intervals {
+      try!(interval.fmt(formatter));
+    }
+    formatter.write_str("\"]")
+  }
+}
+
 #[derive(Clone, Debug)]
 pub struct CharacterInterval {
   pub lo: char,
   pub hi: char
+}
+
+impl Display for CharacterInterval {
+  fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
+    if self.lo == self.hi {
+      formatter.write_char(self.lo)
+    }
+    else {
+      formatter.write_fmt(format_args!("{}-{}", self.lo, self.hi))
+    }
+  }
 }
 
 pub trait ItemIdent

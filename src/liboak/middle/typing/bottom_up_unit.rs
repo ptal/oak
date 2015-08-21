@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Bottom-up unit inference consists of propagating invisible unit types up in the expressions.
-
+//!
 //! The typing rules are of the form `expr:ty => expr':ty'` which means that if `expr` has type `ty` then `expr'` has type `ty'`:
 //! * Basic combinators (`e*`, `e+`, `e?`):
 //!    * `f(e:(^)) => f(e):(^)`

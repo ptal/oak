@@ -13,9 +13,9 @@
 // limitations under the License.
 
 //! Partial is similar to Option where `Value` replaces `Some` and `Nothing` replaces `None`.
-
+//!
 //! `Fake` means that we got a value to pass for continuation (e.g. in `map` or `and_then`) but without real meaning, so it's an error to unwrap it.
-
+//!
 //! Value transformation are only from Value to Fake to Nothing which means that a Fake value will never be a Value again.
 //! Use case: When compiling, an error in one function must be reported but should
 //! not prevent the compilation of a second function to detect more errors in one run.
