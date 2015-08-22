@@ -107,7 +107,7 @@ impl<'cx> FunctionGenerator<'cx>
     };
     let function = quote_item!(self.cx,
       #[inline]
-      $pub_kw fn $name(input: &str, pos: usize) -> oak_runtime::ParseResult<$ty>
+      $pub_kw fn $name(input: &str, pos: usize) -> oak_runtime::ParseState<$ty>
       {
         $body
       }

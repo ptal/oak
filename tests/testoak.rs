@@ -19,7 +19,7 @@
 extern crate oak_runtime;
 extern crate term;
 
-use oak_runtime::ParseResult;
+use oak_runtime::{ParseState, ParseResult};
 use grammars::*;
 
 use std::path::{PathBuf, Path};
@@ -123,7 +123,7 @@ impl TestDisplay
     let msg = match result {
       Ok(ref state) if state.partial_read(input) => format!("Partial match, stopped at `{}`.", self.code_snippet(state.offset, input)),
       Ok(_) => format!("Fully matched."),
-      Err(err) => err.description(input)
+      Err(err) => err
     };
     self.error(&msg)
   }
@@ -131,7 +131,7 @@ impl TestDisplay
   fn code_snippet<'a>(&self, stopped_at: usize, input: &'a str) -> &'a str
   {
     let len = std::cmp::min(input.len() - stopped_at, self.code_snippet_len as usize);
-    &input[stopped_at..len]
+    &input[stopped_at..][..len]
   }
 
   pub fn success(&mut self, path: &Path)
@@ -187,7 +187,7 @@ impl TestDisplay
 struct GrammarInfo
 {
   name: String,
-  recognizer: Box<Fn(&str, usize) -> ParseResult<()>>
+  recognizer: Box<Fn(&str, usize) -> ParseState<()>>
 }
 
 struct Test<'a>
@@ -244,7 +244,9 @@ impl<'a> Test<'a>
 
   fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
   {
-    match (expectation.clone(), (self.info.recognizer)(input, 0)) {
+    let state = (self.info.recognizer)(input, 0);
+    let result = state.into_result(input);
+    match (expectation.clone(), result) {
       (Match, Ok(ref state)) if state.full_read(input) => self.display.success(test_path),
       (Error, Ok(ref state)) if state.partial_read(input) => self.display.success(test_path),
       (Error, Err(_)) => self.display.success(test_path),
@@ -276,7 +278,7 @@ impl TestEngine
     }
   }
 
-  fn register(&mut self, name: &str, recognizer: Box<Fn(&str, usize) -> ParseResult<()>>)
+  fn register(&mut self, name: &str, recognizer: Box<Fn(&str, usize) -> ParseState<()>>)
   {
     self.grammars.push(GrammarInfo{name: String::from(name), recognizer: recognizer});
   }

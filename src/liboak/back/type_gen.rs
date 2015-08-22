@@ -272,11 +272,11 @@ impl<'a> Visitor<TExpression, RTy> for RuleTyper<'a>
   }
 
   fn visit_str_literal(&mut self, _parent: &Box<TExpression>, _lit: &String) -> RTy {
-    panic!("BUG: String literal expression should have type `Unit` and handled in visit_expr.");
+    panic!("BUG: String literal expression should have type `Unit` and handled in `visit_expr`.");
   }
 
   fn visit_syntactic_predicate(&mut self, _parent: &Box<TExpression>, _expr: &Box<TExpression>) -> RTy {
-    panic!("BUG: Syntactic predicate (&e, !e) expressions should have type `Unit` and handled in visit_expr.");
+    panic!("BUG: Syntactic predicate (&e, !e) expressions should have type `Unit` and handled in `visit_expr`.");
   }
 
   fn visit_character(&mut self, _parent: &Box<TExpression>) -> RTy {

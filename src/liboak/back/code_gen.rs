@@ -32,14 +32,27 @@ pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar)
 }
 
 fn map_foldr<T, U, V, F, G>(data: Vec<T>, accu: V, f: F, g: G) -> V where
-  F: Fn(T) -> U,
-  G: Fn(V, U) -> V
+ F: Fn(T) -> U,
+ G: Fn(V, U) -> V
 {
   let data = data.into_iter()
     .map(f)
     .rev();
   data.fold(accu, g)
 }
+
+fn map_foldr_init<T, U, V, I, F, G>(data: Vec<T>, init: I, f: F, g: G) -> V where
+ I: FnOnce(U) -> V,
+ F: Fn(T) -> U,
+ G: Fn(V, U) -> V
+{
+  let mut data = data.into_iter()
+    .map(f)
+    .rev();
+  let accu = data.next().expect("map_foldr_init expect at least one element.");
+  data.fold(init(accu), g)
+}
+
 
 struct CodeGenerator<'cx>
 {
@@ -93,15 +106,15 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
       let char_range = input.char_range_at(pos);
       let current = char_range.ch;
       if $cond {
-        Ok($result)
+        $result
       } else {
-        Err(oak_runtime::ParseError::unique(pos, $classes_desc_str))
+        oak_runtime::ParseState::error(pos, $classes_desc_str)
       }}
     );
 
     self.function_gen.generate_expr("class_char", self.current_rule_name, parent.kind(),
       make_char_class_body(quote_expr!(cx, oak_runtime::ParseState::stateless(char_range.next))),
-      make_char_class_body(quote_expr!(cx, oak_runtime::ParseState::new(current, char_range.next)))
+      make_char_class_body(quote_expr!(cx, oak_runtime::ParseState::success(current, char_range.next)))
     )
   }
 
@@ -120,18 +133,17 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     let exprs = walk_exprs(self, choices);
 
     let cx = self.cx;
-    let error = quote_expr!(cx, Err(err.clone()));
+    let init = |name: Ident| quote_expr!(cx, $name(input, pos));
     let make_body = |accu:RExpr, name:Ident| {
-      quote_expr!(cx, $name(input, pos)
-        .or_else(|err| $accu.or_else(|err2| Err(err.join(err2)))))
+      quote_expr!(cx, $name(input, pos).or_else_join(|| $accu))
     };
-    let recognizer_body = map_foldr(exprs.clone(),
-      error.clone(),
+    let recognizer_body = map_foldr_init(exprs.clone(),
+      &init,
       |name| name.recognizer,
       &make_body
     );
-    let parser_body = map_foldr(exprs,
-      error,
+    let parser_body = map_foldr_init(exprs,
+      init,
       |name| name.parser,
       make_body
     );
@@ -142,25 +154,20 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
 
   fn visit_zero_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let cx = self.cx;
-    self.compile_star(parent, expr,
-      quote_expr!(cx, Ok(oak_runtime::ParseState::stateless(current))),
-      quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current))))
+    let result = quote_expr!(cx, accu);
+    self.compile_star(parent, expr, result)
   }
 
   fn visit_one_or_more(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
     let cx = self.cx;
-    let make_result = |res:RExpr| {
-      quote_expr!(cx, {
-        if current == pos {
-          Err(_error)
-        } else {
-          $res
-        }
-      })
-    };
-    self.compile_star(parent, expr,
-      make_result(quote_expr!(cx, Ok(oak_runtime::ParseState::stateless(current)))),
-      make_result(quote_expr!(cx, Ok(oak_runtime::ParseState::new(data, current)))))
+    let result = quote_expr!(cx, {
+      if current == pos {
+        accu.to_error()
+      } else {
+        accu
+      }
+    });
+    self.compile_star(parent, expr, result)
   }
 
   fn visit_optional(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) -> GenFunNames {
@@ -203,9 +210,9 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     );
     let action_call = self.compile_semantic_action_call(parent, expr, action_name);
     let parser_body = quote_expr!(self.cx,
-      $parser(input, pos).map(|state| {
+      $parser(input, pos).map(|success| {
         let data = $action_call;
-        oak_runtime::ParseState::new(data, state.offset)
+        oak_runtime::ParseSuccess::new(data, success.offset)
       })
     );
     self.function_gen.generate_expr("semantic_action", self.current_rule_name, parent.kind(),
@@ -287,43 +294,34 @@ impl<'cx> CodeGenerator<'cx>
       self.function_gen.generate_rule(rule.def.kind(), self.current_rule_name, expr_fn);
     }
   }
+
   fn compile_star(&mut self, parent: &Box<Expression>, expr: &Box<Expression>,
-    recognizer_res: RExpr, parser_res: RExpr) -> GenFunNames
+    result: RExpr) -> GenFunNames
   {
+    let cx = self.cx;
     let GenFunNames{recognizer, parser} = self.visit_expr(expr);
-    let recognizer_body = self.compile_star_recognizer_body(recognizer, recognizer_res);
-    let parser_body = self.compile_star_parser_body(parser, parser_res);
+    let recognizer_init = quote_expr!(cx, oak_runtime::ParseState::stateless(pos));
+    let parser_init = quote_expr!(cx, oak_runtime::ParseState::success(vec![], pos));
+    let recognizer_body = self.compile_star_body(recognizer, recognizer_init, result.clone());
+    let parser_body = self.compile_star_body(parser, parser_init, result);
     self.function_gen.generate_expr("star", self.current_rule_name, parent.kind(),
       recognizer_body,
       parser_body)
   }
 
-  fn compile_star_recognizer_body(&self, expr_recognizer: Ident, result: RExpr) -> RExpr {
+  fn compile_star_body(&self, expr: Ident, result_init: RExpr, result: RExpr) -> RExpr {
     quote_expr!(self.cx, {
       let mut current = pos;
-      let mut _error = oak_runtime::ParseError::empty(pos);
+      let mut accu = $result_init;
       while current < input.len() {
-        match $expr_recognizer(input, current) {
-          Ok(state) => { current = state.offset; }
-          Err(err) => { _error = err; break; }
-        }
-      }
-      $result
-    })
-  }
-
-  fn compile_star_parser_body(&self, expr_parser: Ident, result: RExpr) -> RExpr {
-    quote_expr!(self.cx, {
-      let mut data = vec![];
-      let mut current = pos;
-      let mut _error = oak_runtime::ParseError::empty(pos);
-      while current < input.len() {
-        match $expr_parser(input, current) {
-          Ok(state) => {
-            data.push(state.data);
-            current = state.offset;
-          }
-          Err(err) => { _error = err; break; }
+        let res = $expr(input, current);
+        accu = accu.join(res.error);
+        match res.success {
+          Some(success) => {
+            current = success.offset;
+            accu.merge_success(success);
+          },
+          None => { break; }
         }
       }
       $result
@@ -331,8 +329,8 @@ impl<'cx> CodeGenerator<'cx>
   }
 
   fn compile_sequence_recognizer_body(&self, exprs: Vec<GenFunNames>) -> RExpr {
-    map_foldr(exprs,
-      quote_expr!(self.cx, Ok(state)),
+    map_foldr_init(exprs,
+      |name: Ident| quote_expr!(self.cx, $name(input, pos)),
       |name| name.recognizer,
       |accu: RExpr, name: Ident| {
         quote_expr!(self.cx, $name(input, pos).and_then(|state| {
@@ -384,14 +382,14 @@ impl<'cx> CodeGenerator<'cx>
       } else {
         self.cx.expr_tuple(parent.span, tuple_result)
       };
-    quote_expr!(self.cx, Ok(oak_runtime::ParseState::new($result, pos)))
+    quote_expr!(self.cx, oak_runtime::ParseState::success($result, pos))
   }
 
   fn compile_semantic_action_call(&self, parent: &Box<Expression>,
     expr: &Box<Expression>, action_name: Ident) -> RExpr
   {
     let ty = expr.ty.clone();
-    let state_data = quote_expr!(self.cx, state.data);
+    let state_data = quote_expr!(self.cx, success.data);
     let action_params = match ty {
       ExprTy::Tuple(ref indexes) if indexes.len() > 1 => {
         indexes.iter()

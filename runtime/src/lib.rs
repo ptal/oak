@@ -16,7 +16,192 @@
 
 use std::collections::hash_set::HashSet;
 
-pub type ParseResult<T> = Result<ParseState<T>, ParseError>;
+pub type ParseResult<T> = Result<ParseSuccess<T>, String>;
+
+pub struct ParseState<T>
+{
+  /// Even in case of success, we keep error information in case we
+  /// fail later.
+  pub error: ParseError,
+  pub success: Option<ParseSuccess<T>>
+}
+
+impl<T> ParseState<T>
+{
+  #[inline]
+  pub fn success(data: T, offset: usize) -> ParseState<T> {
+    ParseState {
+      error: ParseError::empty(offset),
+      success: Some(ParseSuccess::new(data, offset))
+    }
+  }
+
+  #[inline]
+  pub fn from_error(error: ParseError) -> ParseState<T> {
+    ParseState {
+      error: error,
+      success: None
+    }
+  }
+
+  #[inline]
+  pub fn error(offset: usize, expect: &'static str) -> ParseState<T> {
+    ParseState::from_error(ParseError::unique(offset, expect))
+  }
+
+  #[inline]
+  pub fn empty_error(offset: usize) -> ParseState<T> {
+    ParseState {
+      error: ParseError::empty(offset),
+      success: None
+    }
+  }
+
+  #[inline]
+  pub fn map<U, F>(self, op: F) -> ParseState<U> where
+   F: FnOnce(ParseSuccess<T>) -> ParseSuccess<U>
+  {
+    ParseState {
+      error: self.error,
+      success: self.success.map(op)
+    }
+  }
+
+  #[inline]
+  pub fn and_then<U, F>(self, op: F) -> ParseState<U> where
+   F: FnOnce(ParseSuccess<T>) -> ParseState<U>
+  {
+    match self.success {
+      Some(success) => {
+        let mut state = op(success);
+        state.error = state.error.join(self.error);
+        state
+      }
+      None => ParseState::from_error(self.error)
+    }
+  }
+
+  #[inline]
+  pub fn or_else_join<F>(self, op: F) -> ParseState<T> where
+   F: FnOnce() -> ParseState<T>
+  {
+    self.or_else(|err| op().join(err))
+  }
+
+  #[inline]
+  pub fn join(mut self, error: ParseError) -> ParseState<T> {
+    self.error = self.error.join(error);
+    self
+  }
+
+  #[inline]
+  pub fn or_else<F>(self, op: F) -> ParseState<T> where
+   F: FnOnce(ParseError) -> ParseState<T>
+  {
+    match &self.success {
+      &Some(_) => self,
+      &None => op(self.error)
+    }
+  }
+
+  #[inline]
+  pub fn map_or_else<U, D, F>(self, default: D, f: F) -> ParseState<U> where
+   D: FnOnce() -> ParseSuccess<U>,
+   F: FnOnce(ParseSuccess<T>) -> ParseSuccess<U>
+  {
+    ParseState {
+      error: self.error,
+      success: Some(self.success.map_or_else(default, f))
+    }
+  }
+
+  #[inline]
+  pub fn to_error(mut self) -> ParseState<T> {
+    self.success = None;
+    self
+  }
+
+  pub fn into_result(self, source: &str) -> ParseResult<T> {
+    match self.success {
+      Some(success) => {
+        Ok(success)
+      },
+      None => {
+        Err(self.error.description(source))
+      }
+    }
+  }
+}
+
+impl ParseState<()>
+{
+  #[inline]
+  pub fn stateless(offset: usize) -> ParseState<()> {
+    ParseState::success((), offset)
+  }
+
+  #[inline]
+  pub fn to_stateless_success(self, offset: usize) -> ParseState<()> {
+    ParseState {
+      error: self.error,
+      success: self.success.or(Some(ParseSuccess::stateless(offset)))
+    }
+  }
+
+  #[inline]
+  pub fn merge_success(&mut self, other: ParseSuccess<()>)
+  {
+    debug_assert!(self.success.is_some(), "ParseState::merge_success can only be called if `self` is successfull.");
+    self.success = Some(other);
+  }
+}
+
+impl<T> ParseState<Vec<T>>
+{
+  #[inline]
+  pub fn merge_success(&mut self, other: ParseSuccess<T>)
+  {
+    debug_assert!(self.success.is_some(), "ParseState::merge_success can only be called if `self` is successfull.");
+    let success = self.success.as_mut().unwrap();
+    success.data.push(other.data);
+    success.offset = other.offset;
+  }
+}
+
+#[derive(Debug)]
+pub struct ParseSuccess<T>
+{
+  pub data: T,
+  pub offset: usize
+}
+
+impl<T> ParseSuccess<T>
+{
+  #[inline]
+  pub fn new(data: T, offset: usize) -> ParseSuccess<T> {
+    ParseSuccess {
+      data: data,
+      offset: offset
+    }
+  }
+
+  pub fn full_read(&self, input: &str) -> bool {
+    debug_assert!(self.offset <= input.len());
+    self.offset == input.len()
+  }
+
+  pub fn partial_read(&self, input: &str) -> bool {
+    !self.full_read(input)
+  }
+}
+
+impl ParseSuccess<()>
+{
+  #[inline]
+  pub fn stateless(offset: usize) -> ParseSuccess<()> {
+    ParseSuccess::new((), offset)
+  }
+}
 
 #[derive(Clone, Debug)]
 pub struct ParseError
@@ -77,9 +262,15 @@ impl ParseError
 
   fn code_snippet<'a>(&self, source: &'a str) -> &'a str
   {
-    let code_snippet_len = 10usize;
-    let len = std::cmp::min(source.len() - self.farthest_offset, code_snippet_len);
-    &source[self.farthest_offset..len]
+    debug_assert!(self.farthest_offset <= source.len());
+    if self.farthest_offset == source.len() {
+      &"<end-of-file>"
+    }
+    else {
+      let code_snippet_len = 10usize;
+      let len = std::cmp::min(source.len() - self.farthest_offset, code_snippet_len);
+      &source[self.farthest_offset..][..len]
+    }
   }
 
   fn expected_desc(&self) -> String {
@@ -96,112 +287,74 @@ impl ParseError
   }
 }
 
-#[derive(Debug)]
-pub struct ParseState<T>
-{
-  pub data: T,
-  pub offset: usize
-}
-
-impl<T> ParseState<T>
-{
-  #[inline]
-  pub fn new(data: T, offset: usize) -> ParseState<T> {
-    ParseState {
-      data: data,
-      offset: offset
-    }
-  }
-}
-
-impl ParseState<()>
-{
-  #[inline]
-  pub fn stateless(offset: usize) -> ParseState<()> {
-    ParseState::new((), offset)
-  }
-
-  #[inline]
-  pub fn erase<T>(source: ParseState<T>) -> ParseState<()> {
-    ParseState {
-      data: (),
-      offset: source.offset
-    }
-  }
-
-  pub fn full_read(&self, input: &str) -> bool {
-    debug_assert!(self.offset <= input.len());
-    self.offset == input.len()
-  }
-
-  pub fn partial_read(&self, input: &str) -> bool {
-    !self.full_read(input)
-  }
-}
-
 #[inline]
-pub fn parse_any_single_char(input: &str, offset: usize) -> ParseResult<char> {
+pub fn parse_any_single_char(input: &str, offset: usize) -> ParseState<char> {
   if offset < input.len() {
     let any = input.char_at(offset);
-    Ok(ParseState::new(any, offset + any.len_utf8()))
+    ParseState::success(any, offset + any.len_utf8())
   } else {
-    Err(ParseError::unique(offset, "<character>"))
+    ParseState::error(offset, "<character>")
   }
 }
 
 #[inline]
-pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseResult<()> {
-  parse_any_single_char(input, offset).map(|state| ParseState::erase(state))
+pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseState<()> {
+  if offset < input.len() {
+    let any = input.char_at(offset);
+    ParseState::stateless(offset + any.len_utf8())
+  } else {
+    ParseState::error(offset, "<character>")
+  }
 }
 
 #[inline]
 pub fn parse_match_literal(input: &str, offset: usize, lit: &'static str, lit_len: usize)
-  -> ParseResult<()>
+  -> ParseState<()>
 {
   if offset < input.len() && input[offset..].starts_with(lit) {
-    Ok(ParseState::stateless(offset + lit_len))
+    ParseState::stateless(offset + lit_len)
   } else {
-    Err(ParseError::unique(offset, lit))
+    ParseState::error(offset, lit)
   }
 }
 
 #[inline]
 pub fn recognize_match_literal(input: &str, offset: usize, lit: &'static str, lit_len: usize)
-  -> ParseResult<()>
+  -> ParseState<()>
 {
   parse_match_literal(input, offset, lit, lit_len)
 }
 
 #[inline]
-pub fn not_predicate(state: ParseResult<()>, offset: usize)
-  -> ParseResult<()>
+/// We erase the errors generated inside a `!e` expression because it is hard to correctly use (see paper Maidl & al. 2014 on error reporting).
+pub fn not_predicate(state: ParseState<()>, offset: usize)
+  -> ParseState<()>
 {
-  match state {
-    Ok(_) => Err(ParseError::empty(offset)),
-    _ => Ok(ParseState::stateless(offset))
+  match state.success {
+    Some(_) => ParseState::empty_error(offset),
+    _ => ParseState::stateless(offset)
   }
 }
 
 #[inline]
-pub fn and_predicate(state: ParseResult<()>, offset: usize)
-  -> ParseResult<()>
+pub fn and_predicate(state: ParseState<()>, offset: usize)
+  -> ParseState<()>
 {
-  state.map(|_| ParseState::stateless(offset))
+  state.map(|_| ParseSuccess::stateless(offset))
 }
 
 #[inline]
-pub fn optional_recognizer(state: ParseResult<()>, offset: usize)
-  -> ParseResult<()>
+pub fn optional_recognizer(state: ParseState<()>, offset: usize)
+  -> ParseState<()>
 {
-  state.or_else(|_| Ok(ParseState::stateless(offset)))
+  state.to_stateless_success(offset)
 }
 
 #[inline]
-pub fn optional_parser<T>(state: ParseResult<T>, offset: usize)
-  -> ParseResult<Option<T>>
+pub fn optional_parser<T>(state: ParseState<T>, offset: usize)
+  -> ParseState<Option<T>>
 {
-  match state {
-    Ok(state) => Ok(ParseState::new(Some(state.data), state.offset)),
-    Err(_) => Ok(ParseState::new(None, offset))
-  }
+  state.map_or_else(
+    || ParseSuccess::new(None, offset),
+    |success| ParseSuccess::new(Some(success.data), success.offset))
 }
