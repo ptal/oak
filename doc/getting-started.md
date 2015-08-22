@@ -53,7 +53,8 @@ grammar! sum{
 }
 
 fn main() {
-  assert_eq!(sum::parse_sum("7+2+1", 0).unwrap().data, 10);
+  let input = "7+2+1";
+  assert_eq!(sum::parse_sum(input, 0).into_result(input).unwrap().data, 10);
 }
 ```
 

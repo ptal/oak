@@ -48,29 +48,28 @@ Before explaining the others combinators, we take a glimpse at the generated cod
 ```rust
 note: pub mod calc {
     pub fn parse_let_kw(input: &str, pos: usize)
-     -> oak_runtime::ParseResult<()>;
+     -> oak_runtime::ParseState<()>;
     pub fn recognize_let_kw(input: &str, pos: usize)
-     -> oak_runtime::ParseResult<()>;
+     -> oak_runtime::ParseState<()>;
 
     pub fn recognize_identifier(input: &str, pos: usize)
-     -> oak_runtime::ParseResult<()>;
+     -> oak_runtime::ParseState<()>;
     pub fn parse_identifier(input: &str, pos: usize)
-     -> oak_runtime::ParseResult<Vec<char>>;
+     -> oak_runtime::ParseState<Vec<char>>;
 
     pub fn parse_integer(input: &str, pos: usize)
-     -> oak_runtime::ParseResult<Vec<char>>;
+     -> oak_runtime::ParseState<Vec<char>>;
   // ...
   // Rest of the output truncated for the tutorial.
 }
 ```
 
-
-
 We can already use these functions in our main:
 
 ```
 fn main() {
-  assert!(calc::parse_let_kw("let", 0).is_ok());
+  let input = "let";
+  assert!(calc::parse_let_kw(input, 0).into_result(input).is_ok());
 }
 ```
 
