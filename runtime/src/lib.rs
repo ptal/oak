@@ -311,8 +311,9 @@ pub fn recognize_any_single_char(input: &str, offset: usize) -> ParseState<()> {
 pub fn parse_match_literal(input: &str, offset: usize, lit: &'static str, lit_len: usize)
   -> ParseState<()>
 {
-  if offset < input.len() && input[offset..].starts_with(lit) {
-    ParseState::stateless(offset + lit_len)
+  let end_offset = offset + lit_len;
+  if end_offset <= input.len() && &input.as_bytes()[offset..end_offset] == lit.as_bytes() {
+    ParseState::stateless(end_offset)
   } else {
     ParseState::error(offset, lit)
   }
