@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use Producer;
+pub use Producer;
 use std::str::CharIndices;
 use std::cmp::Ordering;
 
@@ -40,7 +40,7 @@ impl<'a> StrStream<'a>
     }
   }
 
-  pub fn offset(&self) -> usize {
+  fn offset(&self) -> usize {
     match self.current.clone().peekable().next() {
       None => self.raw_data.len(),
       Some((idx, _)) => idx
@@ -85,5 +85,69 @@ impl<'a> Ord for StrStream<'a>
   fn cmp(&self, other: &Self) -> Ordering {
     self.assert_same_raw_data(other);
     self.offset().cmp(&other.offset())
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+
+  #[test]
+  fn test_stream() {
+    let abc = "abc";
+    let mut s1 = abc.producer();
+    let s1_init = s1.clone();
+    let mut s2 = s1_init.clone();
+    for c in abc.chars() {
+      assert!(s1 == s2);
+      assert_eq!(s1.next().unwrap(), c);
+      assert!(s1 > s1_init);
+      assert!(s1 > s2);
+      s2 = s1.clone();
+    }
+    assert_eq!(s1.next(), None);
+    assert_eq!(s2.next(), None);
+    assert!(s1 > s1_init);
+    assert!(s1 == s2);
+  }
+
+  #[test]
+  fn test_empty_stream() {
+    let mut empty = "".producer();
+    assert_eq!(empty.offset(), 0);
+    assert_eq!(empty.next(), None);
+    assert_eq!(empty.next(), None);
+    assert_eq!(empty.offset(), 0);
+    assert!(empty == empty);
+    assert!(!(empty > empty));
+    let empty2 = empty.clone();
+    assert!(empty == empty2);
+    assert!(!(empty > empty2));
+  }
+
+  fn test_unrelated_streams<R, F>(op: F) where
+   F: FnOnce(&StrStream<'static>, &StrStream<'static>) -> R
+  {
+    let s1 = "abc".producer();
+    let s2 = "def".producer();
+    op(&s1, &s2);
+  }
+
+  #[test]
+  #[should_panic]
+  fn unrelated_stream_eq() {
+    test_unrelated_streams(|a, b| a == b);
+  }
+
+  #[test]
+  #[should_panic]
+  fn unrelated_stream_partial_ord() {
+    test_unrelated_streams(|a, b| a.partial_cmp(b));
+  }
+
+  #[test]
+  #[should_panic]
+  fn unrelated_stream_ord() {
+    test_unrelated_streams(|a, b| a.cmp(b));
   }
 }
