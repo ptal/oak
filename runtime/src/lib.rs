@@ -16,6 +16,14 @@
 
 use std::collections::hash_set::HashSet;
 
+pub mod str_stream;
+
+pub trait Producer
+{
+  type Stream;
+  fn producer(self) -> Self::Stream;
+}
+
 pub type ParseResult<T> = Result<ParseSuccess<T>, String>;
 
 pub struct ParseState<T>
