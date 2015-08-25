@@ -24,6 +24,16 @@ pub trait Producer
   fn producer(self) -> Self::Stream;
 }
 
+pub trait Location
+{
+  fn location(&self) -> String;
+}
+
+pub trait CodeSnippet
+{
+  fn code_snippet(&self) -> String;
+}
+
 pub type ParseResult<T> = Result<ParseSuccess<T>, String>;
 
 pub struct ParseState<T>

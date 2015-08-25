@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use Producer;
+pub use {Producer, Location, CodeSnippet};
 use std::str::CharIndices;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, min};
 
 impl<'a> Producer for &'a str
 {
@@ -52,6 +52,22 @@ impl<'a> StrStream<'a>
     debug_assert!(self.raw_data.as_ptr() == other.raw_data.as_ptr(),
       "Operations between two streams are only defined when they share the same raw data.");
   }
+
+  // Partially taken from https://github.com/kevinmehall/rust-peg/blob/master/src/translate.rs
+  pub fn line_column(&self) -> (usize, usize) {
+    let mut remaining = self.offset();
+    let mut line_no = 1usize;
+    for line in self.raw_data.lines_any() {
+      let line_len = line.len() + 1;
+      if remaining < line_len {
+        break;
+      }
+      remaining -= line_len;
+      line_no += 1;
+    }
+    (line_no, remaining + 1)
+  }
+
 }
 
 impl<'a> Iterator for StrStream<'a>
@@ -85,6 +101,30 @@ impl<'a> Ord for StrStream<'a>
   fn cmp(&self, other: &Self) -> Ordering {
     self.assert_same_raw_data(other);
     self.offset().cmp(&other.offset())
+  }
+}
+
+impl<'a> Location for StrStream<'a>
+{
+  fn location(&self) -> String {
+    let (line, column) = self.line_column();
+    format!("{}:{}", line, column)
+  }
+}
+
+impl<'a> CodeSnippet for StrStream<'a>
+{
+  fn code_snippet(&self) -> String {
+    let raw_len = self.raw_data.len();
+    let current_offset = self.offset();
+    if current_offset == raw_len {
+      String::from("<end-of-file>")
+    }
+    else {
+      let code_snippet_len = 10usize;
+      let len = min(raw_len - current_offset, code_snippet_len);
+      String::from(&self.raw_data[current_offset..][..len])
+    }
   }
 }
 
