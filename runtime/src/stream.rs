@@ -1,4 +1,4 @@
-// Copyright 2014 Pierre Talbot (IRCAM)
+// Copyright 2015 Pierre Talbot (IRCAM)
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(str_char)]
+pub trait Producer
+{
+  type Stream;
+  fn producer(self) -> Self::Stream;
+}
 
-pub use str_stream::*;
-pub use stream::*;
-pub use parse_success::*;
-pub use parse_error::*;
-pub use parse_state::*;
-pub use combinators::*;
+pub trait Location
+{
+  fn location(&self) -> String;
+}
 
-pub mod str_stream;
-pub mod parse_success;
-pub mod parse_error;
-pub mod parse_state;
-pub mod combinators;
-pub mod stream;
+pub trait CodeSnippet
+{
+  fn code_snippet(&self) -> String;
+}
 
+pub trait ConsumePrefix<P>
+{
+  fn consume_prefix(&mut self, prefix: P) -> bool;
+}

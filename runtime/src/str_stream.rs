@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use {Producer, Location, CodeSnippet, ConsumePrefix};
+use stream::*;
 use std::cmp::{Ordering, min};
 
 impl<'a> Producer for &'a str
@@ -145,6 +145,7 @@ impl<'a> ConsumePrefix<&'static str> for StrStream<'a>
 #[cfg(test)]
 mod test {
   use super::*;
+  use stream::*;
 
   fn consume_prefix_test<'a>(stream: &StrStream<'a>, prefix: &'static str,
     prefix_match: bool, next_char: Option<char>)

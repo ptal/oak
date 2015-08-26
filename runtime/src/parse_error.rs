@@ -87,7 +87,7 @@ impl<S> Display for ParseError<S> where
 #[cfg(test)]
 mod test {
   use super::*;
-  use str_stream::*;
+  use stream::*;
 
   #[test]
   fn test_error_join() {
