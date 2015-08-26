@@ -28,6 +28,16 @@ impl<S, T> ParseSuccess<S, T>
       data: data
     }
   }
+
+  #[inline]
+  pub fn map<U, F>(self, op: F) -> ParseSuccess<S, U> where
+   F: FnOnce(T) -> U
+  {
+    ParseSuccess {
+      stream: self.stream,
+      data: op(self.data)
+    }
+  }
 }
 
 impl<S, T> ParseSuccess<S, T> where

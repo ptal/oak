@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use {Producer, Location, CodeSnippet};
-use std::str::CharIndices;
+pub use {Producer, Location, CodeSnippet, ConsumePrefix};
 use std::cmp::{Ordering, min};
 
 impl<'a> Producer for &'a str
@@ -28,7 +27,7 @@ impl<'a> Producer for &'a str
 pub struct StrStream<'a>
 {
   raw_data: &'a str,
-  current: CharIndices<'a>
+  bytes_offset: usize
 }
 
 impl<'a> StrStream<'a>
@@ -36,14 +35,7 @@ impl<'a> StrStream<'a>
   fn new(raw_data: &'a str) -> StrStream<'a> {
     StrStream {
       raw_data: raw_data,
-      current: raw_data.char_indices()
-    }
-  }
-
-  fn offset(&self) -> usize {
-    match self.current.clone().peekable().next() {
-      None => self.raw_data.len(),
-      Some((idx, _)) => idx
+      bytes_offset: 0
     }
   }
 
@@ -55,7 +47,7 @@ impl<'a> StrStream<'a>
 
   // Partially taken from https://github.com/kevinmehall/rust-peg/blob/master/src/translate.rs
   pub fn line_column(&self) -> (usize, usize) {
-    let mut remaining = self.offset();
+    let mut remaining = self.bytes_offset;
     let mut line_no = 1usize;
     for line in self.raw_data.lines_any() {
       let line_len = line.len() + 1;
@@ -74,7 +66,13 @@ impl<'a> Iterator for StrStream<'a>
 {
   type Item = char;
   fn next(&mut self) -> Option<Self::Item> {
-    self.current.next().map(|(_,x)| x)
+    if self.bytes_offset < self.raw_data.len() {
+      let current = self.raw_data.char_at(self.bytes_offset);
+      self.bytes_offset += current.len_utf8();
+      Some(current)
+    } else {
+      None
+    }
   }
 }
 
@@ -82,7 +80,7 @@ impl<'a> PartialEq for StrStream<'a>
 {
   fn eq(&self, other: &Self) -> bool {
     self.assert_same_raw_data(other);
-    self.offset() == other.offset()
+    self.bytes_offset == other.bytes_offset
   }
 }
 
@@ -92,7 +90,7 @@ impl<'a> PartialOrd for StrStream<'a>
 {
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     self.assert_same_raw_data(other);
-    self.offset().partial_cmp(&other.offset())
+    self.bytes_offset.partial_cmp(&other.bytes_offset)
   }
 }
 
@@ -100,7 +98,7 @@ impl<'a> Ord for StrStream<'a>
 {
   fn cmp(&self, other: &Self) -> Ordering {
     self.assert_same_raw_data(other);
-    self.offset().cmp(&other.offset())
+    self.bytes_offset.cmp(&other.bytes_offset)
   }
 }
 
@@ -115,15 +113,31 @@ impl<'a> Location for StrStream<'a>
 impl<'a> CodeSnippet for StrStream<'a>
 {
   fn code_snippet(&self) -> String {
-    let raw_len = self.raw_data.len();
-    let current_offset = self.offset();
-    if current_offset == raw_len {
+    let total_len = self.raw_data.len();
+    let current_offset = self.bytes_offset;
+    if current_offset == total_len {
       String::from("<end-of-file>")
     }
     else {
       let code_snippet_len = 10usize;
-      let len = min(raw_len - current_offset, code_snippet_len);
+      let len = min(total_len - current_offset, code_snippet_len);
       String::from(&self.raw_data[current_offset..][..len])
+    }
+  }
+}
+
+impl<'a> ConsumePrefix<&'static str> for StrStream<'a>
+{
+  fn consume_prefix(&mut self, prefix: &'static str) -> bool {
+    let current_offset = self.bytes_offset;
+    let end_offset = current_offset + prefix.len();
+    if end_offset <= self.raw_data.len()
+     && &self.raw_data.as_bytes()[current_offset..end_offset] == prefix.as_bytes()
+    {
+      self.bytes_offset = end_offset;
+      true
+    } else {
+      false
     }
   }
 }
@@ -131,6 +145,24 @@ impl<'a> CodeSnippet for StrStream<'a>
 #[cfg(test)]
 mod test {
   use super::*;
+
+  fn consume_prefix_test<'a>(stream: &StrStream<'a>, prefix: &'static str,
+    prefix_match: bool, next_char: Option<char>)
+  {
+    let mut s2 = stream.clone();
+    assert_eq!(s2.consume_prefix(prefix), prefix_match);
+    assert!(s2.next() == next_char);
+  }
+
+  #[test]
+  fn test_consume_prefix() {
+    let s1 = &"abc".producer();
+    consume_prefix_test(s1, "abc", true, None);
+    consume_prefix_test(s1, "ab", true, Some('c'));
+    consume_prefix_test(s1, "", true, Some('a'));
+    consume_prefix_test(s1, "ac", false, Some('a'));
+    consume_prefix_test(s1, "z", false, Some('a'));
+  }
 
   #[test]
   fn test_stream() {
@@ -154,10 +186,10 @@ mod test {
   #[test]
   fn test_empty_stream() {
     let mut empty = "".producer();
-    assert_eq!(empty.offset(), 0);
+    assert_eq!(empty.bytes_offset, 0);
     assert_eq!(empty.next(), None);
     assert_eq!(empty.next(), None);
-    assert_eq!(empty.offset(), 0);
+    assert_eq!(empty.bytes_offset, 0);
     assert!(empty == empty);
     assert!(!(empty > empty));
     let empty2 = empty.clone();

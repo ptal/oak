@@ -36,6 +36,11 @@ pub trait CodeSnippet
   fn code_snippet(&self) -> String;
 }
 
+pub trait ConsumePrefix<P>
+{
+  fn consume_prefix(&mut self, prefix: P) -> bool;
+}
+
 pub type ParseResult<T> = Result<ParseSuccess<T>, String>;
 
 pub struct ParseState<T>
