@@ -22,3 +22,4 @@ script:
   - cargo build
   - cargo test
   - cargo doc
+  - cd runtime; cargo test; cargo doc

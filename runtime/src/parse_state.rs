@@ -168,7 +168,7 @@ impl<S> ParseState<S, ()> where
 impl<S> ParseState<S, ()>
 {
   #[inline]
-  pub fn to_stateless_success(self, stream: S) -> ParseState<S, ()> {
+  pub fn or_stateless(self, stream: S) -> ParseState<S, ()> {
     ParseState {
       error: self.error,
       success: self.success.or(Some(ParseSuccess::stateless(stream)))

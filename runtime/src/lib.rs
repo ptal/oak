@@ -20,6 +20,7 @@ pub mod str_stream;
 pub mod parse_success;
 pub mod parse_error;
 pub mod parse_state;
+pub mod combinators;
 
 pub trait Producer
 {
