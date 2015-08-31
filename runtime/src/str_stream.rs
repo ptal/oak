@@ -112,15 +112,14 @@ impl<'a> Location for StrStream<'a>
 
 impl<'a> CodeSnippet for StrStream<'a>
 {
-  fn code_snippet(&self) -> String {
+  fn code_snippet(&self, len_hint: usize) -> String {
     let total_len = self.raw_data.len();
     let current_offset = self.bytes_offset;
     if current_offset == total_len {
       String::from("<end-of-file>")
     }
     else {
-      let code_snippet_len = 10usize;
-      let len = min(total_len - current_offset, code_snippet_len);
+      let len = min(total_len - current_offset, len_hint);
       String::from(&self.raw_data[current_offset..][..len])
     }
   }
@@ -141,6 +140,14 @@ impl<'a> ConsumePrefix<&'static str> for StrStream<'a>
     }
   }
 }
+
+impl<'a> HasNext for StrStream<'a>
+{
+  fn has_next(&self) -> bool {
+    self.bytes_offset < self.raw_data.len()
+  }
+}
+
 
 #[cfg(test)]
 mod test {

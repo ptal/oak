@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::cmp::Ord;
+use stream::HasNext;
 use parse_error::ParseError;
 use parse_success::ParseSuccess;
 
@@ -37,6 +38,12 @@ impl<S, T> ParseState<S, T> where
       error: ParseError::empty(stream.clone()),
       success: Some(ParseSuccess::new(stream, data))
     }
+  }
+
+  #[inline]
+  pub fn stream(&self) -> S {
+    self.assert_success("stream");
+    self.success.as_ref().unwrap().stream.clone()
   }
 }
 
@@ -121,9 +128,30 @@ impl<S, T> ParseState<S, T>
     }
   }
 
-  fn assert_merge_success(&self) {
-    debug_assert!(self.success.is_some(),
-      "ParseState::merge_success can only be called if `self` is successfull.");
+  pub fn is_successful(&self) -> bool {
+    self.success.is_some()
+  }
+
+  fn assert_success(&self, from: &str) {
+    debug_assert!(self.is_successful(),
+      "`{}`: `self` is required to be in a successful state.", from);
+  }
+}
+
+impl<S, T> ParseState<S, T> where
+ S: HasNext
+{
+  #[inline]
+  pub fn has_successor(&self) -> bool {
+    self.success.as_ref().map_or(false, |success| success.stream.has_next())
+  }
+}
+
+impl<S, T> ParseState<S, T> where
+ S: Eq
+{
+  pub fn stream_eq(&self, other: &S) -> bool {
+    self.success.as_ref().map_or(false, |success| &success.stream == other)
   }
 }
 
@@ -178,7 +206,7 @@ impl<S> ParseState<S, ()>
   #[inline]
   pub fn merge_success(&mut self, other: ParseSuccess<S, ()>)
   {
-    self.assert_merge_success();
+    self.assert_success("ParseState<S, ()>::merge_success");
     self.success = Some(other);
   }
 }
@@ -188,7 +216,7 @@ impl<S, T> ParseState<S, Vec<T>>
   #[inline]
   pub fn merge_success(&mut self, other: ParseSuccess<S, T>)
   {
-    self.assert_merge_success();
+    self.assert_success("ParseState<S, Vec<T>>::merge_success");
     let success = self.success.as_mut().unwrap();
     success.data.push(other.data);
     success.stream = other.stream;

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(plugin, str_char, convert, path_ext, box_syntax, rustc_private)]
+#![feature(plugin, convert, path_ext, box_syntax, rustc_private)]
 
 #![plugin(oak)]
 
 extern crate oak_runtime;
 extern crate term;
 
-use oak_runtime::{ParseState, ParseResult};
+use oak_runtime::*;
 use grammars::*;
 
 use std::path::{PathBuf, Path};
@@ -41,7 +41,7 @@ enum ExpectedResult {
 struct TestDisplay
 {
   terminal: Box<Terminal<WriterWrapper>+'static>,
-  code_snippet_len: u32,
+  code_snippet_len: usize,
   num_success: u32,
   num_failure: u32,
   num_system_failure: u32
@@ -49,7 +49,7 @@ struct TestDisplay
 
 impl TestDisplay
 {
-  pub fn new(code_snippet_len: u32) -> TestDisplay
+  pub fn new(code_snippet_len: usize) -> TestDisplay
   {
     TestDisplay{
       terminal: term::stdout().unwrap(),
@@ -99,14 +99,14 @@ impl TestDisplay
   }
 
   pub fn failure(&mut self, path: &Path, expectation: ExpectedResult,
-    result: ParseResult<()>, input: &str)
+    result: ParseResult<StrStream, ()>)
   {
     self.num_failure += 1;
     let test_name = self.file_stem(path);
     self.write_line(term::color::RED, "[ failed ] ", &test_name);
     self.path(path);
     self.expected(expectation);
-    self.wrong_result(result, input);
+    self.wrong_result(result);
   }
 
   fn expected(&mut self, expectation: ExpectedResult)
@@ -118,20 +118,17 @@ impl TestDisplay
     self.write_line(term::color::CYAN, "  [ expected ] ", &format!("{}", msg))
   }
 
-  fn wrong_result(&mut self, result: ParseResult<()>, input: &str)
+  fn wrong_result(&mut self, result: ParseResult<StrStream, ()>)
   {
     let msg = match result {
-      Ok(ref state) if state.partial_read(input) => format!("Partial match, stopped at `{}`.", self.code_snippet(state.offset, input)),
+      Ok(ref state) if state.partial_read() => {
+        format!("Partial match, stopped at `{}`.",
+          state.stream.code_snippet(self.code_snippet_len))
+      }
       Ok(_) => format!("Fully matched."),
-      Err(err) => err
+      Err(err) => format!("{}", err)
     };
     self.error(&msg)
-  }
-
-  fn code_snippet<'a>(&self, stopped_at: usize, input: &'a str) -> &'a str
-  {
-    let len = std::cmp::min(input.len() - stopped_at, self.code_snippet_len as usize);
-    &input[stopped_at..][..len]
   }
 
   pub fn success(&mut self, path: &Path)
@@ -187,7 +184,7 @@ impl TestDisplay
 struct GrammarInfo
 {
   name: String,
-  recognizer: Box<Fn(&str, usize) -> ParseState<()>>
+  //recognizer: Box<for<'a> Fn(StrStream<'a>) -> ParseState<StrStream<'a>, ()>>
 }
 
 struct Test<'a>
@@ -244,14 +241,14 @@ impl<'a> Test<'a>
 
   fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
   {
-    let state = (self.info.recognizer)(input, 0);
-    let result = state.into_result(input);
+    let state = calculator::recognize_expression(input.producer());
+    let result = state.into_result();
     match (expectation.clone(), result) {
-      (Match, Ok(ref state)) if state.full_read(input) => self.display.success(test_path),
-      (Error, Ok(ref state)) if state.partial_read(input) => self.display.success(test_path),
+      (Match, Ok(ref state)) if state.full_read() => self.display.success(test_path),
+      (Error, Ok(ref state)) if state.partial_read() => self.display.success(test_path),
       (Error, Err(_)) => self.display.success(test_path),
       (_, state) => {
-        self.display.failure(test_path, expectation, state, input);
+        self.display.failure(test_path, expectation, state);
       }
     }
   }
@@ -278,9 +275,9 @@ impl TestEngine
     }
   }
 
-  fn register(&mut self, name: &str, recognizer: Box<Fn(&str, usize) -> ParseState<()>>)
+  fn register(&mut self, name: &str) //, recognizer: Box<for<'a> Fn(StrStream<'a>) -> ParseState<StrStream<'a>, ()>>)
   {
-    self.grammars.push(GrammarInfo{name: String::from(name), recognizer: recognizer});
+    self.grammars.push(GrammarInfo{name: String::from(name)});//, recognizer: recognizer});
   }
 
   fn run(&mut self)
@@ -315,9 +312,9 @@ fn main()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", box ntcc::recognize_ntcc);
-  test_engine.register("type_name", box type_name::recognize_type_names);
-  test_engine.register("calculator", box calculator::recognize_expression);
+  // test_engine.register("ntcc", box ntcc::recognize_ntcc);
+  // test_engine.register("type_name", box type_name::recognize_type_names);
+  test_engine.register("calculator");//, Box::new(calculator::recognize_expression));
 
   test_engine.run();
 }

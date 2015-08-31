@@ -18,6 +18,18 @@ pub trait Producer
   fn producer(self) -> Self::Stream;
 }
 
+pub trait CharStream
+ : Clone + Ord + HasNext + Eq
+ + Iterator<Item=char>
+ + ConsumePrefix<&'static str>
+{}
+
+impl<R> CharStream for R where
+ R: Clone + Ord + HasNext + Eq
+  + Iterator<Item=char>
+  + ConsumePrefix<&'static str>
+{}
+
 pub trait Location
 {
   fn location(&self) -> String;
@@ -25,10 +37,15 @@ pub trait Location
 
 pub trait CodeSnippet
 {
-  fn code_snippet(&self) -> String;
+  fn code_snippet(&self, len_hint: usize) -> String;
 }
 
 pub trait ConsumePrefix<P>
 {
   fn consume_prefix(&mut self, prefix: P) -> bool;
+}
+
+pub trait HasNext
+{
+  fn has_next(&self) -> bool;
 }

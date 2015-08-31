@@ -77,7 +77,7 @@ impl<S> Display for ParseError<S> where
   fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
     let location = self.farthest_read.location();
     let expected = self.expected_desc();
-    let snippet = self.farthest_read.code_snippet();
+    let snippet = self.farthest_read.code_snippet(10usize);
     formatter.write_fmt(
       format_args!("{}: unexpected `{}`, expecting {}.", location, snippet, expected))
   }

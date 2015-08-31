@@ -14,8 +14,8 @@
 
 pub use grammars::calculator::calculator::*;
 
-grammar! calculator{
-  // #![debug_api]
+grammar! calculator {
+  #![debug_api]
 
   expression = sum
 

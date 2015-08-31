@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use HasNext;
+
 #[derive(Debug)]
 pub struct ParseSuccess<S, T>
 {
@@ -41,10 +43,10 @@ impl<S, T> ParseSuccess<S, T>
 }
 
 impl<S, T> ParseSuccess<S, T> where
- S: Iterator + Clone
+ S: Iterator + Clone + HasNext
 {
   pub fn full_read(&self) -> bool {
-    self.stream.clone().peekable().peek().is_some()
+    !self.stream.has_next()
   }
 
   pub fn partial_read(&self) -> bool {

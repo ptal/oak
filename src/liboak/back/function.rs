@@ -40,7 +40,7 @@ impl<'cx> FunctionGenerator<'cx>
   fn generate_parser_alias(&mut self, kind: FunctionKind, names: GenFunNames, public: bool) -> bool {
     let GenFunNames{recognizer, parser} = names;
     if kind == ParserAlias {
-      let recognizer_call = quote_expr!(self.cx, $recognizer(input, pos));
+      let recognizer_call = quote_expr!(self.cx, $recognizer(stream));
       self.push_unit_fun(parser, recognizer_call, public);
       true
     } else {
@@ -88,8 +88,8 @@ impl<'cx> FunctionGenerator<'cx>
     let rule_name = self.names_of_rule(rule_id);
     let GenFunNames{recognizer, parser} = expr_fn_names;
     self.generate(rule_name, kind,
-      quote_expr!(cx, $recognizer(input, pos)),
-      quote_expr!(cx, $parser(input, pos)),
+      quote_expr!(cx, $recognizer(stream)),
+      quote_expr!(cx, $parser(stream)),
       true
     )
   }
@@ -107,7 +107,8 @@ impl<'cx> FunctionGenerator<'cx>
     };
     let function = quote_item!(self.cx,
       #[inline]
-      $pub_kw fn $name(input: &str, pos: usize) -> oak_runtime::ParseState<$ty>
+      $pub_kw fn $name<S>(mut stream: S) -> oak_runtime::ParseState<S, $ty> where
+       S: oak_runtime::CharStream
       {
         $body
       }
