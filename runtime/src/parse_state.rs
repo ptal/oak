@@ -128,10 +128,18 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  #[inline]
+  pub fn unwrap_data(self) -> T {
+    self.assert_success("ParseState::unwrap_data");
+    self.success.unwrap().data
+  }
+
+  #[inline]
   pub fn is_successful(&self) -> bool {
     self.success.is_some()
   }
 
+  #[inline(always)]
   fn assert_success(&self, from: &str) {
     debug_assert!(self.is_successful(),
       "`{}`: `self` is required to be in a successful state.", from);
