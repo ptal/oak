@@ -70,7 +70,7 @@ impl TestEngine
     TestEngine{
       test_path: test_path,
       grammars: Vec::new(),
-      display: TestDisplay::new(20)
+      display: TestDisplay::new()
     }
   }
 
@@ -169,8 +169,8 @@ impl<'a> Test<'a>
     let state = (self.info.recognizer)(input);
     let result = state.into_result();
     match (expectation.clone(), result) {
-      (Match, Ok(ref state)) if state.full_read() => self.display.success(test_path),
-      (Error, Ok(ref state)) if state.partial_read() => self.display.success(test_path),
+      (Match, Ok((ref state, _))) if state.full_read() => self.display.success(test_path),
+      (Error, Ok((ref state, _))) if state.partial_read() => self.display.success(test_path),
       (Error, Err(_)) => self.display.success(test_path),
       (_, state) => {
         self.display.failure(test_path, expectation, state);
@@ -182,7 +182,6 @@ impl<'a> Test<'a>
 struct TestDisplay
 {
   terminal: Box<Terminal<WriterWrapper>+'static>,
-  code_snippet_len: usize,
   num_success: u32,
   num_failure: u32,
   num_system_failure: u32
@@ -190,11 +189,10 @@ struct TestDisplay
 
 impl TestDisplay
 {
-  pub fn new(code_snippet_len: usize) -> TestDisplay
+  pub fn new() -> TestDisplay
   {
     TestDisplay{
       terminal: term::stdout().unwrap(),
-      code_snippet_len: code_snippet_len,
       num_success: 0,
       num_failure: 0,
       num_system_failure: 0
@@ -262,9 +260,8 @@ impl TestDisplay
   fn wrong_result(&mut self, result: ParseResult<StrStream, ()>)
   {
     let msg = match result {
-      Ok(ref state) if state.partial_read() => {
-        format!("Partial match, stopped at `{}`.",
-          state.stream.code_snippet(self.code_snippet_len))
+      Ok((ref state, ref err)) if state.partial_read() => {
+        format!("Partial match. `{}`", err)
       }
       Ok(_) => format!("Fully matched."),
       Err(err) => format!("{}", err)

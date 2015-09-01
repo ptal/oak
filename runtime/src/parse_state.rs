@@ -17,8 +17,8 @@ use stream::HasNext;
 use parse_error::ParseError;
 use parse_success::ParseSuccess;
 
-/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`.
-pub type ParseResult<S, T> = Result<ParseSuccess<S, T>, ParseError<S>>;
+/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`. `ParseError<S>` represents the expected items to continue the search, this is available even in case of success.
+pub type ParseResult<S, T> = Result<(ParseSuccess<S, T>, ParseError<S>), ParseError<S>>;
 
 pub struct ParseState<S, T>
 {
@@ -122,7 +122,7 @@ impl<S, T> ParseState<S, T>
   pub fn into_result(self) -> ParseResult<S, T> {
     match self.success {
       Some(success) => {
-        Ok(success)
+        Ok((success, self.error))
       },
       None => {
         Err(self.error)
