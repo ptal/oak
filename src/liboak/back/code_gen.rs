@@ -286,12 +286,13 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     let classes_desc_str = classes_desc.as_str();
 
     let make_char_class_body = |result: RExpr| quote_expr!(cx, {
+      let past = stream.clone();
       match stream.next() {
         Some(current) if $cond => {
           $result
         }
         _ => {
-          oak_runtime::ParseState::error(stream, $classes_desc_str)
+          oak_runtime::ParseState::error(past, $classes_desc_str)
         }
       }
     });
