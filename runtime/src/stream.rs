@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub trait Producer
+pub trait Stream
 {
-  type Stream;
-  fn producer(self) -> Self::Stream;
+  type Output;
+  fn stream(self) -> Self::Output;
 }
 
 pub trait CharStream

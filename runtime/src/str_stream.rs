@@ -15,10 +15,10 @@
 use stream::*;
 use std::cmp::{Ordering, min};
 
-impl<'a> Producer for &'a str
+impl<'a> Stream for &'a str
 {
-  type Stream = StrStream<'a>;
-  fn producer(self) -> StrStream<'a> {
+  type Output = StrStream<'a>;
+  fn stream(self) -> StrStream<'a> {
     StrStream::new(self)
   }
 }
@@ -164,7 +164,7 @@ mod test {
 
   #[test]
   fn test_consume_prefix() {
-    let s1 = &"abc".producer();
+    let s1 = &"abc".stream();
     consume_prefix_test(s1, "abc", true, None);
     consume_prefix_test(s1, "ab", true, Some('c'));
     consume_prefix_test(s1, "", true, Some('a'));
@@ -175,7 +175,7 @@ mod test {
   #[test]
   fn test_stream() {
     let abc = "abc";
-    let mut s1 = abc.producer();
+    let mut s1 = abc.stream();
     let s1_init = s1.clone();
     let mut s2 = s1_init.clone();
     for c in abc.chars() {
@@ -193,7 +193,7 @@ mod test {
 
   #[test]
   fn test_empty_stream() {
-    let mut empty = "".producer();
+    let mut empty = "".stream();
     assert_eq!(empty.bytes_offset, 0);
     assert_eq!(empty.next(), None);
     assert_eq!(empty.next(), None);
@@ -208,8 +208,8 @@ mod test {
   fn test_unrelated_streams<R, F>(op: F) where
    F: FnOnce(&StrStream<'static>, &StrStream<'static>) -> R
   {
-    let s1 = "abc".producer();
-    let s2 = "def".producer();
+    let s1 = "abc".stream();
+    let s2 = "def".stream();
     op(&s1, &s2);
   }
 

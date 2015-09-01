@@ -44,11 +44,11 @@ fn test_data_directory()
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
   test_engine.register("ntcc", Box::new(|content|
-    ntcc::recognize_ntcc(content.producer())));
+    ntcc::recognize_ntcc(content.stream())));
   test_engine.register("type_name", Box::new(|content|
-    type_name::recognize_type_names(content.producer())));
+    type_name::recognize_type_names(content.stream())));
   test_engine.register("calculator", Box::new(|content|
-    calculator::recognize_expression(content.producer())));
+    calculator::recognize_expression(content.stream())));
 
   test_engine.run();
 }

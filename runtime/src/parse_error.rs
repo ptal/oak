@@ -91,7 +91,7 @@ mod test {
 
   #[test]
   fn test_error_join() {
-    let mut s1 = "abc".producer();
+    let mut s1 = "abc".stream();
     let s2 = s1.clone();
     s1.next();
 
