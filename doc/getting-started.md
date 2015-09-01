@@ -32,8 +32,11 @@ path = "runtime"
 Oak is now usable from your `main.rs`:
 
 ```rust
-#![feature(plugin, str_char)]
+#![feature(plugin)]
 #![plugin(oak)]
+
+extern crate oak_runtime;
+use oak_runtime::*;
 
 grammar! sum{
   #![show_api]
@@ -53,9 +56,9 @@ grammar! sum{
 }
 
 fn main() {
-  let input = "7+2+1";
-  assert_eq!(sum::parse_sum(input, 0).into_result(input).unwrap().data, 10);
+  let state = sum::parse_sum("7+2+1".stream());
+  assert_eq!(state.unwrap_data(), 10);
 }
 ```
 
-We organized the library into two packages: `oak` and `oak_runtime`. The `oak` dependency is the macro compiling your grammar description into Rust code, the attribute `#![plugin(oak)]` exposes the macro `grammar!` which is the only thing you will use from `oak`. The generated code depends on the library `oak_runtime`, it also contains structures used by the generated code such as `ParseResult`. The attribute `#![feature(plugin, str_char)]` tells the Rust compiler that we are using unstable features, and that's why we need to use the nightly channel. Keep reading to learn more about the language used in the macro `grammar!`.
+We organized the library into two packages: `oak` and `oak_runtime`. The `oak` dependency is the syntax extension compiling your grammar description into Rust code, the attribute `#![plugin(oak)]` exposes the macro `grammar!` which is the only thing you will use from `oak`. The generated code depends on the library `oak_runtime`, it also contains structures that you will have to use such as `ParseState`. The attribute `#![feature(plugin)]` tells the Rust compiler that we are using unstable features, and that's why we need to use the nightly channel. Keep reading to learn more about the language used in the macro `grammar!`.
