@@ -12,15 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Data carried by a parsing state even if the parsing state is currently successful.
+
 use {Location, CodeSnippet};
 use std::collections::hash_set::HashSet;
 use std::cmp::Ord;
 use std::fmt::{Formatter, Display, Error};
 
+/// Type `ParseError` contains the list of all expected items that could have been parsed at position `farthest_read`.
 #[derive(Clone, Debug)]
 pub struct ParseError<S>
 {
+  /// The farthest read into the stream at which we encountered an error.
   pub farthest_read: S,
+  /// Expected items at position `farthest_read`. Duplicate entries are possible.
   pub expected: Vec<&'static str>
 }
 
@@ -57,7 +62,8 @@ impl<S> ParseError<S>
 impl<S> ParseError<S> where
  S: Ord
 {
-  pub fn join(mut self, other: ParseError<S>) -> ParseError<S> {
+  /// Merge two parsing errors. We only keep information of the error that occurred the farthest in the stream. In case of equality, both expected item lists are merged into a new one. It does not remove identical expected items.
+  pub fn merge(mut self, other: ParseError<S>) -> ParseError<S> {
     if self.farthest_read > other.farthest_read {
       self
     }
@@ -71,6 +77,7 @@ impl<S> ParseError<S> where
   }
 }
 
+/// Prints an error message of the form: ```1:1: unexpected `a+1`, expecting `(` or `["0-9"]`.``` where `1:1` is the line and the column where the error occurred.
 impl<S> Display for ParseError<S> where
  S: Location + CodeSnippet
 {
@@ -90,23 +97,23 @@ mod test {
   use stream::*;
 
   #[test]
-  fn test_error_join() {
+  fn test_error_merge() {
     let mut s1 = "abc".stream();
     let s2 = s1.clone();
     s1.next();
 
     let err1 = ParseError::unique(s1, "err1");
     let err2 = ParseError::unique(s2, "err2");
-    let err1_2_join = err1.clone().join(err2.clone());
-    assert!(err1_2_join.farthest_read == err1.farthest_read);
-    assert!(err1_2_join.expected == vec!["err1"]);
+    let err1_2_merge = err1.clone().merge(err2.clone());
+    assert!(err1_2_merge.farthest_read == err1.farthest_read);
+    assert!(err1_2_merge.expected == vec!["err1"]);
 
-    let err2_join = err2.clone().join(err2.clone());
-    assert!(err2_join.farthest_read == err2.farthest_read);
-    assert!(err2_join.expected == vec!["err2", "err2"]);
+    let err2_merge = err2.clone().merge(err2.clone());
+    assert!(err2_merge.farthest_read == err2.farthest_read);
+    assert!(err2_merge.expected == vec!["err2", "err2"]);
 
-    let err2_1_join = err2.clone().join(err1.clone());
-    assert!(err2_1_join.farthest_read == err1.farthest_read);
-    assert!(err2_1_join.expected == vec!["err1"]);
+    let err2_1_merge = err2.clone().merge(err1.clone());
+    assert!(err2_1_merge.farthest_read == err1.farthest_read);
+    assert!(err2_1_merge.expected == vec!["err1"]);
   }
 }

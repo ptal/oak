@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Data carried by a successful parsing state.
+
 use HasNext;
 
+/// Type `ParseSuccess` contains information of a successful parsing state.
 #[derive(Debug)]
 pub struct ParseSuccess<S, T>
 {
+  /// The current stream that can be partially of fully consumed.
   pub stream: S,
+  /// AST built from items read in `stream` that are before the current state of `stream`. It does not necessarily contains `data` built from the beginning of `stream` since it depends on the state in which `stream` was before starting the parsing.
   pub data: T
 }
 
@@ -31,6 +36,7 @@ impl<S, T> ParseSuccess<S, T>
     }
   }
 
+  /// Maps `op` to the current `data` while keeping `stream` unchanged.
   #[inline]
   pub fn map<U, F>(self, op: F) -> ParseSuccess<S, U> where
    F: FnOnce(T) -> U
@@ -45,10 +51,12 @@ impl<S, T> ParseSuccess<S, T>
 impl<S, T> ParseSuccess<S, T> where
  S: Iterator + Clone + HasNext
 {
+  /// Returns `true` if `stream` is entirely consumed.
   pub fn full_read(&self) -> bool {
     !self.stream.has_next()
   }
 
+  /// Returns `true` if `stream` still contains at least one item.
   pub fn partial_read(&self) -> bool {
     !self.full_read()
   }

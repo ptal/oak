@@ -17,15 +17,17 @@ use stream::HasNext;
 use parse_error::ParseError;
 use parse_success::ParseSuccess;
 
+/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`.
 pub type ParseResult<S, T> = Result<ParseSuccess<S, T>, ParseError<S>>;
 
 pub struct ParseState<S, T>
 {
   /// Even in case of success, we keep error information in case we
-  /// fail later. Think about parsing "abaa" with `"ab"* r2`, if `r2`
-  /// directly fails, it is better to report an error such as:
+  /// fail later. Think about parsing "abaa" with `"ab"* "c"`, it will directly fails on `"c"`,
+  /// so it is better to report an error such as:
   /// `expected "ab" but got "aa"` since the input partially matches "ab".
   pub error: ParseError<S>,
+  /// Contains a value if the current state is successful and `None` if it is erroneous.
   pub success: Option<ParseSuccess<S, T>>
 }
 
@@ -187,7 +189,7 @@ impl<S, T> ParseState<S, T> where
 
   #[inline]
   pub fn join(mut self, error: ParseError<S>) -> ParseState<S, T> {
-    self.error = self.error.join(error);
+    self.error = self.error.merge(error);
     self
   }
 }

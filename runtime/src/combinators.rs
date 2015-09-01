@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! PEG combinators that are used by the Oak generated code. This is not aimed to be used by the users of Oak.
+
 use parse_state::ParseState;
 use parse_success::ParseSuccess;
 use ConsumePrefix;
