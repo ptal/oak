@@ -32,10 +32,151 @@ use ExpectedResult::*;
 
 mod grammars;
 
+#[test]
+fn test_data_directory()
+{
+  let data_path = Path::new("data/");
+  if !data_path.is_dir() {
+    panic!(format!("`{}` is not a valid data directory.", data_path.display()));
+  }
+  let mut test_path = PathBuf::new();
+  test_path.push(data_path);
+  test_path.push(Path::new("test"));
+  let mut test_engine = TestEngine::new(test_path);
+  test_engine.register("ntcc", Box::new(|content|
+    ntcc::recognize_ntcc(content.producer())));
+  test_engine.register("type_name", Box::new(|content|
+    type_name::recognize_type_names(content.producer())));
+  test_engine.register("calculator", Box::new(|content|
+    calculator::recognize_expression(content.producer())));
+
+  test_engine.run();
+}
+
+struct TestEngine
+{
+  test_path: PathBuf,
+  grammars: Vec<GrammarInfo>,
+  display: TestDisplay
+}
+
+impl TestEngine
+{
+  fn new(test_path: PathBuf) -> TestEngine
+  {
+    if !test_path.is_dir() {
+      panic!(format!("`{}` is not a valid grammar directory.", test_path.display()));
+    }
+    TestEngine{
+      test_path: test_path,
+      grammars: Vec::new(),
+      display: TestDisplay::new(20)
+    }
+  }
+
+  fn register(&mut self, name: &str, recognizer: Box<for<'a> Fn(&'a str) -> ParseState<StrStream<'a>, ()>>)
+  {
+    self.grammars.push(GrammarInfo{name: String::from(name), recognizer: recognizer});
+  }
+
+  fn run(&mut self)
+  {
+    self.display.title("    Oak library tests suite");
+    for grammar in self.grammars.iter() {
+      let grammar_path = self.test_path.join(Path::new(grammar.name.as_str()));
+      self.display.info(&format!("Start tests of the grammar `{}`", grammar.name));
+      self.display.path(&grammar_path);
+      let mut test = Test{
+        info: grammar,
+        display: &mut self.display
+      };
+      test.test_directory(&format!("Run and Pass tests of `{}`", grammar.name),
+        &grammar_path.join(Path::new("run-pass")), Match);
+      test.test_directory(&format!("Run and Fail tests of `{}`", grammar.name),
+        &grammar_path.join(Path::new("run-fail")), Error);
+    }
+    self.display.stats();
+    self.display.panic_if_failure();
+  }
+}
+
+struct GrammarInfo
+{
+  name: String,
+  recognizer: Box<for<'a> Fn(&'a str) -> ParseState<StrStream<'a>, ()>>
+}
+
 #[derive(Clone)]
 enum ExpectedResult {
   Match,
   Error
+}
+
+struct Test<'a>
+{
+  info: &'a GrammarInfo,
+  display: &'a mut TestDisplay,
+}
+
+impl<'a> Test<'a>
+{
+  fn test_directory(&mut self, start_msg: &String, directory: &Path, expectation: ExpectedResult)
+  {
+    self.display.info(start_msg);
+
+    match read_dir(directory) {
+      Ok(dir_entries) => {
+        for entry in dir_entries.map(Result::unwrap).map(|entry| entry.path()) {
+          if entry.is_file() {
+            self.test_file(entry.as_path(), expectation.clone());
+          } else {
+            self.display.warn(&format!("Entry ignored because it's not a file."));
+            self.display.path(entry.as_path());
+          }
+        }
+      }
+      Err(ref io_err) => {
+        self.display.fs_error("Can't read directory.", directory, io_err);
+      }
+    }
+  }
+
+  fn test_file(&mut self, filepath: &Path, expectation: ExpectedResult)
+  {
+    let mut file = File::open(filepath);
+    match file {
+      Ok(ref mut file) => {
+        let mut buf_contents = vec![];
+        let contents = file.read_to_end(&mut buf_contents);
+        match contents {
+          Ok(_) => {
+            let utf8_contents = std::str::from_utf8(buf_contents.as_slice());
+            self.test_input(utf8_contents.unwrap(), expectation, filepath);
+          },
+          Err(ref io_err) => {
+            self.display.fs_error("Can't read file.", filepath, io_err);
+          }
+        }
+      },
+      Err(ref io_err) => {
+        self.display.fs_error("Can't open file.", filepath, io_err);
+      }
+    }
+  }
+
+  fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
+  {
+    let state = (self.info.recognizer)(input);
+    let result = state.into_result();
+    match (expectation.clone(), result) {
+      (Match, Ok(ref state)) if state.full_read() => self.display.success(test_path),
+      (Error, Ok(ref state)) if state.partial_read() => self.display.success(test_path),
+      (Error, Err(_)) => self.display.success(test_path),
+      (_, state) => {
+        self.display.failure(test_path, expectation, state);
+      }
+    }
+  }
 }
 
 struct TestDisplay
@@ -179,142 +320,4 @@ impl TestDisplay
   {
     (write!(self.terminal, "{}", msg)).unwrap();
   }
-}
-
-struct GrammarInfo
-{
-  name: String,
-  //recognizer: Box<for<'a> Fn(StrStream<'a>) -> ParseState<StrStream<'a>, ()>>
-}
-
-struct Test<'a>
-{
-  info: &'a GrammarInfo,
-  display: &'a mut TestDisplay,
-}
-
-impl<'a> Test<'a>
-{
-  fn test_directory(&mut self, start_msg: &String, directory: &Path, expectation: ExpectedResult)
-  {
-    self.display.info(start_msg);
-
-    match read_dir(directory) {
-      Ok(dir_entries) => {
-        for entry in dir_entries.map(Result::unwrap).map(|entry| entry.path()) {
-          if entry.is_file() {
-            self.test_file(entry.as_path(), expectation.clone());
-          } else {
-            self.display.warn(&format!("Entry ignored because it's not a file."));
-            self.display.path(entry.as_path());
-          }
-        }
-      }
-      Err(ref io_err) => {
-        self.display.fs_error("Can't read directory.", directory, io_err);
-      }
-    }
-  }
-
-  fn test_file(&mut self, filepath: &Path, expectation: ExpectedResult)
-  {
-    let mut file = File::open(filepath);
-    match file {
-      Ok(ref mut file) => {
-        let mut buf_contents = vec![];
-        let contents = file.read_to_end(&mut buf_contents);
-        match contents {
-          Ok(_) => {
-            let utf8_contents = std::str::from_utf8(buf_contents.as_slice());
-            self.test_input(utf8_contents.unwrap(), expectation, filepath);
-          },
-          Err(ref io_err) => {
-            self.display.fs_error("Can't read file.", filepath, io_err);
-          }
-        }
-      },
-      Err(ref io_err) => {
-        self.display.fs_error("Can't open file.", filepath, io_err);
-      }
-    }
-  }
-
-  fn test_input(&mut self, input: &str, expectation: ExpectedResult, test_path: &Path)
-  {
-    let state = calculator::recognize_expression(input.producer());
-    let result = state.into_result();
-    match (expectation.clone(), result) {
-      (Match, Ok(ref state)) if state.full_read() => self.display.success(test_path),
-      (Error, Ok(ref state)) if state.partial_read() => self.display.success(test_path),
-      (Error, Err(_)) => self.display.success(test_path),
-      (_, state) => {
-        self.display.failure(test_path, expectation, state);
-      }
-    }
-  }
-}
-
-struct TestEngine
-{
-  test_path: PathBuf,
-  grammars: Vec<GrammarInfo>,
-  display: TestDisplay
-}
-
-impl TestEngine
-{
-  fn new(test_path: PathBuf) -> TestEngine
-  {
-    if !test_path.is_dir() {
-      panic!(format!("`{}` is not a valid grammar directory.", test_path.display()));
-    }
-    TestEngine{
-      test_path: test_path,
-      grammars: Vec::new(),
-      display: TestDisplay::new(20)
-    }
-  }
-
-  fn register(&mut self, name: &str) //, recognizer: Box<for<'a> Fn(StrStream<'a>) -> ParseState<StrStream<'a>, ()>>)
-  {
-    self.grammars.push(GrammarInfo{name: String::from(name)});//, recognizer: recognizer});
-  }
-
-  fn run(&mut self)
-  {
-    self.display.title("    Oak library tests suite");
-    for grammar in self.grammars.iter() {
-      let grammar_path = self.test_path.join(Path::new(grammar.name.as_str()));
-      self.display.info(&format!("Start tests of the grammar `{}`", grammar.name));
-      self.display.path(&grammar_path);
-      let mut test = Test{
-        info: grammar,
-        display: &mut self.display
-      };
-      test.test_directory(&format!("Run and Pass tests of `{}`", grammar.name),
-        &grammar_path.join(Path::new("run-pass")), Match);
-      test.test_directory(&format!("Run and Fail tests of `{}`", grammar.name),
-        &grammar_path.join(Path::new("run-fail")), Error);
-    }
-    self.display.stats();
-    self.display.panic_if_failure();
-  }
-}
-
-#[test]
-fn main()
-{
-  let data_path = Path::new("data/");
-  if !data_path.is_dir() {
-    panic!(format!("`{}` is not a valid data directory.", data_path.display()));
-  }
-  let mut test_path = PathBuf::new();
-  test_path.push(data_path);
-  test_path.push(Path::new("test"));
-  let mut test_engine = TestEngine::new(test_path);
-  // test_engine.register("ntcc", box ntcc::recognize_ntcc);
-  // test_engine.register("type_name", box type_name::recognize_type_names);
-  test_engine.register("calculator");//, Box::new(calculator::recognize_expression));
-
-  test_engine.run();
 }

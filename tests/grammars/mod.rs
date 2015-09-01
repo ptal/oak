@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// pub mod ntcc;
-// pub mod type_name;
+pub mod ntcc;
+pub mod type_name;
 pub mod calculator;
