@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Implementation of `Stream` for `&'a str` type. It implements all traits required by `CharStream`.
+
 use stream::*;
 use std::cmp::{Ordering, min};
 
@@ -23,6 +25,7 @@ impl<'a> Stream for &'a str
   }
 }
 
+/// Represents a stream from a `&'a str`. It implements all traits required by `CharStream`.
 #[derive(Clone)]
 pub struct StrStream<'a>
 {

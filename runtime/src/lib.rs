@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This is the documentation of the Oak runtime. Oak is a parser generator of _Parsing Expression Grammar_, please read first the [tutorial](http://hyc.io/oak).
+//!
+//! This library is used by the generated code of Oak and is also necessary to any Oak users for interfacing with the code generated. A PEG combinator returns a `ParseState`, please consult the methods `into_result` or `unwrap_data` as they are good starting point for retrieving useful information.
 
 #![feature(str_char)]
-
 
 pub use str_stream::*;
 pub use stream::*;
@@ -30,3 +32,5 @@ pub mod parse_state;
 pub mod combinators;
 pub mod stream;
 
+/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`. `ParseError<S>` represents the expected items to continue the parsing, it is available even in case of success.
+pub type ParseResult<S, T> = Result<(ParseSuccess<S, T>, ParseError<S>), ParseError<S>>;

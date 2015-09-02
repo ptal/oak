@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! A parsing state indicates the current status of the parsing. It is mainly used by PEG combinators.
+
 use std::cmp::Ord;
 use stream::HasNext;
 use parse_error::ParseError;
 use parse_success::ParseSuccess;
-
-/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`. `ParseError<S>` represents the expected items to continue the search, this is available even in case of success.
-pub type ParseResult<S, T> = Result<(ParseSuccess<S, T>, ParseError<S>), ParseError<S>>;
+use ParseResult;
 
 pub struct ParseState<S, T>
 {
@@ -42,6 +42,8 @@ impl<S, T> ParseState<S, T> where
     }
   }
 
+  /// Retrieve the stream from a successful state.
+  /// Panics if `self` is not successful.
   #[inline]
   pub fn stream(&self) -> S {
     self.assert_success("stream");
@@ -72,6 +74,7 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Maps `op` to the success value if the state is successful. It does not alter the errors list.
   #[inline]
   pub fn map<U, F>(self, op: F) -> ParseState<S, U> where
    F: FnOnce(ParseSuccess<S, T>) -> ParseSuccess<S, U>
@@ -82,6 +85,7 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Maps `op` to the data (AST) if the state is successful. It does not alter the errors list.
   #[inline]
   pub fn map_data<U, F>(self, op: F) -> ParseState<S, U> where
    F: FnOnce(T) -> U
@@ -92,6 +96,7 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Calls `op` if the state is not successful, otherwise returns the `self` unchanged.
   #[inline]
   pub fn or_else<F>(self, op: F) -> ParseState<S, T> where
    F: FnOnce(ParseError<S>) -> ParseState<S, T>
@@ -102,6 +107,8 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Applies a function to the contained value (if `self` is successful), or computes a default (if not).
+  /// The state returns is always successful. The errors list is unchanged.
   #[inline]
   pub fn map_or_else<U, D, F>(self, default: D, f: F) -> ParseState<S, U> where
    D: FnOnce() -> ParseSuccess<S, U>,
@@ -113,12 +120,14 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Transforms `self` into an erroneous state by erasing successful information (if any). The errors list is unchanged.
   #[inline]
   pub fn to_error(mut self) -> ParseState<S, T> {
     self.success = None;
     self
   }
 
+  /// Transforms `self` into a more usable `ParseResult` value. It is useful when the state is terminal or if the state will not be further transformed.
   pub fn into_result(self) -> ParseResult<S, T> {
     match self.success {
       Some(success) => {
@@ -130,12 +139,15 @@ impl<S, T> ParseState<S, T>
     }
   }
 
+  /// Extract the underlying data (AST) from the current state.
+  /// Panics if the state is not successful.
   #[inline]
   pub fn unwrap_data(self) -> T {
     self.assert_success("ParseState::unwrap_data");
     self.success.unwrap().data
   }
 
+  /// Returns `true` if the state is successful, otherwise returns `false`.
   #[inline]
   pub fn is_successful(&self) -> bool {
     self.success.is_some()
@@ -151,6 +163,8 @@ impl<S, T> ParseState<S, T>
 impl<S, T> ParseState<S, T> where
  S: HasNext
 {
+  /// Returns `true` if the state has a successor, otherwise returns `false`.
+  /// Erroneous states or states with a consumed stream are terminals and cannot have any successors.
   #[inline]
   pub fn has_successor(&self) -> bool {
     self.success.as_ref().map_or(false, |success| success.stream.has_next())
@@ -160,6 +174,7 @@ impl<S, T> ParseState<S, T> where
 impl<S, T> ParseState<S, T> where
  S: Eq
 {
+  /// Returns `false` if `self` is erroneous or if the current stream is not equal to `other`.
   pub fn stream_eq(&self, other: &S) -> bool {
     self.success.as_ref().map_or(false, |success| &success.stream == other)
   }
@@ -168,27 +183,30 @@ impl<S, T> ParseState<S, T> where
 impl<S, T> ParseState<S, T> where
  S: Ord
 {
+  /// Calls `op` if the state is successful and merges both error lists. Otherwise returns an erroneous state with the same errors list as `self`.
   #[inline]
   pub fn and_then<U, F>(self, op: F) -> ParseState<S, U> where
    F: FnOnce(ParseSuccess<S, T>) -> ParseState<S, U>
   {
     match self.success {
       Some(success) => {
-        op(success).join(self.error)
+        op(success).merge_error(self.error)
       }
       None => ParseState::from_error(self.error)
     }
   }
 
+  /// Calls `op` if `self` is erroneous and merges both error lists. Otherwise returns `self`.
   #[inline]
-  pub fn or_else_join<F>(self, op: F) -> ParseState<S, T> where
+  pub fn or_else_merge<F>(self, op: F) -> ParseState<S, T> where
    F: FnOnce() -> ParseState<S, T>
   {
-    self.or_else(|err| op().join(err))
+    self.or_else(|err| op().merge_error(err))
   }
 
+  /// Merge error lists of `self` and `error`. It does not remove duplicate entries.
   #[inline]
-  pub fn join(mut self, error: ParseError<S>) -> ParseState<S, T> {
+  pub fn merge_error(mut self, error: ParseError<S>) -> ParseState<S, T> {
     self.error = self.error.merge(error);
     self
   }

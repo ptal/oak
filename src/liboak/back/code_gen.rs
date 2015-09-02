@@ -154,7 +154,7 @@ impl<'cx> CodeGenerator<'cx>
       let mut state = $result_init;
       while state.has_successor() {
         let next = $expr(state.stream());
-        state = state.join(next.error);
+        state = state.merge_error(next.error);
         if let Some(success) = next.success {
           state.merge_success(success);
         }
@@ -320,7 +320,7 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
     let cx = self.cx;
     let init = |name: Ident| quote_expr!(cx, $name(stream));
     let make_body = |accu:RExpr, name:Ident| {
-      quote_expr!(cx, $name(stream.clone()).or_else_join(|| $accu))
+      quote_expr!(cx, $name(stream.clone()).or_else_merge(|| $accu))
     };
     let recognizer_body = map_foldr_init(exprs.clone(),
       &init,
