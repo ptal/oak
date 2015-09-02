@@ -45,7 +45,7 @@ impl<S> ParseError<S>
     }
   }
 
-  fn expected_desc(&self) -> String {
+  pub fn expected_items(&self) -> String {
     let expected: HashSet<&'static str> = self.expected.clone().into_iter().collect();
     let mut desc = String::new();
     for expect in expected {
@@ -83,7 +83,7 @@ impl<S> Display for ParseError<S> where
 {
   fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
     let location = self.farthest_read.location();
-    let expected = self.expected_desc();
+    let expected = self.expected_items();
     let snippet = self.farthest_read.code_snippet(10usize);
     formatter.write_fmt(
       format_args!("{}: unexpected `{}`, expecting {}.", location, snippet, expected))

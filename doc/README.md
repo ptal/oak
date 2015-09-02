@@ -8,11 +8,34 @@ The code is available on [github](https://github.com/ptal/oak).
 
 ### Documentation
 
+* [Oak manual](http://hyc.io/oak) – current page.
+* [Oak runtime documentation](http://hyc.io/oak_runtime)
 
+### Syntax cheat sheet
+
+`e` is a sub expression and `T` is the type of `e`. The types are only informative, it does not show unit propagation. Greedy operators do not generate "backtracking points" and consume as many characters as possible.
+
+| Expression      | Type                  | Precedence level | Description |
+| --------------- | --------------------- |----------------- | ----------- |
+| `"literal"`     | `()`                  | 0                | Match a string literal. |
+| `.`             | `char`                | 0                | Match any single character. |
+| `["a-zA-Z-"]`   | `char`                | 0                | Match a character from one of the specified classes. |
+| `(e)`           | `T`                   | 0                | Group an expression. |
+| `ident`         | Type of rule `ident`  | 0                | Call the rule with the name `ident`. |
+| `e?`            | `Option<T>`           | 1                | (Greedy) Match zero or one `e`. Always succeed. |
+| `e*`            | `Vec<T>`              | 1                | (Greedy) Match zero or more `e`. Always succeed. |
+| `e+`            | `Vec<T>`              | 1                | (Greedy) Match one or more `e`. |
+| `&e`            | `(^)`                 | 2                | Try to match `e` and succeed if `e` succeeds. It does not consume any input. |
+| `!e`            | `(^)`                 | 2                | Try to match `e` and succeed if `e` fails. It does not consume any input. |
+| `e1 e2 e3`      | `(T1, T2, T3)`        | 3                | Match `e1 e2 e3` in sequence. Immediately fails when one fails. |
+| `e > f`         | Return type of `f`    | 4                | Match `e` and if it succeeds, call `f(v)` where `v` is the value of `e`. |
+| `e -> ()`       | `()`                  | 4                | Force the type of `e` to be `()`. |
+| `e -> (^)`      | `(^)`                 | 4                | Force the type of `e` to be `(^)`. |
+| `e1 / e2 / e3`  | Type of any `e`       | 5                | Match `e1 e2 e3` in sequence. Immediately succeeds when one succeeds. |
 
 ### Oak status
 
-My goal is to propose a complete library to ease the development of *Embedded Domain Specific Language* (EDSL) in Rust with procedural macros. For the moment my priority is to stabilize/test things. Next I want to add more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what is wrong?) Here some other wanted features:
+My goal is to propose a complete library to ease the development of *Embedded Domain Specific Language* (EDSL) in Rust with procedural macros. For the moment my priority is to stabilize, test and finish this manual. Next I want to add more static analysis to prevent grammar design error such as in `"=" / "=="` (can you find what is wrong?) Here some other wanted features:
 
 * Automatic wrapping of values into `Spanned<T>` structure to get location information ([#13](https://github.com/ptal/Rust.peg/issues/13)).
 * Closest relation between host language types and grammar expression types, for example `e1 > A / e2 > B` with `A` and `B` being variants ([#41](https://github.com/ptal/Rust.peg/issues/41), [#53](https://github.com/ptal/Rust.peg/issues/53), [#54](https://github.com/ptal/Rust.peg/issues/54)).

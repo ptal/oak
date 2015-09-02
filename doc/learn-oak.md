@@ -43,11 +43,13 @@ A grammar is introduced with the macro `grammar! <name>` where `<name>` is the n
 
 The rules describing keywords and operators use *string literals* expressions of the form `"<literal>"`, it expects the input to match exactly the sequence of characters given.
 
-Identifiers and integers are recognized with *character classes* where a class is a single character or a character range. A range `r` has the form `<char>-<char>` inside a set `["r1r2..rN"]`. Since `-` is used to denote a range, it must be placed before or after all the ranges such as in `["-a-z"]` to be recognized as an accepted character. Character classes will succeed and "eat" one character if it is present in the set, so `b`, `8`, `_` are all accepted by `["a-zA-Z0-9_"]` but `é`, `-` or `]` are not.
+Identifiers and integers are recognized with *character classes* where a class is a single character or a character range. A range `r` has the form `<char>-<char>` inside a set `["r1r2..rN"]`. Since `-` is used to denote a range, it must be placed before or after all the ranges such as in `["-a-z"]` to be recognized as an accepted character. Character classes will succeed and "eat" *one* character if it is present in the set, so `b`, `8`, `_` are all accepted by `["a-zA-Z0-9_"]` but `é`, `-` or `]` are not.
 
 For both string literals and character classes, any Unicode characters are interpreted following the same requirements as [string literals](https://doc.rust-lang.org/reference.html#string-literals) in the Rust specification. The only other parsing expression consuming a character is the `.` expression, it matches any character and can only fail if we reached the end of input.
 
 The remaining parsing expressions are combinators, they must be composed with sub-expressions. Identifiers and integers are sequences of one or more characters and we use the combinator `e+` to repeat `e` while it succeeds. For example `identifier` matches "x_1" from the input "x_1 x_2" by successively applying `["a-zA-Z0-9_"]` to the input; it parses `x`, `_` and `1` and then fails on the space character. It however succeeds, even if the match is partial, and `identifier` returns the remaining input " x_2" and the data read. A requirement of `e+` is that `e` must be repeated *at least once*. The `e*` expression does not impose this constraint and allow `e` to be repeated *zero or more times*. `e*` and `e+` will consume as much input as they can and are said to be *greedy operators*.
+
+### Generated code and runtime
 
 Before explaining the others combinators, we take a glimpse at the generated code and how to use it. Oak will generate two functions per rule, a *recognizer* and a *parser*. A recognizer only matches the input against a specific rule but does not build any value from it. A parser matches and builds the corresponding AST (possibly with the help of user-specific function called *semantic actions*). For example, the functions `parse_identifier` and `recognize_identifier` will be generated for rule `identifier`. The `#![show_api]` attribute tells Oak to output, as a compilation note, the signatures of all the generated functions. We obtain the following from the `Calc` grammar:
 
@@ -74,7 +76,7 @@ note: pub mod calc {
 
 We can already use these functions in our main:
 
-```
+```rust
 fn main() {
   let let_kw = "let";
   let state = calc::recognize_let_kw(let_kw.stream());
@@ -86,7 +88,73 @@ fn main() {
 }
 ```
 
+First of all, there is a [documentation of the runtime](http://hyc.io/oak_runtime) available, but please, be aware that it also contains functions and structures used by the generated code and that you will probably not need.
 
+Parsing functions accept a stream as input parameter which represents the data to be processed. A stream can be retrieved from type implementing `Stream` with the method `stream()` which is similar to `iter()` for retrieving an iterator. For example, `Stream` is implemented for the type `&'a str` and we can directly pass the result of `stream()` to the parsing function, as in `calc::recognize_let_kw(let_kw.stream())`. Basically, a stream must implement several operations described by the `CharStream` trait, it is generally an iterator that keeps a reference to the underlying data traversed. You can find a list of all types implementing `Stream` in the [implementors list of `Stream`](http://hyc.io/rust-lib/oak/oak_runtime/stream/trait.Stream.html).
+
+By looking at the signatures of `parse_identifier` and `recognize_identifier` we see that a value of type `ParseState<S, T>` is returned. `T` is the type of the data extracted during parsing. It is always equal to `()` in case of a recognizer since it does not produce data, and hence a recognizer is a particular case of a parser where the AST has type `()`. In the rest of this tutorial and when not specified, we consider the term *parser* to also include recognizer.
+
+A state indicates if the parsing was successful, partial or erroneous. It carries information about which item was expected next and the AST built from the data read. Convenient functions such as `unwrap_data()` or `is_successful()` are available directly from [ParseState](http://hyc.io/rust-lib/oak/oak_runtime/parse_state/struct.ParseState.html). A more complete function is `into_result()` which transforms the state into a type `Result` that can be pattern matched. Here a full example:
+
+```rust
+fn analyse_state(state: ParseState<StrStream, Vec<char>>) {
+  match state.into_result() {
+    Ok((success, error)) => {
+      if success.partial_read() {
+        println!("Partial match: {:?} because: {}", success.data, error);
+      }
+      else {
+        println!("Full match: {:?}", success.data);
+      }
+    }
+    Err(error) => {
+      println!("Error: {}", error);
+    }
+  }
+}
+
+fn main() {
+  analyse_state(calc::parse_integer("10".stream())); // complete
+  analyse_state(calc::parse_integer("10a".stream())); // partial
+  analyse_state(calc::parse_integer("a".stream())); // erroneous
+}
+
+// Result:
+
+// Full match: ['1', '0']
+// Partial match: ['1', '0'] because: 1:3: unexpected `a`, expecting `["0-9"]`.
+// Error: 1:1: unexpected `a`, expecting `["0-9"]`.
+```
+
+You are now able to efficiently use the code generated by Oak.
+
+### Semantic action
+
+As you probably noticed, the rule `integer` produces a value of type `Vec<char>` which is not a usable representation of an integer. We must transform this value into a better type such as `u32`. To achieve this goal, we use a *semantic action* which gives meaning to the characters read. A semantic action is a Rust function taking the value produced by an expression and returning another one more suited for further processing. The grammar becomes:
+
+```
+grammar! calc {
+  #![show_api]
+
+  // ... previous rules truncated.
+
+  integer = ["0-9"]+ > to_digit
+
+  pub type Digit = u32;
+
+  fn to_digit(raw_text: Vec<char>) -> Digit {
+    use std::str::FromStr;
+    let text: String = raw_text.into_iter().collect();
+    u32::from_str(&*text).unwrap()
+  }
+}
+```
+
+The combinator `e > f` expects a PEG combinator on the left and a function name on the right, it works like a "reverse function call operator" in the sense that `f` is called with the result value of `e`. Semantic actions must be Rust functions declared inside the `grammar!` so we can examine its return type. You can call function from other modules or crates by wrapping it up inside a function local to the grammar. Any Rust code is accepted, here we use an extra type declaration `Digit` which will be accessible from outside with `calc::Digit`.
+
+Oak gives a type to any parsing expression to help you constructing your AST more easily. Next sections explain how Oak gives a type to expressions, the limits and how to interact with it for adapting its behaviour. For the moment, if you want to know the type of an expression, just create a rule `r = e`, activates the attribute `#[show_api]` and consults the return type of the generated function in the compiler output. Note that a tuple type such as `(T, U)` is automatically unpacked into two function arguments.
+
+### Arithmetic expression of `Calc`
 
 ### Exercise
 
