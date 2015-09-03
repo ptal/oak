@@ -57,6 +57,7 @@ impl<'a> Parser<'a>
     let mut rust_items = vec![];
     while self.rp.token != rtok::Eof
     {
+      self.parse_inner_attributes();
       self.rp.parse_item().map_or_else(
         || rules.push(self.parse_rule()),
         |item| rust_items.push(item))
@@ -65,19 +66,16 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule(&mut self) -> Rule {
-    let outer_attrs = self.parse_attributes();
+    let outer_attrs = self.rp.parse_outer_attributes();
     let name = self.parse_rule_decl();
     self.rp.expect(&rtok::Eq).unwrap();
     let body = self.parse_rule_rhs(id_to_string(name.node).as_str());
     Rule{name: name, attributes: outer_attrs, def: body}
   }
 
-  // Outer attributes are attached to the next item.
-  // Inner attributes are attached to the englobing item.
-  fn parse_attributes(&mut self) -> Vec<rust::Attribute> {
+  fn parse_inner_attributes(&mut self) {
     let inners = self.rp.parse_inner_attributes();
     self.inner_attrs.push_all(inners.as_slice());
-    self.rp.parse_outer_attributes()
   }
 
   fn parse_rule_decl(&mut self) -> rust::SpannedIdent {
