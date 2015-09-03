@@ -57,15 +57,9 @@ impl<'a> Parser<'a>
     let mut rust_items = vec![];
     while self.rp.token != rtok::Eof
     {
-      // FIXME: #45
-      if self.rp.token == rust::token::Pound {
-        rules.push(self.parse_rule())
-      }
-      else {
-        self.rp.parse_item().map_or_else(
-          || rules.push(self.parse_rule()),
-          |item| rust_items.push(item))
-      }
+      self.rp.parse_item().map_or_else(
+        || rules.push(self.parse_rule()),
+        |item| rust_items.push(item))
     }
     (rules, rust_items)
   }
