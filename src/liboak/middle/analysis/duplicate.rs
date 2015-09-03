@@ -30,11 +30,25 @@ pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
   .map(move |rules| { grammar.rules = rules; grammar })
 }
 
-pub fn rust_item_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
-  items: Vec<P<Item>>) -> Partial<Grammar>
+pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
+  items: Vec<RItem>) -> Partial<Grammar>
 {
-  DuplicateItem::analyse(cx, items.into_iter(), String::from("rust item"))
-    .map(move |rust_items| { grammar.rust_items = rust_items; grammar })
+  let mut functions = vec![];
+  let mut others = vec![];
+  for item in items {
+    if let &rust::Item_::ItemFn(..) = &item.node {
+      functions.push(item);
+    }
+    else {
+      others.push(item);
+    }
+  }
+  DuplicateItem::analyse(cx, functions.into_iter(), String::from("rust function"))
+    .map(move |functions| {
+      grammar.rust_functions = functions;
+      grammar.rust_items = others;
+      grammar
+    })
 }
 
 impl ItemIdent for rust::Item {
@@ -81,10 +95,12 @@ struct DuplicateItem<'a, Item>
   what_is_duplicated: String
 }
 
-impl<'a, Item: ItemIdent + ItemSpan> DuplicateItem<'a, Item>
+impl<'a, Item> DuplicateItem<'a, Item> where
+ Item: ItemIdent + ItemSpan
 {
-  pub fn analyse<ItemIter: Iterator<Item=Item>>(cx: &'a ExtCtxt<'a>,
-    iter: ItemIter, item_kind: String) -> Partial<HashMap<Ident, Item>>
+  pub fn analyse<ItemIter>(cx: &'a ExtCtxt<'a>, iter: ItemIter, item_kind: String)
+    -> Partial<HashMap<Ident, Item>> where
+   ItemIter: Iterator<Item=Item>
   {
     let (min_size, _) = iter.size_hint();
     DuplicateItem {

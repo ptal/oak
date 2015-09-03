@@ -31,6 +31,7 @@ pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar> {
   let mut grammar = Grammar {
     name: agrammar.name,
     rules: HashMap::with_capacity(agrammar.rules.len()),
+    rust_functions: agrammar.rust_functions,
     rust_items: agrammar.rust_items,
     attributes: agrammar.attributes
   };

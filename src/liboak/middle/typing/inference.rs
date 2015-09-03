@@ -150,7 +150,7 @@ impl<'r> InferenceEngine<'r>
     action_name: Ident) -> Box<Expression>
   {
     let sub_expr = self.infer_expr_type(expr);
-    let action_ty = match &self.grammar.rust_items.get(&action_name).unwrap().node {
+    let action_ty = match &self.grammar.rust_functions.get(&action_name).unwrap().node {
       &rust::Item_::ItemFn(ref decl, _,_,_,_,_) => decl.output.clone(),
       _ => panic!("Only function items are currently allowed.")
     };

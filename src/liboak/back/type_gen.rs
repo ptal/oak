@@ -26,6 +26,7 @@ pub fn generate_rust_types(cx: &ExtCtxt, tgrammar: TGrammar) -> Grammar {
   let mut grammar = Grammar {
     name: tgrammar.name,
     rules: HashMap::with_capacity(tgrammar.rules.len()),
+    rust_functions: tgrammar.rust_functions,
     rust_items: tgrammar.rust_items,
     attributes: tgrammar.attributes
   };

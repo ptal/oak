@@ -14,7 +14,7 @@
 
 pub use ast::*;
 pub use front::ast::Expression;
-pub use rust::{ExtCtxt,P,Item,Attribute,SpannedIdent};
+pub use rust::{ExtCtxt,Attribute,SpannedIdent};
 pub use monad::partial::Partial;
 
 use front::ast::Grammar as FGrammar;
@@ -25,7 +25,8 @@ pub struct Grammar
 {
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
-  pub rust_items: HashMap<Ident, P<Item>>,
+  pub rust_functions: HashMap<Ident, RItem>,
+  pub rust_items: Vec<RItem>,
   pub attributes: GrammarAttributes
 }
 
@@ -33,11 +34,11 @@ impl Grammar
 {
   pub fn new(fgrammar: &FGrammar) -> Partial<Grammar> {
     let rules_len = fgrammar.rules.len();
-    let rust_items_len = fgrammar.rust_items.len();
     let grammar = Grammar {
       name: fgrammar.name.clone(),
       rules: HashMap::with_capacity(rules_len),
-      rust_items: HashMap::with_capacity(rust_items_len),
+      rust_functions: HashMap::new(),
+      rust_items: vec![],
       attributes: GrammarAttributes::default()
     };
     Partial::Value(grammar)

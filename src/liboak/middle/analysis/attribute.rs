@@ -16,7 +16,7 @@ use middle::analysis::ast::*;
 use front::ast::Grammar as FGrammar;
 use front::ast::Rule as FRule;
 
-use rust::MetaItem;
+use rust::{P, MetaItem};
 use rust::MetaItem_::*;
 
 pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar,

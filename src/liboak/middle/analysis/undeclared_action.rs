@@ -54,7 +54,7 @@ impl<'a> Visitor<Expression, ()> for UndeclaredAction<'a>
   unit_visitor_impl!(Expression, non_terminal);
 
   fn visit_semantic_action(&mut self, parent: &Box<Expression>, _expr: &Box<Expression>, id: Ident) {
-    if !self.grammar.rust_items.contains_key(&id) {
+    if !self.grammar.rust_functions.contains_key(&id) {
       self.cx.span_err(parent.span, "Undeclared action. This must be a function declared in the grammar scope.");
       self.has_undeclared = true;
     }

@@ -122,7 +122,8 @@ impl<'cx> CodeGenerator<'cx>
 
   fn compile_parser(&mut self, grammar: &Grammar) -> Vec<RItem> {
     self.compile_rules(grammar);
-    let mut rust_code: Vec<RItem> = grammar.rust_items.values().cloned().collect();
+    let mut rust_code = grammar.rust_items.clone();
+    rust_code.extend(grammar.rust_functions.values().cloned());
     rust_code.extend(self.function_gen.code().into_iter());
     rust_code
   }
