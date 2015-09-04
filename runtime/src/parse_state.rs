@@ -207,8 +207,13 @@ impl<S, T> ParseState<S, T> where
   /// Merge error lists of `self` and `error`. It does not remove duplicate entries.
   #[inline]
   pub fn merge_error(mut self, error: ParseError<S>) -> ParseState<S, T> {
-    self.error = self.error.merge(error);
+    self.merge_error_in_place(error);
     self
+  }
+
+  #[inline]
+  pub fn merge_error_in_place(&mut self, error: ParseError<S>) {
+    self.error.merge_in_place(error);
   }
 }
 
@@ -230,23 +235,47 @@ impl<S> ParseState<S, ()>
       success: self.success.or(Some(ParseSuccess::stateless(stream)))
     }
   }
+}
 
+pub trait MergeSuccess<S, T> {
+  fn merge_success(&mut self, other: ParseSuccess<S, T>);
+}
+
+impl<S> MergeSuccess<S, ()> for ParseState<S, ()>
+{
   #[inline]
-  pub fn merge_success(&mut self, other: ParseSuccess<S, ()>)
+  fn merge_success(&mut self, other: ParseSuccess<S, ()>)
   {
     self.assert_success("ParseState<S, ()>::merge_success");
     self.success = Some(other);
   }
 }
 
-impl<S, T> ParseState<S, Vec<T>>
+impl<S, T> MergeSuccess<S, T> for ParseState<S, Vec<T>>
 {
   #[inline]
-  pub fn merge_success(&mut self, other: ParseSuccess<S, T>)
+  fn merge_success(&mut self, other: ParseSuccess<S, T>)
   {
     self.assert_success("ParseState<S, Vec<T>>::merge_success");
     let success = self.success.as_mut().unwrap();
     success.data.push(other.data);
     success.stream = other.stream;
+  }
+}
+
+impl<S, T> ParseState<S, T> where
+ S: Ord
+{
+  pub fn soft_merge<U>(&mut self, other: ParseState<S, U>) -> bool where
+    Self: MergeSuccess<S, U>
+  {
+    self.merge_error_in_place(other.error);
+    if let Some(success) = other.success {
+      self.merge_success(success);
+      true
+    }
+    else {
+      false
+    }
   }
 }

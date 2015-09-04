@@ -85,7 +85,8 @@ impl<'cx> CodeGenerator<'cx>
       pub mod $grammar_name
       {
         #![allow(dead_code)]
-        #![allow(unused_parens, unused_variables, unused_mut)]
+        #![allow(unused_parens, unused_variables, unused_mut, unused_imports)]
+        use oak_runtime::parse_state::MergeSuccess;
 
         $parser
       }
@@ -153,15 +154,9 @@ impl<'cx> CodeGenerator<'cx>
   fn compile_star_body(&self, expr: Ident, result_init: RExpr, result: RExpr) -> RExpr {
     quote_expr!(self.cx, {
       let mut state = $result_init;
-      while state.has_successor() {
-        let next = $expr(state.stream());
-        state = state.merge_error(next.error);
-        if let Some(success) = next.success {
-          state.merge_success(success);
-        }
-        else {
-          break;
-        }
+      let mut next = $expr(state.stream());
+      while state.soft_merge(next) {
+        next = $expr(state.stream());
       }
       $result
     })

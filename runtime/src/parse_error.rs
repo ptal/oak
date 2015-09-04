@@ -46,15 +46,17 @@ impl<S> ParseError<S>
   }
 
   pub fn expected_items(&self) -> String {
-    let expected: HashSet<&'static str> = self.expected.clone().into_iter().collect();
     let mut desc = String::new();
-    for expect in expected {
-      desc.push('`');
-      desc.push_str(expect);
-      desc.push_str("` or ");
+    if self.expected.len() > 0 {
+      let expected: HashSet<&'static str> = self.expected.clone().into_iter().collect();
+      for expect in expected {
+        desc.push('`');
+        desc.push_str(expect);
+        desc.push_str("` or ");
+      }
+      let len_without_last_or = desc.len() - 4;
+      desc.truncate(len_without_last_or);
     }
-    let len_without_last_or = desc.len() - 4;
-    desc.truncate(len_without_last_or);
     desc
   }
 }
@@ -64,15 +66,19 @@ impl<S> ParseError<S> where
 {
   /// Merge two parsing errors. We only keep information of the error that occurred the farthest in the stream. In case of equality, both expected item lists are merged into a new one. It does not remove identical expected items.
   pub fn merge(mut self, other: ParseError<S>) -> ParseError<S> {
+    self.merge_in_place(other);
+    self
+  }
+
+  pub fn merge_in_place(&mut self, other: ParseError<S>) {
     if self.farthest_read > other.farthest_read {
-      self
     }
     else if self.farthest_read < other.farthest_read {
-      other
+      self.farthest_read = other.farthest_read;
+      self.expected = other.expected;
     }
     else {
       self.expected.extend(other.expected.into_iter());
-      self
     }
   }
 }
