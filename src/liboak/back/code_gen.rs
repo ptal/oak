@@ -197,7 +197,7 @@ impl<'cx> CodeGenerator<'cx>
         let state_idx = state_idx - 1;
         let state_name = state_names[state_idx];
         (
-          quote_expr!(self.cx, $name(stream).and_then(|$state_name| {
+          quote_expr!(self.cx, $name(stream).and_then(move |$state_name| {
             let stream = $state_name.stream.clone();
             $accu
           })),
