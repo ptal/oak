@@ -3,7 +3,7 @@
 This section is devoted to introduce smoothly the different PEG combinators through a tutorial presenting `Calc`: a small language with arithmetic expressions and variable bindings. If you want to test the code while reading this tutorial, a skeleton project is available in the section [Getting Started](getting-started.md). Before diving into the details, we present a program written in `Calc`:
 
 ```
-let a = -10 - 2 in
+let a = 10 - 2 in
 let b = a / 2 in
 a + 3 * (b / 2)
 ```
@@ -47,11 +47,11 @@ Identifiers and integers are recognized with *character classes* where a class i
 
 For both string literals and character classes, any Unicode characters are interpreted following the same requirements as [string literals](https://doc.rust-lang.org/reference.html#string-literals) in the Rust specification. The only other parsing expression consuming a character is the `.` expression, it matches any character and can only fail if we reached the end of input.
 
-The remaining parsing expressions are combinators, they must be composed with sub-expressions. Identifiers and integers are sequences of one or more characters and we use the combinator `e+` to repeat `e` while it succeeds. For example `identifier` matches "x_1" from the input "x_1 x_2" by successively applying `["a-zA-Z0-9_"]` to the input; it parses `x`, `_` and `1` and then fails on the space character. It however succeeds, even if the match is partial, and `identifier` returns the remaining input " x_2" and the data read. A requirement of `e+` is that `e` must be repeated *at least once*. The `e*` expression does not impose this constraint and allow `e` to be repeated *zero or more times*. `e*` and `e+` will consume as much input as they can and are said to be *greedy operators*.
+The remaining parsing expressions are combinators, they must be composed with sub-expressions. Identifiers and integers are sequences of one or more characters and we use the combinator `e+` to repeat `e` while it succeeds. For example `identifier` matches "x_1" from the input "x_1 x_2" by successively applying `["a-zA-Z0-9_"]` to the input; it parses `x`, `_` and `1` and then fails on the space character. It however succeeds, even if the match is partial, and `identifier` returns the remaining input " x_2" and the data read. A requirement of `e+` is that `e` must be repeated *at least once*. The `e*` expression does not impose this constraint and allow `e` to be repeated *zero or more times*. The last combinator in this category is `e?`, it consumes `e` *zero or one time*. The combinators `e*`, `e+` and `e?` will consume as much input as they can and are said to be *greedy operators*.
 
 ### Generated code and runtime
 
-Before explaining the others combinators, we take a glimpse at the generated code and how to use it. Oak will generate two functions per rule, a *recognizer* and a *parser*. A recognizer only matches the input against a specific rule but does not build any value from it. A parser matches and builds the corresponding AST (possibly with the help of user-specific function called *semantic actions*). For example, the functions `parse_identifier` and `recognize_identifier` will be generated for rule `identifier`. The `#![show_api]` attribute tells Oak to output, as a compilation note, the signatures of all the generated functions. We obtain the following from the `Calc` grammar:
+Before explaining the others combinators, we take a glimpse at the generated code and how to use it. Oak will generate two functions per rule, a *recognizer* and a *parser*. A recognizer only matches the input against a specific rule but does not build any value from it. A parser matches and builds the corresponding AST (possibly with the help of user-specific functions called *semantic actions*). For example, the functions `parse_identifier` and `recognize_identifier` will be generated for rule `identifier`. The `#![show_api]` attribute tells Oak to output, as a compilation note, the signatures of all the generated functions. We obtain the following from the `Calc` grammar:
 
 ```rust
 // `ParseState` and `CharStream` are prefixed by `oak_runtime::`.
@@ -88,7 +88,7 @@ fn main() {
 }
 ```
 
-First of all, there is a [documentation of the runtime](http://hyc.io/oak_runtime) available, but please, be aware that it also contains functions and structures used by the generated code and that you will probably not need.
+First of all, there is a [documentation of the runtime](http://hyc.io/oak_runtime) available, but please, be aware that it also contains functions and structures used by the generated code that you will probably not need.
 
 Parsing functions accept a stream as input parameter which represents the data to be processed. A stream can be retrieved from type implementing `Stream` with the method `stream()` which is similar to `iter()` for retrieving an iterator. For example, `Stream` is implemented for the type `&'a str` and we can directly pass the result of `stream()` to the parsing function, as in `calc::recognize_let_kw(let_kw.stream())`. Basically, a stream must implement several operations described by the `CharStream` trait, it is generally an iterator that keeps a reference to the underlying data traversed. You can find a list of all types implementing `Stream` in the [implementors list of `Stream`](http://hyc.io/rust-lib/oak/oak_runtime/stream/trait.Stream.html).
 
@@ -132,7 +132,7 @@ You are now able to efficiently use the code generated by Oak.
 
 As you probably noticed, the rule `integer` produces a value of type `Vec<char>` which is not a usable representation of an integer. We must transform this value into a better type such as `u32`. To achieve this goal, we use a *semantic action* which gives meaning to the characters read. A semantic action is a Rust function taking the value produced by an expression and returning another one more suited for further processing. The grammar becomes:
 
-```
+```rust
 grammar! calc {
   #![show_api]
 
@@ -150,12 +150,107 @@ grammar! calc {
 }
 ```
 
-The combinator `e > f` expects a PEG combinator on the left and a function name on the right, it works like a "reverse function call operator" in the sense that `f` is called with the result value of `e`. Semantic actions must be Rust functions declared inside the `grammar!` so we can examine its return type. You can call function from other modules or crates by wrapping it up inside a function local to the grammar. Any Rust code is accepted, here we use an extra type declaration `Digit` which will be accessible from outside with `calc::Digit`.
+The combinator `e > f` expects a parsing expression on the left and a function name on the right, it works like a "reverse function call operator" in the sense that `f` is called with the result value of `e`. Semantic actions must be Rust functions declared inside the `grammar!` so we can examine its return type. You can call function from other modules or crates by wrapping it up inside a function local to the grammar. Any Rust code is accepted, here we use an extra type declaration `Digit` which will be accessible from outside with `calc::Digit`.
 
-Oak gives a type to any parsing expression to help you constructing your AST more easily. Next sections explain how Oak gives a type to expressions, the limits and how to interact with it for adapting its behaviour. For the moment, if you want to know the type of an expression, just create a rule `r = e`, activates the attribute `#[show_api]` and consults the return type of the generated function in the compiler output. Note that a tuple type such as `(T, U)` is automatically unpacked into two function arguments.
+Oak gives a type to any parsing expression to help you constructing your AST more easily. Next sections explain how Oak gives a type to expressions and how you can help Oak to infer better types. For the moment, when you want to know the type of an expression, just creates a rule `r = e`, activates the attribute `#[show_api]` and consults the return type of the generated function from the compiler output. Note that a tuple type such as `(T, U)` is automatically unpacked into two function arguments, so we expect the function to be of type `f(T, U)` and not `f((T, U))`.
 
-### Arithmetic expression of `Calc`
+### Choice combinator
 
-### Exercise
+We can now build another part of our language: a simple arithmetic calculator where operands can be integers or variables (identifiers). We can extend our grammar with a `factor` rule:
 
-Extend the grammar to support `let-in` anywhere in expressions. Note that you do not need to modify the AST structure.
+```rust
+grammar! calc {
+  #![show_api]
+
+  // ... previous rules and code truncated.
+
+  factor
+    = integer > digit_expr
+    / identifier > variable_expr
+
+  pub type PExpr = Box<Expression>;
+
+  pub enum Expression {
+    Variable(String),
+    Digit(u32)
+  }
+
+  fn digit_expr(digit: u32) -> PExpr {
+    Box::new(Digit(digit))
+  }
+
+  fn variable_expr(raw_text: Vec<char>) -> PExpr {
+    Box::new(Variable(raw_text.into_iter().collect()))
+  }
+}
+```
+
+A new combinator appeared! Indeed, an operand can be an `integer` *or* an `identifier` (for variables) and this alternative is expressed with the *choice combinator* of the form `e1 / e2 / ... / eN`. It tries the expression `e1` and if it fails, it restarts with `e2`, etc. It fails if the last expression `eN` fails. An important point is that *order* matters, hence the grammar is unambiguous, for each input, only one parse tree is possible. It's worth mentioning that this prioritized choice can leads to unexpected, but however easy to detect, wrong behaviour. For example, if you consider `identifier / integer` which reverses the order of the factors, `integer` will never be reached because `identifier` accepts a super-set of the language recognized by `integer`. Choice combinators naturally map to an enumeration type in Rust, in our example we declared `Expression` within the macro. We build the variants of the enumeration with our own functions. Note that types can be declared outside the macro, you just need to add the corresponding `use` statements.
+
+### Sequence combinator
+
+We have all the pieces to parse our first arithmetic expression. We start with `+` and `-` because they have the same precedence, we will next add `*` and `/`. The sequence combinator is required to parse a sequence of two or more PEGs and is denoted as `e1 e2 ... eN`. If `e1` succeeds, then `e2` is called and so on until `eN` succeeds. It fails if one fails, this is the main difference from the choice combinator which fails if the last expression fails. Let's give a look to the new grammar:
+
+```rust
+grammar! calc {
+  #![show_api]
+
+  // ... previous rules and code truncated.
+
+  term_op
+    = add_op > add_bin_op
+    / sub_op > sub_bin_op
+
+  expression
+    = factor (term_op factor)* > fold_left
+
+  use self::Expression::*;
+  use self::BinOp::*;
+
+  pub type PExpr = Box<Expression>;
+
+  pub enum Expression {
+    Variable(String),
+    Digit(u32),
+    BinaryExpr(BinOp, PExpr, PExpr)
+  }
+
+  pub enum BinOp {
+    Add,
+    Sub
+  }
+
+  fn fold_left(head: PExpr, rest: Vec<(BinOp, PExpr)>) -> PExpr {
+    rest.into_iter().fold(head,
+      |accu, (op, expr)| Box::new(BinaryExpr(op, accu, expr)))
+  }
+
+  fn add_bin_op() -> BinOp { Add }
+  fn sub_bin_op() -> BinOp { Sub }
+}
+```
+
+Parsing rules for arithmetic expression are usually written with *left recursion* which would give us a rule such as:
+
+```rust
+expression
+  = expression term_op factor
+  / factor
+```
+
+Grammar descriptions written in PEG are closed to hand-written recursive descent parser while context-free language specification are less-tied to implementation. This is why left recursion often leads to infinite loops (and eventually to stack overflow) in PEG implementation while it is nicely handled in other parser generator. Oak does not support left recursion yet so the grammar above will generate invalid code. However, we wrote the first `expression` rule without left recursion, it is possible if you see an expression as a *list* of factors separated by binary operators. The tip is to handle repetition with the `e*` combinator instead of recursive rules.
+
+Due to the lack of left recursion, the shape of the tree is modified and this is why we use the function `fold_left` to create a binary tree from a list of expression. This kind of structure is more convenient for the semantic analysis but it is possible to use a variant for expression list such as `ExprList(PExpr, Vec<(BinOp, PExpr)>)`.
+
+### Operator precedence
+
+### Syntactic predicates
+
+### Spacing
+
+### Operator associativity
+
+### Exercises
+
+* Extend the grammar to support negative integers.
+* Extend the grammar to support `let-in` anywhere in expressions. Note that you do not need to modify the AST structure.
