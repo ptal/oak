@@ -45,6 +45,8 @@ use middle::typing::ast::ExprTy::*;
 
 pub fn bottom_up_unit_inference(grammar: &mut Grammar) {
   IntraRule::propagate(&grammar.rules);
+  // It is necessary to call `InterRule::propagate` twice. This is due to rules that form a loop `r1 -> r2 -> ... -> rN` while calling each other. If we start by propagating `ei`, it is possible that `e(i-1)` has not the good type, notably for invisibility, since the type of `ei` is being computed. More explanation in issue #65.
+  InterRule::propagate(&grammar.rules);
   InterRule::propagate(&grammar.rules);
 }
 

@@ -31,7 +31,7 @@ impl TopDownUnitInference
 {
   fn visit_rules(rules: &mut HashMap<Ident, Rule>) {
     for (_, rule) in rules.iter_mut() {
-      TopDownUnitInference::visit_rule(rule)
+      TopDownUnitInference::visit_rule(rule);
     }
   }
 
@@ -45,12 +45,9 @@ struct ContextExprVisitor;
 impl ContextExprVisitor
 {
   fn visit_expr(expr: &mut Expression, mut context: EvaluationContext) {
+    expr.context = expr.context.merge(context);
     if expr.is_unit() {
-      expr.context = context.merge(UnValued);
       context = UnValued;
-    }
-    else {
-      expr.context = context;
     }
     ContextExprVisitor::visit_expr_node(&mut expr.node, context);
   }
