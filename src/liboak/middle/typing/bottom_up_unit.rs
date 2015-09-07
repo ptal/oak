@@ -36,7 +36,7 @@
 //! * Explicit typing operator `->`:
 //!    * `e:t -> () => e:()`
 //!    * `e:t -> (^) => e:(^)`
-
+//!
 //! One of the difficulty for implementing this is to deal with the recursion introduced by the typing rule of non-terminal symbol with the `R` function. Untypable recursive types must not generate errors here because the rule might be called in a context where the AST does not need to be build. The recursive type analysis will be performed after the top-down unit propagation (see `typing::top_down_unit`).
 //! The algorithm is divided in two steps, it first propagates unit types inside rules (`IntraRule`) and then between the rules (`InterRule`). The inter-rule propagation does not loop. We start from the root grammar rule, whenever we encounter an already visited node, it means that the expression is not typable and let the type of the non-terminal symbol to `Identity`. Of course, after the inter-rule propagation, `Identity`-type loop can arise but generating or not an error is decided by the recursive type analysis that uses the value context in addition.
 

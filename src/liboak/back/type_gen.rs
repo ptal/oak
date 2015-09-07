@@ -264,7 +264,8 @@ impl<'a> RuleTyper<'a>
 impl<'a> Visitor<TExpression, RTy> for RuleTyper<'a>
 {
   fn visit_expr(&mut self, expr: &Box<TExpression>) -> RTy {
-    if expr.context == EvaluationContext::UnValued || expr.is_unit() {
+    debug_assert!(expr.context != EvaluationContext::UnValued || expr.is_unit());
+    if expr.is_unit() {
       TypeGenerator::unit_ty(self.cx)
     }
     else {
@@ -287,7 +288,8 @@ impl<'a> Visitor<TExpression, RTy> for RuleTyper<'a>
   fn visit_non_terminal_symbol(&mut self, _parent: &Box<TExpression>, id: Ident) -> RTy {
     let rule = self.rules.get(&id).unwrap();
     self.visit_rule(rule);
-    debug_assert!(self.rules_ty.contains_key(&id), "Try to use a type not yet computed. Probably a recursive type loop.");
+    debug_assert!(self.rules_ty.contains_key(&id),
+      "Try to use a type not yet computed. Probably a recursive type loop.");
     self.rules_ty[&id].clone()
   }
 

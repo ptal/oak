@@ -15,6 +15,7 @@
 use middle::typing::inference::*;
 use middle::typing::bottom_up_unit::*;
 use middle::typing::top_down_unit::*;
+use middle::typing::bottom_up_tuple::*;
 // use middle::typing::printer::*;
 use middle::typing::ast::*;
 use middle::typing::recursive_type::*;
@@ -22,6 +23,7 @@ use monad::partial::Partial;
 
 pub mod ast;
 mod inference;
+mod bottom_up_tuple;
 mod bottom_up_unit;
 mod top_down_unit;
 mod recursive_type;
@@ -40,4 +42,5 @@ pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar> {
   top_down_unit_inference(&mut grammar);
   // print_annotated_rules(&grammar);
   recursive_type_analysis(cx, grammar)
+    .and_then(|grammar| bottom_up_tuple_inference(grammar))
 }
