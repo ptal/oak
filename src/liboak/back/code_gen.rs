@@ -278,7 +278,7 @@ impl<'cx> Visitor<Expression, GenFunNames> for CodeGenerator<'cx>
       }
     );
 
-    let classes_desc = format!("{}", classes);
+    let classes_desc = format!("{}", classes).escape_default();
     let classes_desc_str = classes_desc.as_str();
 
     let make_char_class_body = |result: RExpr| quote_expr!(cx, {
