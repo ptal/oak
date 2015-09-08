@@ -226,8 +226,8 @@ impl<'cx> CodeGenerator<'cx>
     let access_data = quote_expr!(self.cx, data);
     let action_params = match ty {
       ExprTy::Tuple(ref indexes) if indexes.len() > 1 => {
-        indexes.iter()
-          .map(|&idx| self.cx.expr_tup_field_access(parent.span, access_data.clone(), idx))
+        indexes.iter().enumerate()
+          .map(|(idx, _)| self.cx.expr_tup_field_access(parent.span, access_data.clone(), idx))
           .collect()
       },
       ExprTy::Tuple(ref indexes) if indexes.len() == 0 => {
