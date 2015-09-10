@@ -1,6 +1,22 @@
 % Learn Oak
 
-This section is devoted to introduce smoothly the different PEG combinators through a tutorial presenting `Calc`: a small language with arithmetic expressions and variable bindings. If you want to test the code while reading this tutorial, a skeleton project is available in the section [Getting Started](getting-started.md). Before diving into the details, we present a program written in `Calc`:
+This section is devoted to introduce smoothly the different PEG combinators through a tutorial presenting `Calc`: a small language with arithmetic expressions and variable bindings. If you want to test the code while reading this tutorial, a skeleton project is available in the chapter [Getting Started](getting-started.md). This tutorial is split into several sections:
+
+* [What is parsing?](learn-oak.html#what-is-parsing?)
+* [Syntactic atoms of `Calc`](learn-oak.html#syntactic-atoms-of-calc)
+* [Generated code and runtime](learn-oak.html#generated-code-and-runtime)
+* [Semantic action](learn-oak.html#semantic-action)
+* [Choice combinator](learn-oak.html#choice-combinator)
+* [Sequence combinator](learn-oak.html#sequence-combinator)
+* [Operator precedence](learn-oak.html#operator-precedence)
+* [Syntactic predicates](learn-oak.html#syntactic-predicates)
+* [Spacing](learn-oak.html#spacing)
+* [Identifier and keyword](learn-oak.html#identifier-and-keyword)
+* [Operator associativity](learn-oak.html#operator-associativity)
+* [Conclusion](learn-oak.html#conclusion)
+* [Exercise](learn-oak.html#exercise)
+
+Before diving into the details, we present a program written in `Calc`:
 
 ```
 let a = 10 - 2 in
@@ -375,7 +391,7 @@ The idea is to make sure that blank characters are consumed before the parsing o
 
 In `spacing`, the expression `[" \n\t"]*` has type `Vec<char>`, but we do not really care about this value. This is why Oak proposes a type annotation combinator `e -> ()` to indicate that an expression has type unit `()` and that no value should be built from this expression. Oak will automatically propagate `()` in calling site if it does not add any relevant information. For example, the expression `"let" spacing` has type `()`. There is much more to say about type annotation but since it is not part of PEG, we discuss about this in the next chapter.
 
-### Identifier and keywords
+### Identifier and keyword
 
 Now we have a grammar for arithmetic expressions, we continue by adding the let-in construction for declaring new variables. It has the form `let <ident> = <expression> in <expression>` and is parsed by the following grammar.
 
