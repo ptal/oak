@@ -14,7 +14,7 @@ This section is devoted to introduce smoothly the different PEG combinators thro
 * [Identifier and keyword](learn-oak.html#identifier-and-keyword)
 * [Operator associativity](learn-oak.html#operator-associativity)
 * [Conclusion](learn-oak.html#conclusion)
-* [Exercise](learn-oak.html#exercise)
+* [Exercises](learn-oak.html#exercises)
 
 Before diving into the details, we present a program written in `Calc`:
 
@@ -463,8 +463,9 @@ To summarize, operator associativity is managed by the semantic actions and not 
 
 ### Conclusion
 
-That's it! We built a complete grammar for a small language encompassing arithmetic expressions and variable bindings. This tutorial should have covered most of the useful techniques to write your own grammar. The full grammar of `Calc` is available in the [next chapter](full-calc-grammar.md). If you want to use the most of Oak capabilities, please read-on and learn how Oak gives types to parsing expressions!
+That's it! We built a complete grammar for a small language encompassing arithmetic expressions and variable bindings. This tutorial should have covered most of the useful techniques to write your own grammar. The full grammar and usage examples of the `Calc` language are available in the [next chapter](full-calc-grammar.md). If you want to use the most of Oak capabilities, please read-on and learn how Oak gives types to parsing expressions!
 
-### Exercise
+### Exercises
 
-Extend the grammar to support negative integers.
+* Extend the grammar to support negative integers.
+* Extend the grammar to support declaration and function call.
