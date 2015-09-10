@@ -41,15 +41,16 @@ use oak_runtime::*;
 grammar! sum{
   #![show_api]
 
-  sum = value ("+" value)* > add
-  value = ["0-9"]+ > to_digit
+  sum = integer ("+" integer)* > add
+  integer = ["0-9"]+ > to_integer
+
+  use std::str::FromStr;
 
   fn add(x: u32, rest: Vec<u32>) -> u32 {
     rest.iter().fold(x, |x,y| x+y)
   }
 
-  fn to_digit(raw_text: Vec<char>) -> u32 {
-    use std::str::FromStr;
+  fn to_integer(raw_text: Vec<char>) -> u32 {
     let text: String = raw_text.into_iter().collect();
     u32::from_str(&*text).unwrap()
   }

@@ -1,4 +1,4 @@
-% Full Calc grammar
+% Full Calc Grammar
 
 The following code is the grammar of the `Calc` language which is incrementally built and explained in the [previous chapter](learn-oak.md).
 

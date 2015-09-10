@@ -28,7 +28,7 @@ It declares two local variables `a` and `b` initialized with arithmetic expressi
 
 ### What is parsing?
 
-A parser is a bridge between meaning-less sequence of characters and structured representation of data. It tries to give meanings to raw characters by constructing an *Abstract Syntax Tree* (AST) that will be processed by subsequent compilation phases. We expect a parser to transform `7 - 1` into a structure such as `Minus(i32, i32)`. As a side note, you should avoid to compute the actual result of `7 - 1` in the parsing step, it works for simple language but tends to entangle syntactic and semantic analysis later. Invalid programs such as `let a = 8 in a * b` will still be correctly parsed, the semantic analysis is responsible for detecting that `b` is undeclared.
+A parser is a bridge between meaning-less sequence of characters and structured representation of data. It tries to give meanings to raw characters by constructing an *Abstract Syntax Tree* (AST) that will be processed by subsequent compilation phases. We expect a parser to transform `7 - 1` into a structure such as `Subtraction(i32, i32)`. As a side note, you should avoid to compute the actual result of `7 - 1` in the parsing step, it works for simple language but tends to entangle syntactic and semantic analysis later. Invalid programs such as `let a = 8 in a * b` will still be correctly parsed, the semantic analysis is responsible for detecting that `b` is undeclared.
 
 This tutorial will not cover the semantic analysis part and will only describe the grammar used for parsing `Calc`. Our parser will thus produce an AST but without evaluating the expression.
 
