@@ -36,7 +36,7 @@ This tutorial will not cover the semantic analysis part and will only describe t
 
 When it comes to elaborate a grammar, we usually start by identifying atoms of the language, e.g. syntactic constructions that can not be divided into smaller ones. These atoms are called *tokens* and are often processed during a *lexical analysis* happening before the parsing. Oak is based on _Parsing Expression Grammar_ (PEG) and works directly on a stream of characters instead of a stream of tokens. An advantage is to have a unique and coherent grammar syntax which is helpful for composing grammars that do not necessarily expect the same set of tokens. Before continuing reading, try to find out what are the atoms of `Calc`.
 
-The keywords `let` and `in`, the binding operator `=`, parenthesis `()` and arithmetic operators `+`, `-`, `*`, `/`, `^` form the *unvalued atoms* of the language. `Calc` has two *valued atoms* which are identifiers and integers. Unvalued atoms give a shape to the AST but they do not carry any specific data retrieved from the stream of characters. The following grammar parses the atoms of `Calc`:
+The keywords `let` and `in`, the binding operator `=`, parenthesis `()` and arithmetic operators `+`, `-`, `*`, `/`, `^` form the *unvalued atoms* of the language. `Calc` has two *valued atoms* which are identifiers and numbers. Unvalued atoms give a shape to the AST but they do not carry any specific data retrieved from the stream of characters. The following grammar parses the atoms of `Calc`:
 
 ```
 grammar! calc {
@@ -54,7 +54,7 @@ grammar! calc {
   rparen = ")"
 
   identifier = ["a-zA-Z0-9_"]+
-  integer = ["0-9"]+
+  number = ["0-9"]+
 }
 ```
 
@@ -62,11 +62,11 @@ A grammar is introduced with the macro `grammar! <name>` where `<name>` is the n
 
 The rules describing keywords and operators use *string literals* expressions of the form `"<literal>"`, it expects the input to match exactly the sequence of characters given.
 
-Identifiers and integers are recognized with *character classes* where a class is a single character or a character range. A range `r` has the form `<char>-<char>` inside a set `["r1r2..rN"]`. Since `-` is used to denote a range, it must be placed before or after all the ranges such as in `["-a-z"]` to be recognized as an accepted character. Character classes will succeed and "eat" *one* character if it is present in the set, so `b`, `8`, `_` are all accepted by `["a-zA-Z0-9_"]` but `é`, `-` or `]` are not.
+Identifiers and numbers are recognized with *character classes* where a class is a single character or a character range. A range `r` has the form `<char>-<char>` inside a set `["r1r2..rN"]`. Since `-` is used to denote a range, it must be placed before or after all the ranges such as in `["-a-z"]` to be recognized as an accepted character. Character classes will succeed and "eat" *one* character if it is present in the set, so `b`, `8`, `_` are all accepted by `["a-zA-Z0-9_"]` but `é`, `-` or `]` are not.
 
 For both string literals and character classes, any Unicode characters are interpreted following the same requirements as [string literals](https://doc.rust-lang.org/reference.html#string-literals) in the Rust specification. The only other parsing expression consuming a character is the `.` (a simple dot) expression, it consumes any character and can only fail if we reached the end of input.
 
-The remaining parsing expressions are combinators, they must be composed with sub-expressions. Identifiers and integers are sequences of one or more characters and we use the combinator `e+` to repeat `e` while it succeeds. For example `identifier` matches "x_1" from the input "x_1 x_2" by successively applying `["a-zA-Z0-9_"]` to the input; it parses `x`, `_` and `1` and then fails on the space character. It however succeeds, even if the match is partial, and `identifier` returns the remaining input " x_2" and the data read. A requirement of `e+` is that `e` must be repeated *at least once*. The `e*` expression does not impose this constraint and allows `e` to be repeated *zero or more times*. The last combinator in this category is `e?`, it consumes `e` *zero or one time*. The combinators `e*`, `e+` and `e?` will consume as much input as they can and are said to be *greedy operators*.
+The remaining parsing expressions are combinators, they must be composed with sub-expressions. Identifiers and numbers are sequences of one or more characters and we use the combinator `e+` to repeat `e` while it succeeds. For example `identifier` matches "x_1" from the input "x_1 x_2" by successively applying `["a-zA-Z0-9_"]` to the input; it parses `x`, `_` and `1` and then fails on the space character. It however succeeds, even if the match is partial, and `identifier` returns the remaining input " x_2" and the data read. A requirement of `e+` is that `e` must be repeated *at least once*. The `e*` expression does not impose this constraint and allows `e` to be repeated *zero or more times*. The last combinator in this category is `e?`, it consumes `e` *zero or one time*. The combinators `e*`, `e+` and `e?` will consume as much input as they can and are said to be *greedy operators*.
 
 ### Generated code and runtime
 
@@ -86,7 +86,7 @@ note: pub mod calc {
     pub fn recognize_identifier<S>(mut stream: S) -> ParseState<S, ()>
      where S: CharStream;
 
-    pub fn parse_integer<S>(mut stream: S) -> ParseState<S, Vec<char>>
+    pub fn parse_number<S>(mut stream: S) -> ParseState<S, Vec<char>>
      where S: CharStream;
   // ...
   // Rest of the output truncated for the tutorial.
@@ -102,7 +102,7 @@ fn main() {
   assert!(state.is_successful());
 
   let ten = "10";
-  let state = calc::parse_integer(ten.stream());
+  let state = calc::parse_number(ten.stream());
   assert_eq!(state.unwrap_data(), vec!['1', '0']);
 }
 ```
@@ -133,9 +133,9 @@ fn analyse_state(state: ParseState<StrStream, Vec<char>>) {
 }
 
 fn main() {
-  analyse_state(calc::parse_integer("10".stream())); // complete
-  analyse_state(calc::parse_integer("10a".stream())); // partial
-  analyse_state(calc::parse_integer("a".stream())); // erroneous
+  analyse_state(calc::parse_number("10".stream())); // complete
+  analyse_state(calc::parse_number("10a".stream())); // partial
+  analyse_state(calc::parse_number("a".stream())); // erroneous
 }
 
 // Result:
@@ -149,14 +149,14 @@ You are now able to efficiently use the code generated by Oak.
 
 ### Semantic action
 
-As you probably noticed, the rule `integer` produces a value of type `Vec<char>` which is not a usable representation of an integer. We must transform this value into a better type such as `u32`. To achieve this goal, we use a *semantic action* which gives meaning to the characters read. A semantic action is a Rust function taking the value produced by an expression and returning another one more suited for further processing. The grammar becomes:
+As you probably noticed, the rule `number` produces a value of type `Vec<char>` which is not a usable representation of a number. We must transform this value into a better type such as `u32`. To achieve this goal, we use a *semantic action* which gives meaning to the characters read. A semantic action is a Rust function taking the value produced by an expression and returning another one more suited for further processing. The grammar becomes:
 
 ```rust
 grammar! calc {
   // ... previous rules truncated.
 
   identifier = ["a-zA-Z0-9_"]+ > to_string
-  integer = ["0-9"]+ > to_integer
+  number = ["0-9"]+ > to_number
 
   use std::str::FromStr;
 
@@ -164,7 +164,7 @@ grammar! calc {
     raw_text.into_iter().collect()
   }
 
-  fn to_integer(raw_text: Vec<char>) -> u32 {
+  fn to_number(raw_text: Vec<char>) -> u32 {
     u32::from_str(&*to_string(raw_text)).unwrap()
   }
 }
@@ -178,14 +178,14 @@ Note that semantic actions have the property of not being called inside recogniz
 
 ### Choice combinator
 
-We can now build another part of our language: a simple arithmetic calculator where operands can be integers, variables or a parenthesized expression. We extend the grammar with a `factor` rule:
+We can now build another part of our language: a simple arithmetic calculator where operands can be numbers, variables or a parenthesized expression. We extend the grammar with a `factor` rule:
 
 ```rust
 grammar! calc {
   // ... previous rules and code truncated.
 
   factor
-    = integer > integer_expr
+    = number > number_expr
     / identifier > variable_expr
     / lparen expression rparen
 
@@ -195,11 +195,11 @@ grammar! calc {
 
   pub enum Expression {
     Variable(String),
-    Integer(u32)
+    Number(u32)
   }
 
-  fn integer_expr(value: u32) -> PExpr {
-    Box::new(Integer(value))
+  fn number_expr(value: u32) -> PExpr {
+    Box::new(Number(value))
   }
 
   fn variable_expr(ident: String) -> PExpr {
@@ -208,7 +208,7 @@ grammar! calc {
 }
 ```
 
-A new combinator appeared! Indeed, an operand can be an `integer`, an `identifier` (for variables) *or* a parenthesized expression and these alternatives are expressed with the *choice combinator* of the form `e1 / e2 / ... / eN`. It tries the expression `e1` and if it fails, it restarts with `e2`, etc. It fails if the last expression `eN` fails. An important point is that *order matters*, hence the grammar is unambiguous, for each input, only one parse tree is possible. It's worth mentioning that this prioritized choice can leads to unexpected, but however easy to detect, wrong behaviour. For example, if you consider `identifier / integer` which reverses the order of the factors, `integer` will never be reached because `identifier` accepts a super-set of the language recognized by `integer`. Choice combinators naturally map to an enumeration type in Rust, in our example we declared `Expression` within the macro and is accessible from outside with `calc::Expression`. We build the variants of the enumeration with our own functions. Note that types can be declared outside the macro, you just need to add the corresponding `use` statements.
+A new combinator appeared! Indeed, an operand can be a `number`, an `identifier` (for variables) *or* a parenthesized expression and these alternatives are expressed with the *choice combinator* of the form `e1 / e2 / ... / eN`. It tries the expression `e1` and if it fails, it restarts with `e2`, etc. It fails if the last expression `eN` fails. An important point is that *order matters*, hence the grammar is unambiguous, for each input, only one parse tree is possible. It's worth mentioning that this prioritized choice can leads to unexpected, but however easy to detect, wrong behaviour. For example, if you consider `identifier / number` which reverses the order of the factors, `number` will never be reached because `identifier` accepts a super-set of the language recognized by `number`. Choice combinators naturally map to an enumeration type in Rust, in our example we declared `Expression` within the macro and is accessible from outside with `calc::Expression`. We build the variants of the enumeration with our own functions. Note that types can be declared outside the macro, you just need to add the corresponding `use` statements.
 
 ### Sequence combinator
 
@@ -232,7 +232,7 @@ grammar! calc {
 
   pub enum Expression {
     Variable(String),
-    Integer(u32),
+    Number(u32),
     BinaryExpr(BinOp, PExpr, PExpr)
   }
 
@@ -287,7 +287,7 @@ grammar! calc {
 
   pub enum Expression {
     Variable(String),
-    Integer(u32),
+    Number(u32),
     BinaryExpr(BinOp, PExpr, PExpr)
   }
 
@@ -303,13 +303,13 @@ grammar! calc {
 We added support for multiplication and division with the `term` rule separating factors by `*` or `/`. Note that we re-use the same function `fold_left` for transforming the expression list into a binary tree. We show how precedence is encoded into these rules by computing step by step the parsing of the `Calc` program `8-2/2`.
 
 1. We enter `expression` and directly call `term` which in turn call `factor`.
-2. We enter `factor` and try the rule `integer` which succeeds. `factor` returns `Integer(8)`.
-3. We go back in `term` and try `(factor_op factor)*` but `factor_op` does not match `-` so `e*` produces an empty `Vec` and `fold_left` returns the first and unchanged value `Integer(8)`.
+2. We enter `factor` and try the rule `number` which succeeds. `factor` returns `Number(8)`.
+3. We go back in `term` and try `(factor_op factor)*` but `factor_op` does not match `-` so `e*` produces an empty `Vec` and `fold_left` returns the first and unchanged value `Number(8)`.
 4. We go back in `expression` and try `(term_op term)*`, `term_op` matches `-` and returns `Sub`.
-5. We re-enter `term` and since the remaining input is `2/2`, it exactly matches the expression `factor factor_op factor` and returns `BinaryExpr(Div, Integer(2), Integer(2))`.
-6. We go back in `expression` and build the final expression `BinaryExpr(Sub, Integer(8), BinaryExpr(Div, Integer(2), Integer(2)))`.
+5. We re-enter `term` and since the remaining input is `2/2`, it exactly matches the expression `factor factor_op factor` and returns `BinaryExpr(Div, Number(2), Number(2))`.
+6. We go back in `expression` and build the final expression `BinaryExpr(Sub, Number(8), BinaryExpr(Div, Number(2), Number(2)))`.
 
-This expression well-respect the precedence of arithmetic operators. A general technique to build a PEG supporting any level of precedence is to nest rules in the invert order of precedence. For example in `Calc`, integers and variables have the highest precedence; note that this is always the case for atoms. Addition and subtraction have the lowest precedence and it implies that, for `e1+e2`, both sub-expressions will first be considered to be terms or factors before trying to parse them as expressions. We suggest that you first group operators by precedence levels and than write the expression rules:
+This expression well-respect the precedence of arithmetic operators. A general technique to build a PEG supporting any level of precedence is to nest rules in the invert order of precedence. For example in `Calc`, numbers and variables have the highest precedence; note that this is always the case for atoms. Addition and subtraction have the lowest precedence and it implies that, for `e1+e2`, both sub-expressions will first be considered to be terms or factors before trying to parse them as expressions. We suggest that you first group operators by precedence levels and than write the expression rules:
 
 ```rust
 operators_lvl_1 = "+" / "-"
@@ -349,7 +349,7 @@ grammar! calc {
   // ... previous rules and code truncated.
 
   identifier = !digit ["a-zA-Z0-9_"]+ > to_string
-  integer = digit+ > to_integer
+  number = digit+ > to_number
   digit = ["0-9"]
 
   fn to_string(raw_text: Vec<char>) -> String {
@@ -370,7 +370,7 @@ grammar! calc {
   program = spacing expression
 
   identifier = !digit ["a-zA-Z0-9_"]+ spacing > to_string
-  integer = digit+ spacing > to_integer
+  number = digit+ spacing > to_number
 
   spacing = [" \n\t"]* -> ()
 
@@ -400,7 +400,7 @@ grammar! calc {
   // ... previous rules and code truncated.
 
   factor
-    = integer > integer_expr
+    = number > number_expr
     / identifier > variable_expr
     / let_expr > let_in_expr
     / lparen expression rparen
@@ -467,5 +467,5 @@ That's it! We built a complete grammar for a small language encompassing arithme
 
 ### Exercises
 
-* Extend the grammar to support negative integers.
+* Extend the grammar to support negative numbers.
 * Extend the grammar to support declaration and function call.

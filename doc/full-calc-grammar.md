@@ -24,7 +24,7 @@ grammar! calc {
     = (factor exponent_op)* factor > fold_right
 
   factor
-    = integer > integer_expr
+    = number > number_expr
     / identifier > variable_expr
     / let_expr > let_in_expr
     / lparen expression rparen
@@ -46,7 +46,7 @@ grammar! calc {
   ident_char = ["a-zA-Z0-9_"]
 
   digit = ["0-9"]
-  integer = digit+ spacing > to_integer
+  number = digit+ spacing > to_number
   spacing = [" \n\t"]* -> ()
 
   kw_tail = !ident_char spacing
@@ -73,7 +73,7 @@ grammar! calc {
   #[derive(Debug)]
   pub enum Expression {
     Variable(String),
-    Integer(u32),
+    Number(u32),
     BinaryExpr(BinOp, PExpr, PExpr),
     LetIn(String, PExpr, PExpr)
   }
@@ -83,12 +83,12 @@ grammar! calc {
     Add, Sub, Mul, Div, Exp
   }
 
-  fn to_integer(raw_text: Vec<char>) -> u32 {
+  fn to_number(raw_text: Vec<char>) -> u32 {
     u32::from_str(&*to_string(raw_text)).unwrap()
   }
 
-  fn integer_expr(value: u32) -> PExpr {
-    Box::new(Integer(value))
+  fn number_expr(value: u32) -> PExpr {
+    Box::new(Number(value))
   }
 
   fn variable_expr(ident: String) -> PExpr {
