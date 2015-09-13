@@ -20,10 +20,12 @@ I read, get inspired or used some ideas of the following implementations (non-ex
 * [rust-peg](https://github.com/kevinmehall/rust-peg)
 * [nom](https://github.com/Geal/nom)
 * [combine](https://github.com/Marwes/combine)
-* [Pegged](https://github.com/PhilippeSigaud/Pegged)
+* [Pegged](https://github.com/PhilippeSigaud/Pegged): Annotations in expressions for dropping, discarding, keeping or fusing AST nodes.
 * [Rats!](https://cs.nyu.edu/rgrimm/xtc/rats-intro.html)
 * [Mouse](http://www.romanredz.se/freesoft.htm)
+* [Boost.Spirit](http://www.boost.org/doc/libs/1_59_0/libs/spirit/doc/html/index.html): It takes the approach of inferring a type and try to make it compatible with the type provided by the user.
 * [pegjs](http://pegjs.org/)
+
 
 ### Paper references
 
