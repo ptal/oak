@@ -18,7 +18,7 @@ var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing
 spacing = [" \n\t"]*
 ```
 
-A straightforward mapping would give to this expression the type `(char, Vec<char>, Vec<char>)` since the sequence has three sub expressions and thus forms a 3-tuple. Clearly, the only value of interest in `var_ident` is the one returned by the expression `["a-zA-Z0-9_"]+` which has type `Vec<char>` (note that we could use a semantic action to transform this value into a string). It is natural to think that the rule `var_ident` will be of type `Vec<char>` too. Oak infer this type if we tell him that we do not care about the value of spaces which is not something that it can guess by itself. We use the combinator `e -> ()` to indicate to Oak that spacing is of type unit.
+A straightforward mapping would give to this expression the type `(char, Vec<char>, Vec<char>)` since the sequence has three sub expressions and thus forms a 3-tuple. Clearly, the only value of interest in `var_ident` is the one returned by the expression `["a-zA-Z0-9_"]+` which has type `Vec<char>` (note that we could use a semantic action to transform this value into a string). It is natural to think that the rule `var_ident` will be of type `Vec<char>` too. Oak infers this type if we tell him that we do not care about the value of spaces which is not something that it can guess by itself. We use the combinator `e -> ()` to indicate to Oak that spacing is of type unit.
 
 ```
 var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing

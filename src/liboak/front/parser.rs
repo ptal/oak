@@ -239,7 +239,8 @@ impl<'a> Parser<'a>
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.bump();
-        Some(self.last_respan(StrLiteral(name_to_string(name))))
+        let cooked_lit = cook_lit(name);
+        Some(self.last_respan(StrLiteral(cooked_lit)))
       },
       rtok::Dot => {
         self.bump();
@@ -286,7 +287,7 @@ impl<'a> Parser<'a>
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.bump();
-        let cooked_lit = rust::str_lit(name_to_string(name).as_str());
+        let cooked_lit = cook_lit(name);
         self.parse_set_of_char_range(&cooked_lit, rule_name)
       },
       _ => {

@@ -13,14 +13,14 @@
 // limitations under the License.
 
 pub use std::string::String;
-pub use rust::{Ident, Name};
+pub use rust::{Ident, Name, str_lit};
 
 pub fn id_to_string(id: Ident) -> String {
   id.to_string()
 }
 
-pub fn name_to_string(name: Name) -> String {
- name.to_string()
+pub fn cook_lit(name: Name) -> String {
+  str_lit(name.to_string().as_str())
 }
 
 pub fn string_to_lowercase(s: &String) -> String {

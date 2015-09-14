@@ -24,7 +24,7 @@ let b = a / 2 in
 b^2 + 2 * (1 - a)
 ```
 
-It declares two local variables `a` and `b` initialized with arithmetic expressions and usable within the scope of the let-binding, which is everything after the `in`. Let-bindings can be composed in cascade but must terminates with an arithmetic expression, such as `b^2 + 2 * (1 - a)` in our example.
+It declares two local variables `a` and `b` initialized with arithmetic expressions and usable within the scope of the let-binding, which is everything after the `in`. Let-bindings can be composed in cascade but must terminate with an arithmetic expression, such as `b^2 + 2 * (1 - a)` in our example.
 
 ### What is parsing?
 
