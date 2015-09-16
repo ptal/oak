@@ -52,7 +52,7 @@ impl<'a> StrStream<'a>
   pub fn line_column(&self) -> (usize, usize) {
     let mut remaining = self.bytes_offset;
     let mut line_no = 1usize;
-    for line in self.raw_data.lines_any() {
+    for line in self.raw_data.lines() {
       let line_len = line.len() + 1;
       if remaining < line_len {
         break;
@@ -62,7 +62,6 @@ impl<'a> StrStream<'a>
     }
     (line_no, remaining + 1)
   }
-
 }
 
 impl<'a> Iterator for StrStream<'a>

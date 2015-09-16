@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use rust;
-use rust::{State, Visibility, Mod};
+use rust::{State, PrintState, Visibility, Mod};
 use back::ast::*;
 use middle::analysis::ast::PrintAttribute;
 use std::io;
