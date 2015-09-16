@@ -26,7 +26,6 @@ I read, get inspired or used some ideas of the following implementations (non-ex
 * [Boost.Spirit](http://www.boost.org/doc/libs/1_59_0/libs/spirit/doc/html/index.html): It takes the approach of inferring a type and try to make it compatible with the type provided by the user.
 * [pegjs](http://pegjs.org/)
 
-
 ### Paper references
 
 * The initial article of Brian Ford is at the heart of Oak. Bryan Ford. [Parsing expression grammars: a recognition-based syntactic foundation](http://www.bford.info/pub/lang/peg.pdf). In ACM SIGPLAN Notices, volume 39, pages 111–122. ACM, 2004.

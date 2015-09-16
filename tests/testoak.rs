@@ -47,8 +47,8 @@ fn test_data_directory()
     ntcc::recognize_ntcc(content.stream())));
   test_engine.register("type_name", Box::new(|content|
     type_name::recognize_type_names(content.stream())));
-  test_engine.register("calculator", Box::new(|content|
-    calculator::recognize_expression(content.stream())));
+  test_engine.register("calc", Box::new(|content|
+    calc::recognize_program(content.stream())));
 
   test_engine.run();
 }

@@ -14,4 +14,4 @@
 
 pub mod ntcc;
 pub mod type_name;
-pub mod calculator;
+pub mod calc;
