@@ -49,6 +49,10 @@ impl Expression
     self.kind.clone()
   }
 
+  pub fn is_unit(&self) -> bool {
+    self.kind.is_unit()
+  }
+
   pub fn tuple_indexes(&self) -> Vec<usize> {
     if let ExprTy::Tuple(indexes) = self.ty.clone() {
       indexes

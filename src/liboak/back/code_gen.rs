@@ -22,13 +22,14 @@ use back::ast::*;
 use back::naming::*;
 use back::function::*;
 use back::code_printer::*;
+use monad::partial::Partial;
 
 use std::iter::*;
 
 pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar)
-  -> Box<rust::MacResult + 'cx>
+  -> Partial<Box<rust::MacResult + 'cx>>
 {
-  CodeGenerator::compile(cx, grammar)
+  Partial::Value(CodeGenerator::compile(cx, grammar))
 }
 
 fn map_foldr<T, U, V, F, G>(data: Vec<T>, accu: V, f: F, g: G) -> V where

@@ -22,13 +22,18 @@ mod function;
 mod type_gen;
 mod code_gen;
 mod code_printer;
+mod sum_type;
 
 use middle::typing::ast::Grammar as TGrammar;
-use back;
+use monad::partial::Partial;
+use back::code_gen::*;
+use back::sum_type::*;
+use back::type_gen::*;
 use rust;
 use rust::ExtCtxt;
 
-pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Box<rust::MacResult + 'cx> {
-  let grammar = back::type_gen::generate_rust_types(cx, tgrammar);
-  back::code_gen::generate_rust_code(cx, grammar)
+pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Partial<Box<rust::MacResult + 'cx>> {
+  let grammar = generate_rust_types(cx, tgrammar);
+  sum_type_analysis(cx, grammar)
+    .and_then(|grammar| generate_rust_code(cx, grammar))
 }

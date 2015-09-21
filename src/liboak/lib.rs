@@ -23,7 +23,6 @@ extern crate syntax;
 use rustc::plugin::Registry;
 
 use front::parser;
-use monad::partial::Partial;
 
 mod ast;
 mod front;
@@ -51,12 +50,11 @@ fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
   let ast = parser.parse_grammar();
-  let ast = middle::analyse(cx, ast);
-  match ast {
-    Partial::Value(ast) => back::compile(cx, ast),
-    Partial::Fake(_) | Partial::Nothing => {
+  let cx: &'cx rust::ExtCtxt = cx;
+  middle::analyse(cx, ast)
+    .and_next(|ast| back::compile(cx, ast))
+    .unwrap_or_else(|| {
       cx.parse_sess.span_diagnostic.handler.abort_if_errors();
       rust::DummyResult::any(rust::DUMMY_SP)
-    }
-  }
+    })
 }
