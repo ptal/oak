@@ -43,6 +43,15 @@ impl<T> Partial<T>
     }
   }
 
+  pub fn unwrap_or_else<F>(self, f: F) -> T where
+   F: FnOnce() -> T
+  {
+    match self {
+      Value(x) => x,
+      _ => f()
+    }
+  }
+
   pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Partial<U> {
     match self {
       Value(x) => Value(f(x)),
@@ -61,18 +70,66 @@ impl<T> Partial<T>
       Nothing => Nothing
     }
   }
+
+  pub fn and_next<U, F: FnOnce(T) -> Partial<U>>(self, f: F) -> Partial<U> {
+    match self {
+      Value(x) => f(x),
+      _ => Nothing
+    }
+  }
+}
+
+fn nothing_i32(_: i32) -> Partial<i32> {
+  Nothing
 }
 
 #[test]
-fn partial() {
+fn partial_unwrap() {
   assert_eq!(Value(9i32).unwrap(), 9i32);
+}
+
+#[test]
+#[should_panic]
+fn partial_unwrap_fake() {
+  Fake(9i32).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn partial_unwrap_nothing() {
+  let x: Partial<i32> = Nothing;
+  x.unwrap();
+}
+
+#[test]
+fn partial_unwrap_or_else() {
+  assert_eq!(Value(9i32).unwrap_or_else(|| 1i32), 9i32);
+  assert_eq!(Fake(9i32).unwrap_or_else(|| 1i32), 1i32);
+  assert_eq!(Nothing.unwrap_or_else(|| 1i32), 1i32);
+}
+
+#[test]
+fn partial_map() {
   assert_eq!(Value(9i32).map(|i|i*2), Value(18i32));
   assert_eq!(Fake(9i32).map(|i|i*2), Fake(18i32));
   assert_eq!(Nothing.map(|i:i32|i), Nothing);
+}
+
+#[test]
+fn partial_and_then() {
   assert_eq!(Value(9i32).and_then(|i| Value(i*2)), Value(18i32));
   assert_eq!(Value(9i32).and_then(|i| Fake(i*2)), Fake(18i32));
   assert_eq!(Fake(9i32).and_then(|i| Fake(i*2)), Fake(18i32));
   // Even if you return a Value, it automatically coerces to Fake.
   assert_eq!(Fake(9i32).and_then(|i| Value(i*2)), Fake(18i32));
-  assert_eq!(Fake(9i32).and_then(|_| -> Partial<i32> { Nothing }), Nothing);
+  assert_eq!(Fake(9i32).and_then(nothing_i32), Nothing);
+}
+
+#[test]
+fn partial_and_next() {
+  assert_eq!(Value(1i32).and_next(|i| Value(i*2)), Value(2));
+  assert_eq!(Value(1i32).and_next(|i| Fake(i*2)), Fake(2));
+  assert_eq!(Value(1i32).and_next(nothing_i32), Nothing);
+  assert_eq!(Fake(1i32).and_next(|i| Value(i*2)), Nothing);
+  assert_eq!(nothing_i32(0).and_next(|i| Value(i*2)), Nothing);
 }
