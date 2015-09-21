@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Generates Rust type from Oak type.
+//!
+//! It needs two passes:
+//! * Give a type to rules.
+//! * Give a type to each expression and build the new expression tree.
+//!
+//! This is needed because even if types can not be recursive, rules can be. In other words, two rules A and B can be recursive with well-formed types. When traversing sub-expressions of A and reaching `NonTerminalSymbol(B)` we need the type of B and so we go inside B. Of course, the recursive type analysis ensures that we can obtain the type of B without going into A again, but this is not just about typing, we still need to build sub-expressions of B, which need to be typed too, hence we would need to go inside A, and this forms a cycle. The solution is to first type each rule without trying to build the expression tree, this is done with `RuleTyper`. Next we can safely build the expression tree and give a type to each sub-expression since we know the type of each rule, this is done with `ExpressionTyper`.
+
 use rust;
 use rust::ast::FunctionRetTy::*;
 use rust::AstBuilder;
@@ -264,6 +272,7 @@ impl<'a> RuleTyper<'a>
 impl<'a> Visitor<TExpression, RTy> for RuleTyper<'a>
 {
   fn visit_expr(&mut self, expr: &Box<TExpression>) -> RTy {
+    // `context == Unvalued` implies `expr:()`
     debug_assert!(expr.context != EvaluationContext::UnValued || expr.is_unit());
     if expr.is_unit() {
       TypeGenerator::unit_ty(self.cx)
