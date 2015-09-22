@@ -14,21 +14,43 @@
 
 //! A parsing state indicates the current status of the parsing. It is mainly used by PEG combinators.
 
-use std::cmp::Ord;
-use stream::HasNext;
+use stream::{Location, HasNext, CodeSnippet};
 use parse_error::ParseError;
 use parse_success::ParseSuccess;
 use ParseResult;
 
+use std::cmp::Ord;
+use std::fmt::{Formatter, Debug, Error};
+
 pub struct ParseState<S, T>
 {
-  /// Even in case of success, we keep error information in case we
-  /// fail later. Think about parsing "abaa" with `"ab"* "c"`, it will directly fails on `"c"`,
-  /// so it is better to report an error such as:
-  /// `expected "ab" but got "aa"` since the input partially matches "ab".
+  /// Even in case of success, we keep error information in case we fail later. Think about parsing "abaa" with `"ab"* "c"`, it will directly fails on `"c"`, so it is better to report an error such as:
+  /// `expected "ab" but got "aa"` since the input partially matches "ab"`.
   pub error: ParseError<S>,
   /// Contains a value if the current state is successful and `None` if it is erroneous.
   pub success: Option<ParseSuccess<S, T>>
+}
+
+impl<S, T> Debug for ParseState<S, T> where
+ T: Debug,
+ S: HasNext + Location + CodeSnippet
+{
+  fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
+    if let Some(success) = self.success.as_ref() {
+      if success.partial_read() {
+        formatter.write_fmt(format_args!(
+          "Partial match, got data `{:?}`. It stopped because: `{}`.",
+          success.data, self.error))
+      }
+      else {
+        formatter.write_fmt(format_args!(
+          "Full match, got data `{:?}`.", success.data))
+      }
+    }
+    else {
+      formatter.write_fmt(format_args!("Error: `{}`.", self.error))
+    }
+  }
 }
 
 impl<S, T> ParseState<S, T> where

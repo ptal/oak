@@ -154,6 +154,6 @@ fn main() {
      in \
      a^2 - (let x = a in x * 2) \
     ";
-  analyse_state(calc::parse_program(program2.stream()));
+  println!("{:?}", calc::parse_program(program2.stream()));
 }
 ```

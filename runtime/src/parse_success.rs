@@ -49,7 +49,7 @@ impl<S, T> ParseSuccess<S, T>
 }
 
 impl<S, T> ParseSuccess<S, T> where
- S: Iterator + Clone + HasNext
+ S: HasNext
 {
   /// Returns `true` if `stream` is entirely consumed.
   pub fn full_read(&self) -> bool {
