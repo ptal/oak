@@ -22,4 +22,5 @@ script:
   - cargo build
   - cargo test
   - cargo doc
-  - cd runtime; cargo test; cargo doc
+  - cd runtime; cargo test; cargo doc; cd ..
+  - cd parsers; cargo test; cargo doc; cd ..
