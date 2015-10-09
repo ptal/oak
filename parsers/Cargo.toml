@@ -1,0 +1,22 @@
+[package]
+name = "oak_parsers"
+version = "0.0.1"
+authors = ["Pierre Talbot <ptalbot@hyc.io>"]
+
+description = "Re-usable parsers compilable with the Oak parser generator."
+repository = "https://github.com/ptal/oak"
+documentation = "http://hyc.io/oak"
+keywords = ["parser", "peg", "grammar", "combinator", "parsing"]
+license = "Apache-2.0"
+
+[lib]
+
+name = "oak_parsers"
+path = "src/lib.rs"
+crate_type = ["dylib"]
+
+[dependencies.oak]
+path = ".."
+
+[dependencies.oak_runtime]
+path = "../runtime"
