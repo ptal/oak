@@ -16,6 +16,87 @@ pub use self::rust::*;
 
 grammar! rust {
 
+  identifier = !digit !keyword ident_char+ spacing > to_string
+  ident_char = ["a-zA-Z0-9_"]
+
+  keyword
+    = strict_keyword kw_tail
+    / reserved_keyword kw_tail
+
+  kw_tail = !ident_char spacing
+
+  special_idents
+    = "self"
+    / "static"
+    / "super"
+    / "'static"
+    // for matcher NTs
+    / "tt"
+    / "matchers"
+    // outside of libsyntax
+    / "__rust_abi"
+    / "<opaque>"
+    / "<unnamed_field>"
+    / "Self"
+    / "prelude_import"
+
+  strict_keyword
+    = "as"
+    / "break"
+    / "crate"
+    / "else"
+    / "enum"
+    / "extern"
+    / "false"
+    / "fn"
+    / "for"
+    / "if"
+    / "impl"
+    / "in"
+    / "let"
+    / "loop"
+    / "match"
+    / "mod"
+    / "move"
+    / "mut"
+    / "pub"
+    / "ref"
+    / "return"
+    // Static and Self are also special idents (prefill de-dupes)
+    / "static"
+    / "self"
+    / "Self"
+    / "struct"
+    / "super"
+    / "true"
+    / "trait"
+    / "type"
+    / "unsafe"
+    / "use"
+    / "while"
+    / "continue"
+    / "box"
+    / "const"
+    / "where"
+
+  reserved_keyword
+    = "virtual"
+    / "proc"
+    / "alignof"
+    / "become"
+    / "offsetof"
+    / "priv"
+    / "pure"
+    / "sizeof"
+    / "typeof"
+    / "unsized"
+    / "yield"
+    / "do"
+    / "abstract"
+    / "final"
+    / "override"
+    / "macro"
+
   integer
     = decimal
 
@@ -42,6 +123,7 @@ grammar! rust {
 
   digit = ["0-9"]
   underscore = "_" -> (^)
+  spacing = [" \n\r\t"]* -> ()
 
   pub use syntax::ast::*;
   use std::str::FromStr;
@@ -122,5 +204,13 @@ mod test {
   #[should_panic]
   fn negation_signed_integer() {
     parse_integer("-10000u8".stream());
+  }
+
+  #[test]
+  fn identifier_test() {
+    assert_eq!(parse_identifier("foo  ".stream()).unwrap_data(), "foo");
+    assert_eq!(parse_identifier("let".stream()).is_successful(), false);
+    assert_eq!(parse_identifier("leti".stream()).is_successful(), true);
+    assert_eq!(parse_keyword("let  ".stream()).is_successful(), true);
   }
 }
