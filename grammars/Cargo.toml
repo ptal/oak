@@ -1,9 +1,9 @@
 [package]
-name = "oak_parsers"
+name = "oak_grammars"
 version = "0.0.1"
 authors = ["Pierre Talbot <ptalbot@hyc.io>"]
 
-description = "Re-usable parsers compilable with the Oak parser generator."
+description = "Re-usable grammars compilable with the Oak parser generator."
 repository = "https://github.com/ptal/oak"
 documentation = "http://hyc.io/oak"
 keywords = ["parser", "peg", "grammar", "combinator", "parsing"]
@@ -11,7 +11,7 @@ license = "Apache-2.0"
 
 [lib]
 
-name = "oak_parsers"
+name = "oak_grammars"
 path = "src/lib.rs"
 crate_type = ["dylib"]
 
