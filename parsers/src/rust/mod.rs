@@ -12,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-grammar! literals {
+pub use self::rust::*;
+
+grammar! rust {
+
   integer
     = decimal
 
-  decimal = sign? digit_list integer_suffix? > make_decimal
+  decimal = sign? number integer_suffix? > make_decimal
 
   sign
     = "-" > make_minus_sign
     / "+" > make_plus_sign
 
-  digit_list = digit+ (underscore* digit)* > concat
+  number = digits > make_number
+  digits = digit+ (underscore* digit)* > concat
 
   integer_suffix
     = "u8" > make_u8
@@ -61,7 +65,7 @@ grammar! literals {
   fn make_minus_sign() -> Sign { Sign::Minus }
   fn make_plus_sign() -> Sign { Sign::Plus }
 
-  fn make_decimal(sign: Option<Sign>, raw_number: Vec<char>, suffix: Option<LitIntType>) -> Lit_ {
+  fn make_decimal(sign: Option<Sign>, number: u64, suffix: Option<LitIntType>) -> Lit_ {
     let sign = sign.unwrap_or(Sign::Plus);
     let ty = match suffix {
       None => UnsuffixedIntLit(sign),
@@ -71,11 +75,14 @@ grammar! literals {
       },
       Some(x) => x
     };
-    let number = match u64::from_str(&*to_string(raw_number)).ok() {
+    Lit_::LitInt(number, ty)
+  }
+
+  fn make_number(raw_number: Vec<char>) -> u64 {
+    match u64::from_str(&*to_string(raw_number)).ok() {
       Some(x) => x,
       None => panic!("int literal is too large")
-    };
-    Lit_::LitInt(number, ty)
+    }
   }
 
   fn to_string(raw_text: Vec<char>) -> String {
@@ -85,7 +92,7 @@ grammar! literals {
 
 #[cfg(test)]
 mod test {
-  use super::literals::*;
+  use super::*;
   use oak_runtime::*;
 
   #[test]
