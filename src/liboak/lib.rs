@@ -45,16 +45,21 @@ fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::
   parse(cx, grammar_name, tts)
 }
 
+fn abort_if_errors(cx: &rust::ExtCtxt) {
+  cx.parse_sess.span_diagnostic.handler.abort_if_errors();
+}
+
 fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
   let ast = parser.parse_grammar();
+  abort_if_errors(cx);
   let cx: &'cx rust::ExtCtxt = cx;
   middle::analyse(cx, ast)
     .and_next(|ast| back::compile(cx, ast))
     .unwrap_or_else(|| {
-      cx.parse_sess.span_diagnostic.handler.abort_if_errors();
+      abort_if_errors(cx);
       rust::DummyResult::any(rust::DUMMY_SP)
     })
 }
