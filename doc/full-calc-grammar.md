@@ -47,7 +47,7 @@ grammar! calc {
 
   digit = ["0-9"]
   number = digit+ spacing > to_number
-  spacing = [" \n\t"]* -> ()
+  spacing = [" \n\r\t"]* -> ()
 
   kw_tail = !ident_char spacing
 

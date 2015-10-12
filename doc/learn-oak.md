@@ -372,7 +372,7 @@ grammar! calc {
   identifier = !digit ["a-zA-Z0-9_"]+ spacing > to_string
   number = digit+ spacing > to_number
 
-  spacing = [" \n\t"]* -> ()
+  spacing = [" \n\r\t"]* -> ()
 
   let_kw = "let" spacing
   in_kw = "in" spacing
