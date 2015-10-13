@@ -36,7 +36,7 @@ mod monad;
 pub fn plugin_registrar(reg: &mut Registry) {
   reg.register_syntax_extension(
     rust::token::intern("grammar"),
-    rust::SyntaxExtension::IdentTT(Box::new(expand), None, false));
+    rust::SyntaxExtension::IdentTT(Box::new(expand), None, true));
 }
 
 fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::Ident,
