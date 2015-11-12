@@ -25,7 +25,6 @@ pub use syntax::ext::build::AstBuilder;
 pub use syntax::ext::base::SyntaxExtension;
 
 pub use syntax::parse::str_lit;
-pub use syntax::parse::attr::ParserAttr;
 pub use syntax::parse::parser::Parser;
 pub use syntax::parse::ParseSess;
 pub use syntax::parse::new_parser_from_tts;

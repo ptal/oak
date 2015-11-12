@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::{ParserAttr, respan};
+use rust::respan;
 use rust::Token as rtok;
 use rust::BinOpToken as rbtok;
 use rust;
@@ -58,7 +58,7 @@ impl<'a> Parser<'a>
     while self.rp.token != rtok::Eof
     {
       self.parse_inner_attributes();
-      self.rp.parse_item().map_or_else(
+      self.rp.parse_item_panic().map_or_else(
         || rules.push(self.parse_rule()),
         |item| rust_items.push(item))
     }
@@ -66,7 +66,7 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule(&mut self) -> Rule {
-    let outer_attrs = self.rp.parse_outer_attributes();
+    let outer_attrs = self.rp.parse_outer_attributes().unwrap();
     let name = self.parse_rule_decl();
     self.rp.expect(&rtok::Eq).unwrap();
     let body = self.parse_rule_rhs(id_to_string(name.node).as_str());
@@ -75,7 +75,7 @@ impl<'a> Parser<'a>
 
   fn parse_inner_attributes(&mut self) {
     let inners = self.rp.parse_inner_attributes();
-    self.inner_attrs.push_all(inners.as_slice());
+    self.inner_attrs.push_all(inners.unwrap().as_slice());
   }
 
   fn parse_rule_decl(&mut self) -> rust::SpannedIdent {
