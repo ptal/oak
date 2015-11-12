@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(plugin, convert, path_ext, box_syntax, rustc_private)]
+#![feature(plugin, convert, box_syntax, rustc_private)]
 
 #![plugin(oak)]
 
@@ -23,7 +23,7 @@ use oak_runtime::*;
 use grammars::*;
 
 use std::path::{PathBuf, Path};
-use std::fs::{File, read_dir, PathExt};
+use std::fs::{File, read_dir};
 use std::io;
 use std::io::Read;
 
