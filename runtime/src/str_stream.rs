@@ -25,6 +25,14 @@ impl<'a> Stream for &'a str
   }
 }
 
+impl<'a> Stream for &'a String
+{
+  type Output = StrStream<'a>;
+  fn stream(self) -> StrStream<'a> {
+    self.as_str().stream()
+  }
+}
+
 /// Represents a stream from a `&'a str`. It implements all traits required by `CharStream`.
 #[derive(Clone)]
 pub struct StrStream<'a>
@@ -174,13 +182,12 @@ mod test {
     consume_prefix_test(s1, "z", false, Some('a'));
   }
 
-  #[test]
-  fn test_stream() {
-    let abc = "abc";
-    let mut s1 = abc.stream();
+  fn test_str_stream<'a, I>(mut s1: StrStream<'a>, chars: I) where
+   I: Iterator<Item=char>
+  {
     let s1_init = s1.clone();
     let mut s2 = s1_init.clone();
-    for c in abc.chars() {
+    for c in chars {
       assert!(s1 == s2);
       assert_eq!(s1.next().unwrap(), c);
       assert!(s1 > s1_init);
@@ -191,6 +198,18 @@ mod test {
     assert_eq!(s2.next(), None);
     assert!(s1 > s1_init);
     assert!(s1 == s2);
+  }
+
+  #[test]
+  fn test_stream() {
+    let abc = "abc";
+    test_str_stream(abc.stream(), abc.chars());
+  }
+
+  #[test]
+  fn test_string_stream() {
+    let abc = String::from("abc");
+    test_str_stream(abc.stream(), abc.chars());
   }
 
   #[test]
