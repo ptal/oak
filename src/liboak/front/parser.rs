@@ -58,7 +58,7 @@ impl<'a> Parser<'a>
     while self.rp.token != rtok::Eof
     {
       self.parse_inner_attributes();
-      self.rp.parse_item_panic().map_or_else(
+      self.rp.parse_item().unwrap().map_or_else(
         || rules.push(self.parse_rule()),
         |item| rust_items.push(item))
     }
