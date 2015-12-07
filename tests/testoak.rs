@@ -181,7 +181,7 @@ impl<'a> Test<'a>
 
 struct TestDisplay
 {
-  terminal: Box<Terminal<WriterWrapper>+'static>,
+  terminal: Box<StdoutTerminal>,
   num_success: u32,
   num_failure: u32,
   num_system_failure: u32

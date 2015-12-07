@@ -20,7 +20,7 @@ use HasNext;
 #[derive(Debug)]
 pub struct ParseSuccess<S, T>
 {
-  /// The current stream that can be partially of fully consumed.
+  /// The current stream that can be partially or fully consumed.
   pub stream: S,
   /// AST built from items read in `stream` that are before the current state of `stream`. It does not necessarily contains `data` built from the beginning of `stream` since it depends on the state in which `stream` was before starting the parsing.
   pub data: T
