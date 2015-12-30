@@ -14,7 +14,7 @@
 
 //! This is the developer documentation of Oak, if you do not intend to contribute, please read the [user manual](http://hyc.io/oak) instead. This library proposes a syntax extension for a parser generator based on [Parsing Expression Grammar (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). It aims at simplifying the construction of the AST by typing the parsing rules. This is an experimental library.
 
-#![feature(convert, rustc_private, plugin_registrar, quote, box_syntax, vec_push_all, drain, str_escape)]
+#![feature(convert, rustc_private, plugin_registrar, quote, box_syntax, str_escape)]
 #![crate_name = "oak"]
 
 extern crate rustc;
@@ -47,7 +47,7 @@ fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::
 }
 
 fn abort_if_errors(cx: &rust::ExtCtxt) {
-  cx.parse_sess.span_diagnostic.handler.abort_if_errors();
+  cx.parse_sess.span_diagnostic.abort_if_errors();
 }
 
 fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,

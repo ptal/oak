@@ -97,7 +97,7 @@ impl<'a> RecursiveType<'a>
       self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span,
         "This rule is part of the recursive type.");
     }
-    self.cx.parse_sess.span_diagnostic.handler.note("Recursive data types are not handled automatically, \
+    self.cx.parse_sess.span_diagnostic.note("Recursive data types are not handled automatically, \
       you must create it yourself with a semantic action.\nIf you don't care about the value of this rule, \
       annotate it with `rule = (e) -> ()` or annotate leaf rules that produce values with `rule = (e) -> (^)`.");
   }

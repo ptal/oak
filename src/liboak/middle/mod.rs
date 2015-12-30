@@ -36,7 +36,7 @@ pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool {
   if fgrammar.rules.len() == 0 {
-    cx.parse_sess.span_diagnostic.handler.err(
+    cx.parse_sess.span_diagnostic.err(
       "At least one rule must be declared.");
     false
   } else {

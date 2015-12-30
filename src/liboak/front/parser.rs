@@ -75,7 +75,7 @@ impl<'a> Parser<'a>
 
   fn parse_inner_attributes(&mut self) {
     let inners = self.rp.parse_inner_attributes();
-    self.inner_attrs.push_all(inners.unwrap().as_slice());
+    self.inner_attrs.extend_from_slice(inners.unwrap().as_slice());
   }
 
   fn parse_rule_decl(&mut self) -> rust::SpannedIdent {
@@ -314,7 +314,7 @@ impl<'a> Parser<'a>
     }
     loop {
       match self.parse_char_range(&mut ranges, rule_name) {
-        Some(char_set) => intervals.push_all(char_set.as_slice()),
+        Some(char_set) => intervals.extend_from_slice(char_set.as_slice()),
         None => break
       }
     }

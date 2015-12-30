@@ -48,7 +48,7 @@ fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
       &MetaWord(ref name)
     | &MetaList(ref name, _)
     | &MetaNameValue(ref name, _) => {
-      cx.parse_sess.span_diagnostic.handler.warn(
+      cx.parse_sess.span_diagnostic.warn(
         format!("Unknown attribute `{}`: it will be ignored.", name).as_str());
       PrintAttribute::Nothing
     }
@@ -69,7 +69,7 @@ fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>) {
       &MetaWord(ref name)
     | &MetaList(ref name, _)
     | &MetaNameValue(ref name, _) => {
-      cx.parse_sess.span_diagnostic.handler.warn(
+      cx.parse_sess.span_diagnostic.warn(
         format!("Unknown attribute `{}` attached to the rule `{}`: it will be ignored.", name, rule_name).as_str());
       }
   }

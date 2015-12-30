@@ -105,7 +105,7 @@ impl<'cx> CodeGenerator<'cx>
     match &grammar_module.node {
       &rust::ItemMod(ref module_code) => {
         let mut items = vec![runtime_crate];
-        items.push_all(module_code.items.clone().as_slice());
+        items.extend_from_slice(module_code.items.clone().as_slice());
         rust::P(rust::Item {
           ident: grammar_module.ident,
           attrs: grammar_module.attrs.clone(),

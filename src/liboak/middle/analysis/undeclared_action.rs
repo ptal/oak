@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use middle::analysis::ast::*;
-use monad::partial::Partial::*;
 
 pub struct UndeclaredAction<'a>
 {

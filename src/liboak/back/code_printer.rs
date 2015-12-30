@@ -20,7 +20,7 @@ use std::io;
 
 pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RItem) {
   if print_attr.debug_api() {
-    cx.parse_sess.span_diagnostic.handler.note(
+    cx.parse_sess.span_diagnostic.note(
       rust::item_to_string(grammar_module).as_str());
   }
   else if print_attr.show_api() {
@@ -28,7 +28,7 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
       let res = rust::to_string(|s| {
         print_module(s, module, grammar_module.ident, grammar_module.vis, grammar_module.span)
       });
-      cx.parse_sess.span_diagnostic.handler.note(res.as_str());
+      cx.parse_sess.span_diagnostic.note(res.as_str());
     } else {
       panic!("Expected the grammar module.");
     }
