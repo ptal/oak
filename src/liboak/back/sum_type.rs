@@ -85,12 +85,13 @@ impl<'a> SumType<'a>
     tys_indices: HashMap<String, Vec<usize>>)
   {
     self.bad_type_detected = true;
-    self.cx.span_err(parent.span, "sum combinator arms have incompatible types:");
+    let mut db = self.cx.struct_span_err(parent.span, "sum combinator arms have incompatible types:");
     for (ty_desc, indices) in tys_indices {
       for idx in indices {
-        self.cx.span_note(exprs[idx].span, format!("has type {}", ty_desc).as_str());
+        db.span_note(exprs[idx].span, format!("has type {}", ty_desc).as_str());
       }
     }
+    db.emit();
   }
 }
 

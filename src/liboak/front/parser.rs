@@ -231,6 +231,13 @@ impl<'a> Parser<'a>
     respan_expr(self.rp.last_span, expr)
   }
 
+  // RUST TOFIX: span_fatal does not provoke -> !, see how it will evolve in the API.
+  fn fatal_error(&mut self, err_msg: &str) -> ! {
+    let span = self.rp.span;
+    self.rp.span_fatal(span, err_msg).emit();
+    panic!(true);
+  }
+
   fn parse_rule_atom(&mut self, rule_name: &str) -> Option<Box<Expression>> {
     let token = self.rp.token.clone();
     if token.is_any_keyword() {
@@ -268,13 +275,11 @@ impl<'a> Parser<'a>
             res
           },
           _ => {
-            let span = self.rp.span;
-            panic!(self.rp.span_fatal(
-              span,
+            self.fatal_error(
               format!("In rule {}: A character class must always be terminated by `]` \
                 and can only contain a string literal (such as in `[\"a-z\"]`",
                 rule_name).as_str()
-            ));
+            );
           }
         }
       },
@@ -291,13 +296,11 @@ impl<'a> Parser<'a>
         self.parse_set_of_char_range(&cooked_lit, rule_name)
       },
       _ => {
-        let span = self.rp.span;
-        panic!(self.rp.span_fatal(
-          span,
+        self.fatal_error(
           format!("In rule {}: An expected character occurred in this character class. \
-            `[` must only be followed by a string literal (such as in `[\"a-z\"]`",
+            `[` must only be followed by a string literal (such as in `[\"a-z\"]`)",
             rule_name).as_str()
-        ));
+        );
       }
     }
   }

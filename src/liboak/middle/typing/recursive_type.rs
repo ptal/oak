@@ -91,15 +91,17 @@ impl<'a> RecursiveType<'a>
       trimmed_cycle.push(id.clone());
     }
 
-    self.cx.span_err(self.rules.get(&in_cycle).unwrap().name.span, "Inlining cycle detected. \
+    let mut db = self.cx.struct_span_err(self.rules.get(&in_cycle).unwrap().name.span,
+      "Inlining cycle detected. \
       The type of a rule must be inlined into itself (indirectly or not), which is impossible.");
     for cycle_node in trimmed_cycle.iter() {
-      self.cx.span_note(self.rules.get(cycle_node).unwrap().name.span,
+      db.span_note(self.rules.get(cycle_node).unwrap().name.span,
         "This rule is part of the recursive type.");
     }
-    self.cx.parse_sess.span_diagnostic.note("Recursive data types are not handled automatically, \
+    db.note("Recursive data types are not handled automatically, \
       you must create it yourself with a semantic action.\nIf you don't care about the value of this rule, \
       annotate it with `rule = (e) -> ()` or annotate leaf rules that produce values with `rule = (e) -> (^)`.");
+    db.emit();
   }
 }
 

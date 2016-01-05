@@ -128,12 +128,12 @@ impl<'a, Item> DuplicateItem<'a, Item> where
   }
 
   fn duplicate_items(&self, pre: &Item, current: Item) {
-    self.cx.span_err(current.span(), format!(
+    let mut db = self.cx.struct_span_err(current.span(), format!(
       "duplicate definition of {} `{}`",
       self.what_is_duplicated, current.ident()).as_str());
-    self.cx.span_note(pre.span(), format!(
+    db.span_note(pre.span(), format!(
       "previous definition of {} `{}` here",
-      self.what_is_duplicated, pre.ident()).as_str());
+      self.what_is_duplicated, pre.ident()).as_str()).emit();
   }
 
   fn make(self) -> Partial<HashMap<Ident, Item>> {
