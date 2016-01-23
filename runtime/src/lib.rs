@@ -16,7 +16,7 @@
 //!
 //! This library is used by the generated code of Oak and is also necessary to any Oak users for interfacing with the code generated. A PEG combinator returns a `ParseState`, please consult the methods `into_result` or `unwrap_data` as they are good starting point for retrieving useful information.
 
-#![feature(str_char, convert)]
+#![feature(str_char)]
 
 pub use str_stream::*;
 pub use stream::*;

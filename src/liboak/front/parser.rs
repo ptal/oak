@@ -49,7 +49,7 @@ impl<'a> Parser<'a>
   }
 
   fn bump(&mut self) {
-    self.rp.bump().unwrap()
+    self.rp.bump()
   }
 
   fn parse_blocks(&mut self) -> (Vec<Rule>, Vec<RItem>) {

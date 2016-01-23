@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(plugin, convert, box_syntax, rustc_private)]
+#![feature(plugin, box_syntax, rustc_private)]
 
 #![plugin(oak)]
 
