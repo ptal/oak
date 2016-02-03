@@ -54,8 +54,17 @@ fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
-  let ast = parser.parse_grammar();
-  abort_if_errors(cx);
+  let ast = match parser.parse_grammar() {
+    Ok(g) => {
+      abort_if_errors(cx);
+      g
+    }
+    Err(mut e) => {
+      e.emit();
+      abort_if_errors(cx);
+      unreachable!();
+    }
+  };
   let cx: &'cx rust::ExtCtxt = cx;
   middle::analyse(cx, ast)
     .and_next(|ast| back::compile(cx, ast))
