@@ -33,6 +33,8 @@ mod rust;
 mod identifier;
 mod monad;
 
+type FGrammar = front::ast::Grammar;
+
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
   reg.register_syntax_extension(
@@ -50,21 +52,26 @@ fn abort_if_errors(cx: &rust::ExtCtxt) {
   cx.parse_sess.span_diagnostic.abort_if_errors();
 }
 
+fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -> FGrammar {
+  match ast {
+    Ok(ast) => {
+      abort_if_errors(cx);
+      ast
+    }
+    Err(mut err_diagnostic) => {
+      err_diagnostic.emit();
+      abort_if_errors(cx);
+      panic!(rust::FatalError);
+    }
+  }
+}
+
 fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
-  let ast = match parser.parse_grammar() {
-    Ok(g) => {
-      abort_if_errors(cx);
-      g
-    }
-    Err(mut e) => {
-      e.emit();
-      abort_if_errors(cx);
-      unreachable!();
-    }
-  };
+  let ast = parser.parse_grammar();
+  let ast = unwrap_parser_ast(cx, ast);
   let cx: &'cx rust::ExtCtxt = cx;
   middle::analyse(cx, ast)
     .and_next(|ast| back::compile(cx, ast))
