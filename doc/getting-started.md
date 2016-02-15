@@ -1,9 +1,18 @@
 % Getting Started
 
-Before starting playing with Oak, let's create a skeleton project. There are some requirements:
+Before starting playing with Oak, let's install the nightly compiler and create a skeleton project. We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension which is only available in nightly build of Rust. We advise to use the tool [multirust](https://github.com/brson/multirust) for installing, updating and switching between stable, beta and nightly channels of Rust. The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compiler.
 
-* We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension that is only available in nightly build of Rust. It is simple to install but you need to build from source the Rust compiler. Instructions are available in the [Rust book](http://doc.rust-lang.org/book/nightly-rust.html).
-* The Rust packages manager [Cargo](http://doc.crates.io/) is highly recommended. If you followed the Rust book for installing the nightly build, you have nothing to do! Cargo comes installed with the Rust compiler.
+```sh
+$ curl -sf https://raw.githubusercontent.com/brson/multirust/master/blastoff.sh | sh
+# Switch to nightly build of Rust.
+$ multirust default nightly
+# Update Rust compiler and Cargo.
+$ multirust update
+# Switch to stable.
+$ multirust default stable
+```
+
+For avoiding all compatibility troubles between Oak and the Rust compiler, you should use the version of the Rust compiler matching the one used for compiling Oak. This is done by using `multirust override <nightly version>` command available in the [README](https://github.com/ptal/oak/).
 
 Once both are installed, we can set up a project using Oak. Run the command `cargo new oak_skeleton` to create a new project. Modify the `Cargo.toml` file to add Oak dependencies:
 
