@@ -103,14 +103,14 @@ impl<'cx> CodeGenerator<'cx>
     ).expect("Quote the extern PEG crate.");
 
     match &grammar_module.node {
-      &rust::ItemMod(ref module_code) => {
+      &rust::ItemKind::Mod(ref module_code) => {
         let mut items = vec![runtime_crate];
         items.extend_from_slice(module_code.items.clone().as_slice());
         rust::P(rust::Item {
           ident: grammar_module.ident,
           attrs: grammar_module.attrs.clone(),
           id: rust::DUMMY_NODE_ID,
-          node: rust::ItemMod(rust::Mod{
+          node: rust::ItemKind::Mod(rust::Mod{
             inner: rust::DUMMY_SP,
             items: items
           }),

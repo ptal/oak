@@ -16,8 +16,7 @@ use middle::analysis::ast::*;
 use front::ast::Grammar as FGrammar;
 use front::ast::Rule as FRule;
 
-use rust::{P, MetaItem};
-use rust::MetaItem_::*;
+use rust::{P, MetaItemKind, MetaItem};
 
 pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar,
   mut grammar: Grammar) -> Partial<Grammar>
@@ -39,15 +38,15 @@ fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttrib
 
 fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
   match &meta_item.node {
-    &MetaWord(ref name) if *name == "debug_api" => {
+    &MetaItemKind::Word(ref name) if *name == "debug_api" => {
       PrintAttribute::DebugApi
     },
-    &MetaWord(ref name) if *name == "show_api" => {
+    &MetaItemKind::Word(ref name) if *name == "show_api" => {
       PrintAttribute::ShowApi
     },
-      &MetaWord(ref name)
-    | &MetaList(ref name, _)
-    | &MetaNameValue(ref name, _) => {
+      &MetaItemKind::Word(ref name)
+    | &MetaItemKind::List(ref name, _)
+    | &MetaItemKind::NameValue(ref name, _) => {
       cx.parse_sess.span_diagnostic.warn(
         format!("Unknown attribute `{}`: it will be ignored.", name).as_str());
       PrintAttribute::Nothing
@@ -66,9 +65,9 @@ fn check_rules_attributes(cx: &ExtCtxt, rules: &Vec<FRule>) {
 
 fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>) {
   match &meta_item.node {
-      &MetaWord(ref name)
-    | &MetaList(ref name, _)
-    | &MetaNameValue(ref name, _) => {
+      &MetaItemKind::Word(ref name)
+    | &MetaItemKind::List(ref name, _)
+    | &MetaItemKind::NameValue(ref name, _) => {
       cx.parse_sess.span_diagnostic.warn(
         format!("Unknown attribute `{}` attached to the rule `{}`: it will be ignored.", name, rule_name).as_str());
       }

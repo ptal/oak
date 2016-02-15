@@ -36,7 +36,7 @@ pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
   let mut functions = vec![];
   let mut others = vec![];
   for item in items {
-    if let &rust::Item_::ItemFn(..) = &item.node {
+    if let &rust::ItemKind::Fn(..) = &item.node {
       functions.push(item);
     }
     else {

@@ -5,7 +5,7 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
-Compiled with `rustc 1.8.0-nightly (18b851bc5 2016-01-22)`.
+Compiled with `rustc 1.8.0-nightly (fae516277 2016-02-13)`.
 
 
 Please consult the [Oak manual](http://hyc.io/oak).

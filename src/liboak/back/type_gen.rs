@@ -21,7 +21,7 @@
 //! This is needed because even if types can not be recursive, rules can be. In other words, two rules A and B can be recursive with well-formed types. When traversing sub-expressions of A and reaching `NonTerminalSymbol(B)` we need the type of B and so we go inside B. Of course, the recursive type analysis ensures that we can obtain the type of B without going into A again, but this is not just about typing, we still need to build sub-expressions of B, which need to be typed too, hence we would need to go inside A, and this forms a cycle. The solution is to first type each rule without trying to build the expression tree, this is done with `RuleTyper`. Next we can safely build the expression tree and give a type to each sub-expression since we know the type of each rule, this is done with `ExpressionTyper`.
 
 use rust;
-use rust::ast::FunctionRetTy::*;
+use rust::ast::FunctionRetTy;
 use rust::AstBuilder;
 use middle::typing::ast::Grammar as TGrammar;
 use middle::typing::ast::Rule as TRule;
@@ -66,8 +66,8 @@ impl TypeGenerator
   fn action_ty(cx: &ExtCtxt, expr_ty: ExprTy) -> RTy {
     if let ExprTy::Action(return_ty) = expr_ty {
       match return_ty {
-        NoReturn(_) | DefaultReturn(_) => TypeGenerator::unit_ty(cx),
-        Return(ty) => ty
+        FunctionRetTy::None(_) | FunctionRetTy::Default(_) => TypeGenerator::unit_ty(cx),
+        FunctionRetTy::Ty(ty) => ty
       }
     }
     else {
@@ -78,7 +78,7 @@ impl TypeGenerator
   fn tuple_ty<F>(cx: &ExtCtxt, expr: &Box<TExpression>, mut rty_of_idx: F) -> RTy where
    F: FnMut(usize) -> RTy
   {
-    // cx.ty(expr.span, rust::Ty_::TyTup(vec![]))
+    // cx.ty(expr.span, rust::TyKind::Tup(vec![]))
     let expr_ty = expr.ty_clone();
     if let ExprTy::Tuple(indexes) = expr_ty {
       let tys: Vec<_> = indexes.iter().map(|&idx| rty_of_idx(idx)).collect();
@@ -86,7 +86,7 @@ impl TypeGenerator
         tys[0].clone()
       }
       else {
-        cx.ty(expr.span, rust::Ty_::TyTup(tys))
+        cx.ty(expr.span, rust::TyKind::Tup(tys))
       }
     }
     else {

@@ -24,7 +24,7 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
       rust::item_to_string(grammar_module).as_str());
   }
   else if print_attr.show_api() {
-    if let &rust::Item_::ItemMod(ref module) = &grammar_module.node {
+    if let &rust::ItemKind::Mod(ref module) = &grammar_module.node {
       let res = rust::to_string(|s| {
         print_module(s, module, grammar_module.ident, grammar_module.vis, grammar_module.span)
       });
@@ -51,7 +51,7 @@ fn print_module(s: &mut State, module: &Mod, ident: Ident, vis: Visibility, span
 
 fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
   if item.vis == rust::Visibility::Public {
-    if let &rust::Item_::ItemFn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
+    if let &rust::ItemKind::Fn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
       try!(s.hardbreak_if_not_bol());
       try!(s.head(""));
       try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, item.vis));
