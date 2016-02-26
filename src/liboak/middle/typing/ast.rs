@@ -101,6 +101,14 @@ impl Expression
     self.ty.borrow().is_unit()
   }
 
+  pub fn is_forwading_type(&self) -> bool {
+    match self.node {
+      NonTerminalSymbol(_) => true,
+      Choice(_) => true,
+      _ => self.ty.borrow().is_projection()
+    }
+  }
+
   pub fn ty_clone(&self) -> ExprTy {
     self.ty.borrow().clone()
   }
@@ -144,6 +152,13 @@ impl ExprTy
   pub fn is_unit(&self) -> bool {
     match *self {
       Tuple(ref indexes) => indexes.len() == 0,
+      _ => false
+    }
+  }
+
+  pub fn is_projection(&self) -> bool {
+    match *self {
+      Tuple(ref indexes) => indexes.len() == 1,
       _ => false
     }
   }

@@ -34,7 +34,9 @@ pub struct RecursiveType<'a>
   rules: &'a HashMap<Ident, Rule>,
   visited: HashMap<Ident, bool>,
   current_inline_path: Vec<Ident>,
-  cycle_detected: bool
+  cycle_detected: bool,
+  /// This boolean stays true if we only forward type along the recursive cycle. In this case, it means that no new value must be built.
+  forwarding_type: bool
 }
 
 impl<'a> RecursiveType<'a>
@@ -55,7 +57,8 @@ impl<'a> RecursiveType<'a>
       rules: rules,
       visited: visited,
       current_inline_path: vec![],
-      cycle_detected: false
+      cycle_detected: false,
+      forwarding_type: true
     }
   }
 
@@ -116,7 +119,7 @@ impl<'a> Visitor<Expression, ()> for RecursiveType<'a>
     if !self.cycle_detected {
       let rule = self.rules.get(&ident).unwrap();
       let ident = rule.name.node;
-      if !rule.def.is_unit() && self.current_inline_path.contains(&ident) {
+      if !rule.def.is_unit() && self.current_inline_path.contains(&ident) && !self.forwarding_type {
         self.current_inline_path.push(ident);
         self.loop_detected();
       }
@@ -126,14 +129,23 @@ impl<'a> Visitor<Expression, ()> for RecursiveType<'a>
     }
   }
 
-  // Base case: Expression with a unit type does not generate a recursive type.
+  /// Base case: Expression with a unit type does not generate a recursive type.
+  /// If the current expression is not only a projection, it means that a type must be built.
   fn visit_expr(&mut self, expr: &Box<Expression>) {
     if !expr.is_unit() {
-      walk_expr(self, expr);
+      if !expr.is_forwading_type() {
+        let forwading_old = self.forwarding_type;
+        self.forwarding_type = false;
+        walk_expr(self, expr);
+        self.forwarding_type = forwading_old;
+      }
+      else {
+        walk_expr(self, expr);
+      }
     }
   }
 
-  // Base case: Semantic actions always have type given by the user, so recursivity is handled by the user.
+  /// Base case: Semantic actions always have type given by the user, so recursivity is handled by the user.
   fn visit_semantic_action(&mut self, _parent: &Box<Expression>,
     _expr: &Box<Expression>, _id: Ident)
   {}
