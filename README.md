@@ -5,7 +5,7 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
-Compiled with `rustc 1.8.0-nightly (0ef8d4260 2016-02-24)`. Download this specific version with [multirust](https://github.com/brson/multirust): `multirust override nightly-2016-02-24`.
+Compiled on the nightly channel of Rust. Use [rustup](www.rustup.rs) for managing compiler channels. Download the exact same version of the compiler used with `rustup override add nightly-2016-04-05`.
 
 
 Please consult the [Oak manual](http://hyc.io/oak).
