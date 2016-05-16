@@ -26,7 +26,7 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
   else if print_attr.show_api() {
     if let &rust::ItemKind::Mod(ref module) = &grammar_module.node {
       let res = rust::to_string(|s| {
-        print_module(s, module, grammar_module.ident, grammar_module.vis, grammar_module.span)
+        print_module(s, module, grammar_module.ident, grammar_module.vis.clone(), grammar_module.span)
       });
       cx.parse_sess.span_diagnostic.note_without_error(res.as_str());
     } else {
@@ -38,7 +38,7 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
 fn print_module(s: &mut State, module: &Mod, ident: Ident, vis: Visibility, span: Span)
   -> io::Result<()>
 {
-  try!(s.head(&rust::visibility_qualified(vis, "mod")));
+  try!(s.head(&rust::visibility_qualified(&vis, "mod")));
   try!(s.print_ident(ident));
   try!(s.nbsp());
   try!(s.bopen());
@@ -54,7 +54,7 @@ fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
     if let &rust::ItemKind::Fn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
       try!(s.hardbreak_if_not_bol());
       try!(s.head(""));
-      try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, item.vis));
+      try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, &item.vis));
       try!(s.end()); // end head-ibox
       try!(rust::pp::word(&mut s.s, ";"));
       try!(s.end()); // end the outer fn box

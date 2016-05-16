@@ -195,7 +195,7 @@ impl<'a> Parser<'a>
       }
       None => {
         Err(self.fatal_error(
-          format!("In rule {}: {} is not followed by a valid expression. 
+          format!("In rule {}: {} is not followed by a valid expression.
             Do not forget it must be in front of the expression.",
             rule_name, pred_name).as_str()
         ))
@@ -256,7 +256,7 @@ impl<'a> Parser<'a>
         try!(self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)));
         Some(res)
       },
-      rtok::Ident(id, _) if !token.is_any_keyword() => {
+      rtok::Ident(id) if !token.is_any_keyword() => {
         if self.is_rule_lhs() { None }
         else {
           self.bump();

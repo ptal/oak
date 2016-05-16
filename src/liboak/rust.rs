@@ -35,6 +35,5 @@ pub use syntax::parse::token::Token;
 pub use syntax::parse::token;
 pub use syntax::parse::token::keywords::Keyword;
 pub use syntax::parse::token::DelimToken;
-pub use syntax::parse::token::IdentStyle;
 pub use syntax::parse::token::BinOpToken;
 pub use syntax::parse::token::gensym_ident;
