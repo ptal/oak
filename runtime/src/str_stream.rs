@@ -77,7 +77,7 @@ impl<'a> Iterator for StrStream<'a>
   type Item = char;
   fn next(&mut self) -> Option<Self::Item> {
     if self.bytes_offset < self.raw_data.len() {
-      let current = self.raw_data.char_at(self.bytes_offset);
+      let current = self.raw_data[self.bytes_offset..].chars().next().unwrap();
       self.bytes_offset += current.len_utf8();
       Some(current)
     } else {
