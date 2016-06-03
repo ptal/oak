@@ -15,18 +15,70 @@
 pub use rust::{SpannedIdent, Spanned, Attribute, BytePos, mk_sp};
 pub use ast::*;
 
-pub struct Grammar{
+pub struct Grammar
+{
   pub name: Ident,
   pub rules: Vec<Rule>,
+  pub exprs: Vec<Expression>,
+  pub exprs_info: Vec<ExpressionInfo>,
   pub rust_items: Vec<RItem>,
   pub attributes: Vec<Attribute>
 }
 
+impl Grammar
+{
+  pub fn new(grammar_name: Ident) -> Grammar {
+    Grammar {
+      name: grammar_name,
+      rules: vec![],
+      exprs: vec![],
+      exprs_info: vec![],
+      rust_items: vec![],
+      attributes: vec![]
+    }
+  }
+
+  pub fn alloc_expr(&mut self, lo: BytePos, hi: BytePos, expr: Expression) -> usize {
+    let expr_idx = self.exprs.len();
+    self.exprs.push(expr);
+    self.exprs_info.push(ExpressionInfo::spanned(lo, hi));
+    expr_idx
+  }
+
+  pub fn push_rule(&mut self, name: SpannedIdent, attributes: Vec<Attribute>, def: usize) {
+    self.rules.push(Rule::new(name, attributes, def));
+  }
+
+  pub fn push_attr(&mut self, attr: Attribute) {
+    self.attributes.push(attr);
+  }
+
+  pub fn push_rust_item(&mut self, ritem: RItem) {
+    self.rust_items.push(ritem);
+  }
+
+  pub fn expr_ty(&mut self, expr: usize, ty: TypeAnnotation) {
+    self.exprs_info[expr].ty = Some(ty);
+  }
+}
+
 #[derive(Clone)]
-pub struct Rule{
+pub struct Rule
+{
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
-  pub def: Box<Expression>
+  pub def: usize
+}
+
+impl Rule
+{
+  pub fn new(name: SpannedIdent, attributes: Vec<Attribute>, def: usize) -> Rule {
+    Rule {
+      name: name,
+      attributes: attributes,
+      def: def
+    }
+  }
 }
 
 impl ItemIdent for Rule
@@ -43,35 +95,26 @@ impl ItemSpan for Rule
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum TypeAnnotation {
   Invisible,
   Unit
 }
 
-pub type ExpressionNode = Expression_<Expression>;
-
 // Implicitly typed expression.
 #[derive(Clone)]
-pub struct Expression
+pub struct ExpressionInfo
 {
   pub span: Span,
-  pub node: ExpressionNode,
   pub ty: Option<TypeAnnotation>
 }
 
-impl ExprNode for Expression
+impl ExpressionInfo
 {
-  fn expr_node<'a>(&'a self) -> &'a ExpressionNode {
-    &self.node
+  fn spanned(lo: BytePos, hi: BytePos) -> ExpressionInfo {
+    ExpressionInfo {
+      span: mk_sp(lo, hi),
+      ty: None
+    }
   }
 }
-
-pub fn spanned_expr(lo: BytePos, hi: BytePos, expr: ExpressionNode) -> Box<Expression> {
-  respan_expr(mk_sp(lo, hi), expr)
-}
-
-pub fn respan_expr(sp: Span, expr: ExpressionNode) -> Box<Expression> {
-  box Expression {span : sp, node: expr, ty: None}
-}
-

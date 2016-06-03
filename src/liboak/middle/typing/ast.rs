@@ -142,7 +142,7 @@ pub enum ExprTy
   Identity,
   /// `Tuple(vec![])` is the unit type.
   /// `Tuple(vec![i])` is a projection of the type of a sub-expression.
-  /// `Tuple(vec![i,..,j])` is a tuple for the sub-expressions at index `i,..,j`.
+  /// `Tuple(vec![i,..,j])` is a tuple for the sub-expressions at index `{i,..,j}`.
   Tuple(Vec<usize>),
   Action(rust::FunctionRetTy)
 }
