@@ -17,13 +17,13 @@ use middle::analysis::ast::*;
 pub struct UndeclaredAction<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  grammar: &'a Grammar,
+  grammar: &'a AGrammar,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredAction<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar> {
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Partial<AGrammar> {
     if UndeclaredAction::has_undeclared(cx, &grammar) {
       Partial::Nothing
     } else {
@@ -31,7 +31,7 @@ impl<'a> UndeclaredAction<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool {
     let mut analyser = UndeclaredAction {
       cx: cx,
       grammar: grammar,

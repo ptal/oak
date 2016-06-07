@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use front::ast::FGrammar;
 use middle::analysis::ast::*;
 use middle::analysis::duplicate::*;
 use middle::analysis::undeclared_rule::*;
 use middle::analysis::undeclared_action::*;
 use middle::analysis::attribute::*;
-use front::ast::Grammar as FGrammar;
 
 mod duplicate;
 mod undeclared_rule;
@@ -25,7 +25,7 @@ mod undeclared_action;
 mod attribute;
 pub mod ast;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
+pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<AGrammar> {
   let grammar = Grammar::new(fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
   let frules = fgrammar.rules.clone();
   let frust_items = fgrammar.rust_items;

@@ -25,6 +25,82 @@ pub type RTy = rust::P<rust::Ty>;
 pub type RExpr = rust::P<rust::Expr>;
 pub type RItem = rust::P<rust::Item>;
 
+pub use rust::{ExtCtxt, Attribute, SpannedIdent};
+pub use monad::partial::Partial;
+
+use middle::analysis::ast::GrammarAttributes;
+
+use std::collections::HashMap;
+use std::default::Default;
+
+pub struct Grammar<ExprInfo>
+{
+  pub name: Ident,
+  pub rules: HashMap<Ident, Rule>,
+  pub exprs: Vec<Expression>,
+  pub exprs_info: Vec<ExprInfo>,
+  pub rust_functions: HashMap<Ident, RItem>,
+  pub rust_items: Vec<RItem>,
+  pub attributes: GrammarAttributes
+}
+
+impl<ExprInfo> Grammar<ExprInfo>
+{
+  pub fn new(name: Ident, exprs: Vec<Expression>, exprs_info: Vec<ExprInfo>) -> Grammar<ExprInfo> {
+    Grammar {
+      name: name,
+      rules: HashMap::new(),
+      exprs: exprs,
+      exprs_info: exprs_info,
+      rust_functions: HashMap::new(),
+      rust_items: vec![],
+      attributes: GrammarAttributes::default()
+    }
+  }
+
+  pub fn info_by_index<'a>(&'a self, index: usize) -> &'a ExprInfo {
+    &self.exprs_info[index]
+  }
+}
+
+impl<ExprInfo> ExprByIndex for Grammar<ExprInfo>
+{
+  fn expr_by_index<'a>(&'a self, index: usize) -> &'a Expression {
+    &self.exprs[index]
+  }
+}
+
+pub struct Rule
+{
+  pub name: SpannedIdent,
+  pub def: usize,
+}
+
+impl Rule
+{
+  pub fn new(name: SpannedIdent, def: usize) -> Rule {
+    Rule{
+      name: name,
+      def: def
+    }
+  }
+}
+
+impl ItemIdent for Rule
+{
+  fn ident(&self) -> Ident {
+    self.name.node.clone()
+  }
+}
+
+impl ItemSpan for Rule
+{
+  fn span(&self) -> Span {
+    self.name.span.clone()
+  }
+}
+
+
 #[derive(Clone, Debug)]
 pub enum Expression
 {

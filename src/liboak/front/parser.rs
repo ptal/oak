@@ -25,7 +25,7 @@ use front::ast::Expression::*;
 pub struct Parser<'a>
 {
   rp: rust::Parser<'a>,
-  grammar: Grammar
+  grammar: FGrammar
 }
 
 impl<'a> Parser<'a>
@@ -37,7 +37,7 @@ impl<'a> Parser<'a>
   {
     Parser{
       rp: rust::new_parser_from_tts(sess, cfg, tts),
-      grammar: Grammar::new(grammar_name)
+      grammar: FGrammar::new(grammar_name)
     }
   }
 
@@ -45,7 +45,7 @@ impl<'a> Parser<'a>
     self.grammar.alloc_expr(lo, hi, expr)
   }
 
-  pub fn parse_grammar(mut self) -> rust::PResult<'a, Grammar> {
+  pub fn parse_grammar(mut self) -> rust::PResult<'a, FGrammar> {
     try!(self.parse_blocks());
     Ok(self.grammar)
     //Ok(Grammar{name: self.grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()})

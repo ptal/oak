@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{SpannedIdent, Spanned, Attribute, BytePos, mk_sp};
+pub use rust::{Spanned, BytePos, mk_sp};
 pub use ast::*;
 
-pub struct Grammar
+pub struct FGrammar
 {
   pub name: Ident,
-  pub rules: Vec<Rule>,
+  pub rules: Vec<FRule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExpressionInfo>,
   pub rust_items: Vec<RItem>,
   pub attributes: Vec<Attribute>
 }
 
-impl Grammar
+impl FGrammar
 {
-  pub fn new(grammar_name: Ident) -> Grammar {
-    Grammar {
+  pub fn new(grammar_name: Ident) -> FGrammar {
+    FGrammar {
       name: grammar_name,
       rules: vec![],
       exprs: vec![],
@@ -46,7 +46,7 @@ impl Grammar
   }
 
   pub fn push_rule(&mut self, name: SpannedIdent, attributes: Vec<Attribute>, def: usize) {
-    self.rules.push(Rule::new(name, attributes, def));
+    self.rules.push(FRule::new(name, attributes, def));
   }
 
   pub fn push_attr(&mut self, attr: Attribute) {
@@ -63,17 +63,17 @@ impl Grammar
 }
 
 #[derive(Clone)]
-pub struct Rule
+pub struct FRule
 {
   pub name: SpannedIdent,
   pub attributes: Vec<Attribute>,
   pub def: usize
 }
 
-impl Rule
+impl FRule
 {
-  pub fn new(name: SpannedIdent, attributes: Vec<Attribute>, def: usize) -> Rule {
-    Rule {
+  pub fn new(name: SpannedIdent, attributes: Vec<Attribute>, def: usize) -> FRule {
+    FRule {
       name: name,
       attributes: attributes,
       def: def
@@ -81,14 +81,14 @@ impl Rule
   }
 }
 
-impl ItemIdent for Rule
+impl ItemIdent for FRule
 {
   fn ident(&self) -> Ident {
     self.name.node
   }
 }
 
-impl ItemSpan for Rule
+impl ItemSpan for FRule
 {
   fn span(&self) -> Span {
     self.name.span

@@ -24,6 +24,7 @@ extern crate syntax;
 use rustc_plugin::Registry;
 
 use front::parser;
+use front::ast::FGrammar;
 
 mod ast;
 mod front;
@@ -32,8 +33,6 @@ mod middle;
 mod rust;
 mod identifier;
 mod monad;
-
-type FGrammar = front::ast::Grammar;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {

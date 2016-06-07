@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub use middle::analysis::ast::GrammarAttributes;
+pub use middle::analysis::ast::Rule;
 pub use ast::*;
 pub use ast::Expression_::*;
 
@@ -25,22 +26,13 @@ use rust;
 use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
 
-pub type Grammar = Grammar_<Expression>;
-pub type Rule = Rule_<Expression>;
-
-pub struct Grammar_<Expr>
+pub struct Grammar<Expr>
 {
   pub name: Ident,
-  pub rules: HashMap<Ident, Rule_<Expr>>,
+  pub rules: HashMap<Ident, Rule>,
   pub rust_functions: HashMap<Ident, RItem>,
   pub rust_items: Vec<RItem>,
   pub attributes: GrammarAttributes
-}
-
-pub struct Rule_<Expr>
-{
-  pub name: SpannedIdent,
-  pub def: Box<Expr>
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

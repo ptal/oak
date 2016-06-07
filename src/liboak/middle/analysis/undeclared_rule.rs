@@ -19,13 +19,13 @@ use monad::partial::Partial::*;
 pub struct UndeclaredRule<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  grammar: &'a Grammar,
+  grammar: &'a AGrammar,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: Grammar) -> Partial<Grammar> {
+  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Partial<AGrammar> {
     if UndeclaredRule::has_undeclared(cx, &grammar) {
       Nothing
     } else {
@@ -33,7 +33,7 @@ impl<'a> UndeclaredRule<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool {
     let mut analyser = UndeclaredRule {
       cx: cx,
       grammar: grammar,

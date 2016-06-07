@@ -13,12 +13,12 @@
 // limitations under the License.
 
 use middle::analysis::ast::*;
-use front::ast::Rule as FRule;
+use front::ast::FRule;
 
 use rust::{P, MetaItemKind, MetaItem};
 
-pub fn decorate_with_attributes(cx: &ExtCtxt, mut grammar: Grammar,
-  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<Grammar>
+pub fn decorate_with_attributes(cx: &ExtCtxt, mut grammar: AGrammar,
+  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar>
 {
   check_rules_attributes(cx, frules);
   let print_attr = check_grammar_attributes(cx, attributes);
