@@ -26,10 +26,13 @@ mod attribute;
 pub mod ast;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
-  Grammar::new(&fgrammar)
-    .and_then(|grammar| rule_duplicate(cx, grammar, fgrammar.rules.clone()))
-    .and_then(|grammar| rust_functions_duplicate(cx, grammar, fgrammar.rust_items.clone()))
-    .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
-    .and_then(|grammar| UndeclaredAction::analyse(cx, grammar))
-    .and_then(|grammar| decorate_with_attributes(cx, &fgrammar, grammar))
+  let grammar = Grammar::new(fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
+  let frules = fgrammar.rules.clone();
+  let frust_items = fgrammar.rust_items;
+  let fattributes = fgrammar.attributes;
+  rule_duplicate(cx, grammar, fgrammar.rules)
+  .and_then(|grammar| rust_functions_duplicate(cx, grammar, frust_items))
+  .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
+  .and_then(|grammar| UndeclaredAction::analyse(cx, grammar))
+  .and_then(|grammar| decorate_with_attributes(cx, grammar, fattributes, frules))
 }

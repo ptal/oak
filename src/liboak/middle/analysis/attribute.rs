@@ -13,24 +13,23 @@
 // limitations under the License.
 
 use middle::analysis::ast::*;
-use front::ast::Grammar as FGrammar;
 use front::ast::Rule as FRule;
 
 use rust::{P, MetaItemKind, MetaItem};
 
-pub fn decorate_with_attributes(cx: &ExtCtxt, fgrammar: &FGrammar,
-  mut grammar: Grammar) -> Partial<Grammar>
+pub fn decorate_with_attributes(cx: &ExtCtxt, mut grammar: Grammar,
+  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<Grammar>
 {
-  check_rules_attributes(cx, &fgrammar.rules);
-  let print_attr = check_grammar_attributes(cx, &fgrammar.attributes);
+  check_rules_attributes(cx, frules);
+  let print_attr = check_grammar_attributes(cx, attributes);
   grammar.attributes = GrammarAttributes::new(print_attr);
   Partial::Value(grammar)
 }
 
-fn check_grammar_attributes(cx: &ExtCtxt, attrs: &Vec<Attribute>) -> PrintAttribute {
+fn check_grammar_attributes(cx: &ExtCtxt, attrs: Vec<Attribute>) -> PrintAttribute {
   let mut print_attr = PrintAttribute::Nothing;
   for attr in attrs {
-    let meta_item = attr.node.value.clone();
+    let meta_item = attr.node.value;
     print_attr = print_attr.merge(check_grammar_attr(cx, meta_item));
   }
   print_attr
@@ -54,10 +53,10 @@ fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
   }
 }
 
-fn check_rules_attributes(cx: &ExtCtxt, rules: &Vec<FRule>) {
+fn check_rules_attributes(cx: &ExtCtxt, rules: Vec<FRule>) {
   for rule in rules {
-    for attr in &rule.attributes {
-      let meta_item = attr.node.value.clone();
+    for attr in rule.attributes {
+      let meta_item = attr.node.value;
       check_rule_attr(cx, rule.name.node, meta_item);
     }
   }

@@ -19,7 +19,6 @@ use middle::analysis::ast::*;
 use monad::partial::Partial::*;
 
 use rust;
-use std::ops::Deref;
 
 pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
   rules: Vec<FRule>) -> Partial<Grammar>
@@ -49,42 +48,6 @@ pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: Grammar,
       grammar.rust_items = others;
       grammar
     })
-}
-
-impl ItemIdent for rust::Item {
-  fn ident(&self) -> Ident {
-    self.ident.clone()
-  }
-}
-
-impl ItemSpan for rust::Item {
-  fn span(&self) -> Span {
-    self.span.clone()
-  }
-}
-
-impl<InnerItem: ItemIdent> ItemIdent for rust::P<InnerItem> {
-  fn ident(&self) -> Ident {
-    self.deref().ident()
-  }
-}
-
-impl<InnerItem: ItemSpan> ItemSpan for rust::P<InnerItem> {
-  fn span(&self) -> Span {
-    self.deref().span()
-  }
-}
-
-impl ItemIdent for Rule {
-  fn ident(&self) -> Ident {
-    self.name.node.clone()
-  }
-}
-
-impl ItemSpan for Rule {
-  fn span(&self) -> Span {
-    self.name.span.clone()
-  }
 }
 
 struct DuplicateItem<'a, Item>

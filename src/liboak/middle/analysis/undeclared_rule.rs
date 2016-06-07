@@ -15,12 +15,11 @@
 
 use middle::analysis::ast::*;
 use monad::partial::Partial::*;
-use std::collections::HashMap;
 
 pub struct UndeclaredRule<'a>
 {
   cx: &'a ExtCtxt<'a>,
-  rules: &'a HashMap<Ident, Rule>,
+  grammar: &'a Grammar,
   has_undeclared: bool
 }
 
@@ -37,26 +36,34 @@ impl<'a> UndeclaredRule<'a>
   fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
     let mut analyser = UndeclaredRule {
       cx: cx,
-      rules: &grammar.rules,
+      grammar: grammar,
       has_undeclared: false
     };
     for rule in grammar.rules.values() {
-      analyser.visit_expr(&rule.def);
+      analyser.visit_expr(rule.def);
     }
     analyser.has_undeclared
   }
 }
 
-impl<'a> Visitor<Expression, ()> for UndeclaredRule<'a>
+impl<'a> ExprByIndex for UndeclaredRule<'a>
 {
-  unit_visitor_impl!(Expression, str_literal);
-  unit_visitor_impl!(Expression, character);
-  unit_visitor_impl!(Expression, sequence);
-  unit_visitor_impl!(Expression, choice);
+  fn expr_by_index<'b>(&'b self, index: usize) -> &'b Expression {
+    self.grammar.expr_by_index(index)
+  }
+}
 
-  fn visit_non_terminal_symbol(&mut self, parent: &Box<Expression>, id: Ident) {
-    if !self.rules.contains_key(&id) {
-      self.cx.span_err(parent.span, "Undeclared rule.");
+impl<'a> Visitor<()> for UndeclaredRule<'a>
+{
+  unit_visitor_impl!(str_literal);
+  unit_visitor_impl!(character);
+  unit_visitor_impl!(sequence);
+  unit_visitor_impl!(choice);
+
+  fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
+    if !self.grammar.rules.contains_key(&id) {
+      let parent_info = self.grammar.info_by_index(parent);
+      self.cx.span_err(parent_info.span, "Undeclared rule.");
       self.has_undeclared = true;
     }
   }

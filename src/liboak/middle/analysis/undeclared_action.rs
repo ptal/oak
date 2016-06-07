@@ -38,23 +38,31 @@ impl<'a> UndeclaredAction<'a>
       has_undeclared: false
     };
     for rule in grammar.rules.values() {
-      analyser.visit_expr(&rule.def);
+      analyser.visit_expr(rule.def);
     }
     analyser.has_undeclared
   }
 }
 
-impl<'a> Visitor<Expression, ()> for UndeclaredAction<'a>
+impl<'a> ExprByIndex for UndeclaredAction<'a>
 {
-  unit_visitor_impl!(Expression, str_literal);
-  unit_visitor_impl!(Expression, character);
-  unit_visitor_impl!(Expression, sequence);
-  unit_visitor_impl!(Expression, choice);
-  unit_visitor_impl!(Expression, non_terminal);
+  fn expr_by_index<'b>(&'b self, index: usize) -> &'b Expression {
+    self.grammar.expr_by_index(index)
+  }
+}
 
-  fn visit_semantic_action(&mut self, parent: &Box<Expression>, _expr: &Box<Expression>, id: Ident) {
+impl<'a> Visitor<()> for UndeclaredAction<'a>
+{
+  unit_visitor_impl!(str_literal);
+  unit_visitor_impl!(character);
+  unit_visitor_impl!(sequence);
+  unit_visitor_impl!(choice);
+  unit_visitor_impl!(non_terminal);
+
+  fn visit_semantic_action(&mut self, parent: usize, _expr: usize, id: Ident) {
     if !self.grammar.rust_functions.contains_key(&id) {
-      self.cx.span_err(parent.span, "Undeclared action. This must be a function declared in the grammar scope.");
+      let parent_info = self.grammar.info_by_index(parent);
+      self.cx.span_err(parent_info.span, "Undeclared action. This must be a function declared in the grammar scope.");
       self.has_undeclared = true;
     }
   }

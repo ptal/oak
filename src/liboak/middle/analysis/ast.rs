@@ -13,11 +13,10 @@
 // limitations under the License.
 
 pub use ast::*;
-pub use front::ast::Expression;
+pub use front::ast::ExpressionInfo;
 pub use rust::{ExtCtxt,Attribute,SpannedIdent};
 pub use monad::partial::Partial;
 
-use front::ast::Grammar as FGrammar;
 use std::collections::HashMap;
 use std::default::Default;
 
@@ -25,6 +24,8 @@ pub struct Grammar
 {
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
+  pub exprs: Vec<Expression>,
+  pub exprs_info: Vec<ExpressionInfo>,
   pub rust_functions: HashMap<Ident, RItem>,
   pub rust_items: Vec<RItem>,
   pub attributes: GrammarAttributes
@@ -32,16 +33,57 @@ pub struct Grammar
 
 impl Grammar
 {
-  pub fn new(fgrammar: &FGrammar) -> Partial<Grammar> {
-    let rules_len = fgrammar.rules.len();
-    let grammar = Grammar {
-      name: fgrammar.name.clone(),
-      rules: HashMap::with_capacity(rules_len),
+  pub fn new(name: Ident, exprs: Vec<Expression>, exprs_info: Vec<ExpressionInfo>) -> Grammar {
+    Grammar {
+      name: name,
+      rules: HashMap::new(),
+      exprs: exprs,
+      exprs_info: exprs_info,
       rust_functions: HashMap::new(),
       rust_items: vec![],
       attributes: GrammarAttributes::default()
-    };
-    Partial::Value(grammar)
+    }
+  }
+
+  pub fn info_by_index<'a>(&'a self, index: usize) -> &'a ExpressionInfo {
+    &self.exprs_info[index]
+  }
+}
+
+impl ExprByIndex for Grammar
+{
+  fn expr_by_index<'a>(&'a self, index: usize) -> &'a Expression {
+    &self.exprs[index]
+  }
+}
+
+pub struct Rule
+{
+  pub name: SpannedIdent,
+  pub def: usize,
+}
+
+impl Rule
+{
+  pub fn new(name: SpannedIdent, def: usize) -> Rule {
+    Rule{
+      name: name,
+      def: def
+    }
+  }
+}
+
+impl ItemIdent for Rule
+{
+  fn ident(&self) -> Ident {
+    self.name.node.clone()
+  }
+}
+
+impl ItemSpan for Rule
+{
+  fn span(&self) -> Span {
+    self.name.span.clone()
   }
 }
 
@@ -93,21 +135,5 @@ impl Default for PrintAttribute
 {
   fn default() -> PrintAttribute {
     PrintAttribute::Nothing
-  }
-}
-
-pub struct Rule
-{
-  pub name: SpannedIdent,
-  pub def: Box<Expression>,
-}
-
-impl Rule
-{
-  pub fn new(name: SpannedIdent, def: Box<Expression>) -> Rule {
-    Rule{
-      name: name,
-      def: def
-    }
   }
 }

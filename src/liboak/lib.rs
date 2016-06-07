@@ -27,7 +27,7 @@ use front::parser;
 
 mod ast;
 mod front;
-// mod middle;
+mod middle;
 // mod back;
 mod rust;
 mod identifier;
@@ -73,6 +73,7 @@ fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
   let ast = parser.parse_grammar();
   let ast = unwrap_parser_ast(cx, ast);
   let cx: &'cx rust::ExtCtxt = cx;
+  middle::analyse(cx, ast);
   rust::DummyResult::any(rust::DUMMY_SP)
   // middle::analyse(cx, ast)
   //   .and_next(|ast| back::compile(cx, ast))

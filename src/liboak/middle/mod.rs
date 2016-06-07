@@ -16,30 +16,28 @@
 
 //! The `analysis` module performs some verifications on the grammar description and the `typing` module gives a type to each rule and expression.
 
-use middle::typing::ast::*;
-use monad::partial::Partial;
+// use middle::typing::ast::*;
+use middle::analysis::ast::*;
+// use monad::partial::Partial;
 
 pub use front::ast::Grammar as FGrammar;
 
 pub mod analysis;
-pub mod typing;
+// pub mod typing;
 
 pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
-  if !at_least_one_rule_declared(cx, &fgrammar) {
-    return Partial::Nothing
-  }
-
   Partial::Value(fgrammar)
+    .and_then(|grammar| at_least_one_rule_declared(cx, grammar))
     .and_then(|grammar| analysis::analyse(cx, grammar))
-    .and_then(|grammar| typing::type_inference(cx, grammar))
+    // .and_then(|grammar| typing::type_inference(cx, grammar))
 }
 
-fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: &FGrammar) -> bool {
+fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<FGrammar> {
   if fgrammar.rules.len() == 0 {
     cx.parse_sess.span_diagnostic.err(
       "At least one rule must be declared.");
-    false
+    Partial::Value(fgrammar)
   } else {
-    true
+    Partial::Nothing
   }
 }
