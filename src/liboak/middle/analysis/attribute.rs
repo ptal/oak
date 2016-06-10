@@ -17,25 +17,25 @@ use front::ast::FRule;
 
 use rust::{P, MetaItemKind, MetaItem};
 
-pub fn decorate_with_attributes(cx: &ExtCtxt, mut grammar: AGrammar,
+pub fn decorate_with_attributes(mut grammar: AGrammar,
   attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar>
 {
-  check_rules_attributes(cx, frules);
-  let print_attr = check_grammar_attributes(cx, attributes);
+  check_rules_attributes(&grammar, frules);
+  let print_attr = check_grammar_attributes(&grammar, attributes);
   grammar.attributes = GrammarAttributes::new(print_attr);
   Partial::Value(grammar)
 }
 
-fn check_grammar_attributes(cx: &ExtCtxt, attrs: Vec<Attribute>) -> PrintAttribute {
+fn check_grammar_attributes(grammar: &AGrammar, attrs: Vec<Attribute>) -> PrintAttribute {
   let mut print_attr = PrintAttribute::Nothing;
   for attr in attrs {
     let meta_item = attr.node.value;
-    print_attr = print_attr.merge(check_grammar_attr(cx, meta_item));
+    print_attr = print_attr.merge(check_grammar_attr(grammar, meta_item));
   }
   print_attr
 }
 
-fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
+fn check_grammar_attr(grammar: &AGrammar, meta_item: P<MetaItem>) -> PrintAttribute {
   match &meta_item.node {
     &MetaItemKind::Word(ref name) if *name == "debug_api" => {
       PrintAttribute::DebugApi
@@ -46,29 +46,31 @@ fn check_grammar_attr(cx: &ExtCtxt, meta_item: P<MetaItem>) -> PrintAttribute {
       &MetaItemKind::Word(ref name)
     | &MetaItemKind::List(ref name, _)
     | &MetaItemKind::NameValue(ref name, _) => {
-      cx.parse_sess.span_diagnostic.warn(
-        format!("Unknown attribute `{}`: it will be ignored.", name).as_str());
+      grammar.warn(format!(
+        "Unknown attribute `{}`: it will be ignored.",
+        name));
       PrintAttribute::Nothing
     }
   }
 }
 
-fn check_rules_attributes(cx: &ExtCtxt, rules: Vec<FRule>) {
+fn check_rules_attributes(grammar: &AGrammar, rules: Vec<FRule>) {
   for rule in rules {
     for attr in rule.attributes {
       let meta_item = attr.node.value;
-      check_rule_attr(cx, rule.name.node, meta_item);
+      check_rule_attr(grammar, rule.name.node, meta_item);
     }
   }
 }
 
-fn check_rule_attr(cx: &ExtCtxt, rule_name: Ident, meta_item: P<MetaItem>) {
+fn check_rule_attr(grammar: &AGrammar, rule_name: Ident, meta_item: P<MetaItem>) {
   match &meta_item.node {
       &MetaItemKind::Word(ref name)
     | &MetaItemKind::List(ref name, _)
     | &MetaItemKind::NameValue(ref name, _) => {
-      cx.parse_sess.span_diagnostic.warn(
-        format!("Unknown attribute `{}` attached to the rule `{}`: it will be ignored.", name, rule_name).as_str());
+      grammar.warn(format!(
+        "Unknown attribute `{}` attached to the rule `{}`: it will be ignored.",
+        name, rule_name));
       }
   }
 }

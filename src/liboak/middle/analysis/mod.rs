@@ -25,14 +25,14 @@ mod undeclared_action;
 mod attribute;
 pub mod ast;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<AGrammar> {
-  let grammar = Grammar::new(fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
+pub fn analyse<'cx>(cx: &'cx ExtCtxt, fgrammar: FGrammar) -> Partial<AGrammar<'cx>> {
+  let grammar = Grammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
   let frules = fgrammar.rules.clone();
   let frust_items = fgrammar.rust_items;
   let fattributes = fgrammar.attributes;
-  rule_duplicate(cx, grammar, fgrammar.rules)
-  .and_then(|grammar| rust_functions_duplicate(cx, grammar, frust_items))
-  .and_then(|grammar| UndeclaredRule::analyse(cx, grammar))
-  .and_then(|grammar| UndeclaredAction::analyse(cx, grammar))
-  .and_then(|grammar| decorate_with_attributes(cx, grammar, fattributes, frules))
+  rule_duplicate(grammar, fgrammar.rules)
+  .and_then(|grammar| rust_functions_duplicate(grammar, frust_items))
+  .and_then(|grammar| UndeclaredRule::analyse(grammar))
+  .and_then(|grammar| UndeclaredAction::analyse(grammar))
+  .and_then(|grammar| decorate_with_attributes(grammar, fattributes, frules))
 }

@@ -20,16 +20,15 @@ use monad::partial::Partial::*;
 
 use rust;
 
-pub fn rule_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: AGrammar,
-  rules: Vec<FRule>) -> Partial<AGrammar>
+pub fn rule_duplicate(mut grammar: AGrammar, rules: Vec<FRule>) -> Partial<AGrammar>
 {
-  DuplicateItem::analyse(cx, rules.into_iter(), String::from("rule"))
+  DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
   .map(|rules|
     rules.into_iter().map(|(id, frule)| (id, Rule::new(frule.name, frule.def))).collect())
   .map(move |rules| { grammar.rules = rules; grammar })
 }
 
-pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: AGrammar,
+pub fn rust_functions_duplicate(mut grammar: AGrammar,
   items: Vec<RItem>) -> Partial<AGrammar>
 {
   let mut functions = vec![];
@@ -42,7 +41,7 @@ pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: AGrammar,
       others.push(item);
     }
   }
-  DuplicateItem::analyse(cx, functions.into_iter(), String::from("rust function"))
+  DuplicateItem::analyse(&grammar, functions.into_iter(), String::from("rust function"))
     .map(move |functions| {
       grammar.rust_functions = functions;
       grammar.rust_items = others;
@@ -52,7 +51,7 @@ pub fn rust_functions_duplicate<'a>(cx: &'a ExtCtxt<'a>, mut grammar: AGrammar,
 
 struct DuplicateItem<'a, Item>
 {
-  cx: &'a ExtCtxt<'a>,
+  grammar: &'a AGrammar<'a>,
   items: HashMap<Ident, Item>,
   has_duplicate: bool,
   what_is_duplicated: String
@@ -61,13 +60,13 @@ struct DuplicateItem<'a, Item>
 impl<'a, Item> DuplicateItem<'a, Item> where
  Item: ItemIdent + ItemSpan
 {
-  pub fn analyse<ItemIter>(cx: &'a ExtCtxt<'a>, iter: ItemIter, item_kind: String)
+  pub fn analyse<ItemIter>(grammar: &'a AGrammar<'a>, iter: ItemIter, item_kind: String)
     -> Partial<HashMap<Ident, Item>> where
    ItemIter: Iterator<Item=Item>
   {
     let (min_size, _) = iter.size_hint();
     DuplicateItem {
-      cx: cx,
+      grammar: grammar,
       items: HashMap::with_capacity(min_size),
       has_duplicate: false,
       what_is_duplicated: item_kind
@@ -91,12 +90,12 @@ impl<'a, Item> DuplicateItem<'a, Item> where
   }
 
   fn duplicate_items(&self, pre: &Item, current: Item) {
-    let mut db = self.cx.struct_span_err(current.span(), format!(
-      "duplicate definition of {} `{}`",
-      self.what_is_duplicated, current.ident()).as_str());
-    db.span_note(pre.span(), format!(
-      "previous definition of {} `{}` here",
-      self.what_is_duplicated, pre.ident()).as_str()).emit();
+    self.grammar.multi_locations_err(
+      current.span(),
+      format!("duplicate definition of {} with name `{}`", self.what_is_duplicated, current.ident()),
+      pre.span(),
+      format!("previous definition of `{}` here", pre.ident())
+    );
   }
 
   fn make(self) -> Partial<HashMap<Ident, Item>> {

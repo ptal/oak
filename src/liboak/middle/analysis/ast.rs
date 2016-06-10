@@ -13,12 +13,11 @@
 // limitations under the License.
 
 pub use ast::*;
-pub use front::ast::ExpressionInfo;
+pub use front::ast::FExpressionInfo;
 
-use std::collections::HashMap;
 use std::default::Default;
 
-pub type AGrammar = Grammar<ExpressionInfo>;
+pub type AGrammar<'cx> = Grammar<'cx, FExpressionInfo>;
 
 #[derive(Default)]
 pub struct GrammarAttributes

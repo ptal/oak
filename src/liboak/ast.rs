@@ -33,8 +33,9 @@ use middle::analysis::ast::GrammarAttributes;
 use std::collections::HashMap;
 use std::default::Default;
 
-pub struct Grammar<ExprInfo>
+pub struct Grammar<'cx, ExprInfo>
 {
+  pub cx: &'cx ExtCtxt<'cx>,
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
   pub exprs: Vec<Expression>,
@@ -44,10 +45,13 @@ pub struct Grammar<ExprInfo>
   pub attributes: GrammarAttributes
 }
 
-impl<ExprInfo> Grammar<ExprInfo>
+impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
 {
-  pub fn new(name: Ident, exprs: Vec<Expression>, exprs_info: Vec<ExprInfo>) -> Grammar<ExprInfo> {
+  pub fn new(cx: &'cx ExtCtxt<'cx>, name: Ident, exprs: Vec<Expression>,
+    exprs_info: Vec<ExprInfo>) -> Grammar<'cx, ExprInfo>
+  {
     Grammar {
+      cx: cx,
       name: name,
       rules: HashMap::new(),
       exprs: exprs,
@@ -61,9 +65,33 @@ impl<ExprInfo> Grammar<ExprInfo>
   pub fn info_by_index<'a>(&'a self, index: usize) -> &'a ExprInfo {
     &self.exprs_info[index]
   }
+
+  pub fn warn(&self, msg: String) {
+    self.cx.parse_sess.span_diagnostic.warn(msg.as_str());
+  }
+
+  pub fn multi_locations_err(&self, sp_err: Span, err: String, sp_note: Span, note: String) {
+    self.cx
+      .struct_span_err(sp_err, err.as_str())
+      .span_note(sp_note, note.as_str())
+      .emit();
+  }
+
+  pub fn span_err(&self, span: Span, msg: String) {
+    self.cx.span_err(span, msg.as_str());
+  }
 }
 
-impl<ExprInfo> ExprByIndex for Grammar<ExprInfo>
+impl<'cx, ExprInfo> Grammar<'cx, ExprInfo> where
+ ExprInfo: ItemSpan
+{
+  pub fn expr_err(&self, expr_idx: usize, msg: String) {
+    let expr_info = self.info_by_index(expr_idx);
+    self.span_err(expr_info.span(), msg);
+  }
+}
+
+impl<'cx, ExprInfo> ExprByIndex for Grammar<'cx, ExprInfo>
 {
   fn expr_by_index<'a>(&'a self, index: usize) -> &'a Expression {
     &self.exprs[index]

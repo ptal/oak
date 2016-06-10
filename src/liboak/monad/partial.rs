@@ -23,8 +23,6 @@
 
 use monad::partial::Partial::*;
 
-
-
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub enum Partial<T>
 {

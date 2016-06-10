@@ -48,7 +48,6 @@ impl<'a> Parser<'a>
   pub fn parse_grammar(mut self) -> rust::PResult<'a, FGrammar> {
     try!(self.parse_blocks());
     Ok(self.grammar)
-    //Ok(Grammar{name: self.grammar_name, rules: rules, rust_items: rust_items, attributes: self.inner_attrs.to_vec()})
   }
 
   fn bump(&mut self) {
@@ -172,6 +171,9 @@ impl<'a> Parser<'a>
         mk_sp(lo, hi),
         format!("In rule {}: must define at least one expression.",
           rule_name).as_str())
+    }
+    else if seq.len() == 1 {
+      return Ok(seq[0]);
     }
     Ok(self.alloc_expr(lo, hi, Sequence(seq)))
   }

@@ -20,7 +20,7 @@ pub struct FGrammar
   pub name: Ident,
   pub rules: Vec<FRule>,
   pub exprs: Vec<Expression>,
-  pub exprs_info: Vec<ExpressionInfo>,
+  pub exprs_info: Vec<FExpressionInfo>,
   pub rust_items: Vec<RItem>,
   pub attributes: Vec<Attribute>
 }
@@ -41,7 +41,7 @@ impl FGrammar
   pub fn alloc_expr(&mut self, lo: BytePos, hi: BytePos, expr: Expression) -> usize {
     let expr_idx = self.exprs.len();
     self.exprs.push(expr);
-    self.exprs_info.push(ExpressionInfo::spanned(lo, hi));
+    self.exprs_info.push(FExpressionInfo::spanned(lo, hi));
     expr_idx
   }
 
@@ -103,18 +103,24 @@ pub enum TypeAnnotation {
 
 // Implicitly typed expression.
 #[derive(Clone)]
-pub struct ExpressionInfo
+pub struct FExpressionInfo
 {
   pub span: Span,
   pub ty: Option<TypeAnnotation>
 }
 
-impl ExpressionInfo
+impl FExpressionInfo
 {
-  fn spanned(lo: BytePos, hi: BytePos) -> ExpressionInfo {
-    ExpressionInfo {
+  fn spanned(lo: BytePos, hi: BytePos) -> FExpressionInfo {
+    FExpressionInfo {
       span: mk_sp(lo, hi),
       ty: None
     }
+  }
+}
+
+impl ItemSpan for FExpressionInfo {
+  fn span(&self) -> Span {
+    self.span
   }
 }

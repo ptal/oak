@@ -16,24 +16,22 @@ use middle::analysis::ast::*;
 
 pub struct UndeclaredAction<'a>
 {
-  cx: &'a ExtCtxt<'a>,
-  grammar: &'a AGrammar,
+  grammar: &'a AGrammar<'a>,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredAction<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Partial<AGrammar> {
-    if UndeclaredAction::has_undeclared(cx, &grammar) {
+  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
+    if UndeclaredAction::has_undeclared(&grammar) {
       Partial::Nothing
     } else {
       Partial::Value(grammar)
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool {
+  fn has_undeclared(grammar: &AGrammar) -> bool {
     let mut analyser = UndeclaredAction {
-      cx: cx,
       grammar: grammar,
       has_undeclared: false
     };
@@ -61,8 +59,10 @@ impl<'a> Visitor<()> for UndeclaredAction<'a>
 
   fn visit_semantic_action(&mut self, parent: usize, _expr: usize, id: Ident) {
     if !self.grammar.rust_functions.contains_key(&id) {
-      let parent_info = self.grammar.info_by_index(parent);
-      self.cx.span_err(parent_info.span, "Undeclared action. This must be a function declared in the grammar scope.");
+      self.grammar.expr_err(
+        parent,
+        format!("Undeclared action `{}`. Function must be declared in the grammar scope.", id)
+      );
       self.has_undeclared = true;
     }
   }

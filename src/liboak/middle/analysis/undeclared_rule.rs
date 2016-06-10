@@ -18,24 +18,22 @@ use monad::partial::Partial::*;
 
 pub struct UndeclaredRule<'a>
 {
-  cx: &'a ExtCtxt<'a>,
-  grammar: &'a AGrammar,
+  grammar: &'a AGrammar<'a>,
   has_undeclared: bool
 }
 
 impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(cx: &'a ExtCtxt<'a>, grammar: AGrammar) -> Partial<AGrammar> {
-    if UndeclaredRule::has_undeclared(cx, &grammar) {
+  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
+    if UndeclaredRule::has_undeclared(&grammar) {
       Nothing
     } else {
       Value(grammar)
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &AGrammar) -> bool {
+  fn has_undeclared(grammar: &AGrammar) -> bool {
     let mut analyser = UndeclaredRule {
-      cx: cx,
       grammar: grammar,
       has_undeclared: false
     };
@@ -62,8 +60,10 @@ impl<'a> Visitor<()> for UndeclaredRule<'a>
 
   fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
     if !self.grammar.rules.contains_key(&id) {
-      let parent_info = self.grammar.info_by_index(parent);
-      self.cx.span_err(parent_info.span, "Undeclared rule.");
+      self.grammar.expr_err(
+        parent,
+        format!("Undeclared rule `{}`.", id)
+      );
       self.has_undeclared = true;
     }
   }
