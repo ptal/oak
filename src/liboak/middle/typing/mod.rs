@@ -29,14 +29,8 @@ mod top_down_unit;
 mod recursive_type;
 // mod printer;
 
-pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar> {
-  let mut grammar = Grammar {
-    name: agrammar.name,
-    rules: HashMap::with_capacity(agrammar.rules.len()),
-    rust_functions: agrammar.rust_functions,
-    rust_items: agrammar.rust_items,
-    attributes: agrammar.attributes
-  };
+pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<TGrammar> {
+  let mut grammar = TGrammar::new(agrammar.name, agrammar.exprs, agrammar.exprs_info)
   InferenceEngine::infer(&mut grammar, agrammar.rules);
   bottom_up_unit_inference(&mut grammar);
   top_down_unit_inference(&mut grammar);

@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use middle::analysis::ast::GrammarAttributes;
-pub use middle::analysis::ast::Rule;
-pub use ast::*;
-pub use ast::Expression_::*;
+//! Give a naive type to any expression of the grammar. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modifies the type accordingly. It does not propagate the invisible types, this step is done in `typing::bottom_up_unit`.
+//! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
-pub use rust::{ExtCtxt, Spanned, SpannedIdent};
+pub use ast::*;
+pub use ast::Expression::*;
 
 pub use std::collections::HashMap;
 pub use std::cell::RefCell;
@@ -25,14 +24,120 @@ pub use std::cell::RefCell;
 use rust;
 use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
+use front::ast::FExpressionInfo
 
-pub struct Grammar<Expr>
+type TGrammar = Grammar<ExpressionInfo>;
+
+impl TGrammar
 {
-  pub name: Ident,
-  pub rules: HashMap<Ident, Rule>,
-  pub rust_functions: HashMap<Ident, RItem>,
-  pub rust_items: Vec<RItem>,
-  pub attributes: GrammarAttributes
+  pub fn push_expr(&mut self, expr: Expression, expr_info: FExpressionInfo) {
+    self.push_expr_info(&expr, expr_info.span, expr_info.ty);
+    self.exprs.push(expr);
+  }
+
+  fn push_expr_info(&self, expr: &Expression, span: Span,
+    ty: Option<TypeAnnotation>)
+  {
+    let expr_info =
+      match ty {
+        Some(TypeAnnotation::Invisible) => {
+          ExpressionInfo::invisible(span)
+        }
+        Some(TypeAnnotation::Unit) => {
+          ExpressionInfo::unit(span)
+        }
+        None => {
+          self.infer_type(expr, span)
+        }
+      };
+    self.exprs_info.push(expr_info);
+  }
+
+  fn infer_type(&self, expr: &Expression, span: Span) -> ExpressionInfo {
+    match expr {
+      &StrLiteral(_)
+    | &NotPredicate(_)
+    | &AndPredicate(_) => ExpressionInfo::invisible(span),
+      &AnySingleChar
+    | &CharacterClass(_)
+    | &NonTerminalSymbol(_)
+    | &ZeroOrMore(_)
+    | &OneOrMore(_)
+    | &Optional(_)
+    | &Choice(_) => ExpressionInfo::new(span, Identity),
+      &Sequence(seq) => ExpressionInfo::new(span, Tuple(seq.clone())),
+      &SemanticAction(_, ident) => {
+        match grammar.rust_functions[&ident].node {
+          &rust::ItemKind::Fn(ref decl,..) => {
+            ExpressionInfo::new(span, Action(decl.output.clone()))
+          },
+          _ => {
+            self.span_err(span, format!(
+              "Only function items are currently allowed in semantic actions."));
+            ExpressionInfo::unit(span)
+          }
+        }
+      }
+    }
+  }
+}
+
+// Explicitly typed expression.
+pub struct ExpressionInfo
+{
+  pub span: Span,
+  pub invisible: bool,
+  pub ty: ExprTy,
+  pub context: EvaluationContext
+}
+
+impl ItemSpan for ExpressionInfo {
+  fn span(&self) -> Span {
+    self.span
+  }
+}
+
+impl ExpressionInfo
+{
+  pub fn new(sp: Span, ty: ExprTy) -> ExpressionInfo {
+    ExpressionInfo {
+      span: sp,
+      invisible: false,
+      ty: ty,
+      context: UnValued
+    }
+  }
+
+  pub fn unit(sp: Span) -> ExpressionInfo {
+    ExpressionInfo::new(sp, ExprTy::unit())
+  }
+
+  pub fn invisible(sp: Span) -> ExpressionInfo {
+    let mut expr_info = ExpressionInfo::new(sp, ExprTy::unit());
+    expr_info.invisible = true;
+    expr_info
+  }
+
+  // pub fn is_forwading_type(&self) -> bool {
+  //   match self.node {
+  //     NonTerminalSymbol(_) => true,
+  //     Choice(_) => true,
+  //     _ => self.ty.borrow().is_projection()
+  //   }
+  // }
+
+  pub fn to_unit_type(&mut self) {
+    self.ty = ExprTy::unit();
+  }
+
+  pub fn to_invisible_type(&mut self) {
+    self.invisible = true;
+    self.to_unit_type();
+  }
+
+  pub fn to_tuple_type(&mut self, indexes: Vec<usize>) {
+    self.ty = Tuple(indexes);
+  }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -47,82 +152,6 @@ impl EvaluationContext
   pub fn merge(self, other: EvaluationContext) -> EvaluationContext {
     if self != other { Both }
     else { self }
-  }
-}
-
-pub type ExpressionNode = Expression_<Expression>;
-
-// Explicitly typed expression.
-pub struct Expression
-{
-  pub span: Span,
-  pub node: ExpressionNode,
-  pub invisible: RefCell<bool>,
-  pub ty: RefCell<ExprTy>,
-  pub context: EvaluationContext
-}
-
-impl ExprNode for Expression
-{
-  fn expr_node<'a>(&'a self) -> &'a ExpressionNode {
-    &self.node
-  }
-}
-
-impl Expression
-{
-  pub fn new(sp: Span, node: ExpressionNode, ty: ExprTy) -> Expression {
-    let expr = Expression {
-      span: sp,
-      node: node,
-      invisible: RefCell::new(false),
-      ty: RefCell::new(ty),
-      context: UnValued
-    };
-    if expr.is_by_default_invisible() {
-      expr.to_invisible_type();
-    }
-    expr
-  }
-
-  pub fn is_invisible(&self) -> bool {
-    *self.invisible.borrow()
-  }
-
-  pub fn is_unit(&self) -> bool {
-    self.ty.borrow().is_unit()
-  }
-
-  pub fn is_forwading_type(&self) -> bool {
-    match self.node {
-      NonTerminalSymbol(_) => true,
-      Choice(_) => true,
-      _ => self.ty.borrow().is_projection()
-    }
-  }
-
-  pub fn ty_clone(&self) -> ExprTy {
-    self.ty.borrow().clone()
-  }
-
-  pub fn to_unit_type(&self) {
-    *self.ty.borrow_mut() = ExprTy::unit();
-  }
-
-  pub fn to_invisible_type(&self) {
-    *self.invisible.borrow_mut() = true;
-    self.to_unit_type();
-  }
-
-  pub fn to_tuple_type(&self, indexes: Vec<usize>) {
-    *self.ty.borrow_mut() = Tuple(indexes);
-  }
-
-  fn is_by_default_invisible(&self) -> bool {
-    match &self.node {
-      &StrLiteral(_) | &NotPredicate(_) | &AndPredicate(_) => true,
-      _ => false
-    }
   }
 }
 
