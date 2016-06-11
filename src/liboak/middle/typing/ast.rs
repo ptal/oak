@@ -26,16 +26,28 @@ use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
 use front::ast::FExpressionInfo
 
-type TGrammar = Grammar<ExpressionInfo>;
+type TGrammar<'cx> = Grammar<'cx, ExpressionInfo>;
 
-impl TGrammar
+impl<'cx> TGrammar<'cx>
 {
-  pub fn push_expr(&mut self, expr: Expression, expr_info: FExpressionInfo) {
-    self.push_expr_info(&expr, expr_info.span, expr_info.ty);
-    self.exprs.push(expr);
+  pub fn typed_grammar(agrammar: AGrammar<'cx>) -> TGrammar<'cx> {
+    let exprs_info = agrammar.exprs_info;
+    let grammar = TGrammar {
+      cx: self.cx,
+      name: self.name,
+      rules: self.rules,
+      exprs: self.exprs,
+      exprs_info: vec![],
+      rust_functions: self.rust_functions,
+      rust_items: self.rust_items,
+      attributes: self.attributes
+    };
+    for (expr_idx, expr_info) in exprs_info.into_iter().enumerate() {
+      self.push_expr_info(expr_idx, expr_info.span, expr_info.ty);
+    }
   }
 
-  fn push_expr_info(&self, expr: &Expression, span: Span,
+  fn push_expr_info(&mut self, expr_idx: usize, span: Span,
     ty: Option<TypeAnnotation>)
   {
     let expr_info =
@@ -47,14 +59,14 @@ impl TGrammar
           ExpressionInfo::unit(span)
         }
         None => {
-          self.infer_type(expr, span)
+          self.infer_type(expr_idx, span)
         }
       };
     self.exprs_info.push(expr_info);
   }
 
-  fn infer_type(&self, expr: &Expression, span: Span) -> ExpressionInfo {
-    match expr {
+  fn infer_type(&self, expr_idx: usize, span: Span) -> ExpressionInfo {
+    match &self.exprs[expr_idx] {
       &StrLiteral(_)
     | &NotPredicate(_)
     | &AndPredicate(_) => ExpressionInfo::invisible(span),
@@ -67,7 +79,7 @@ impl TGrammar
     | &Choice(_) => ExpressionInfo::new(span, Identity),
       &Sequence(seq) => ExpressionInfo::new(span, Tuple(seq.clone())),
       &SemanticAction(_, ident) => {
-        match grammar.rust_functions[&ident].node {
+        match self.rust_functions[&ident].node {
           &rust::ItemKind::Fn(ref decl,..) => {
             ExpressionInfo::new(span, Action(decl.output.clone()))
           },

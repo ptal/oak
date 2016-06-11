@@ -22,7 +22,6 @@ use middle::typing::recursive_type::*;
 use monad::partial::Partial;
 
 pub mod ast;
-mod inference;
 mod bottom_up_tuple;
 mod bottom_up_unit;
 mod top_down_unit;
@@ -30,8 +29,7 @@ mod recursive_type;
 // mod printer;
 
 pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<TGrammar> {
-  let mut grammar = TGrammar::new(agrammar.name, agrammar.exprs, agrammar.exprs_info)
-  InferenceEngine::infer(&mut grammar, agrammar.rules);
+  let mut grammar = TGrammar::typed_grammar(agrammar);
   bottom_up_unit_inference(&mut grammar);
   top_down_unit_inference(&mut grammar);
   // print_annotated_rules(&grammar);
