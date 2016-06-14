@@ -24,27 +24,29 @@ pub use std::cell::RefCell;
 use rust;
 use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
-use front::ast::FExpressionInfo
+use front::ast::TypeAnnotation;
+use middle::analysis::ast::AGrammar;
 
-type TGrammar<'cx> = Grammar<'cx, ExpressionInfo>;
+pub type TGrammar<'cx> = Grammar<'cx, ExpressionInfo>;
 
 impl<'cx> TGrammar<'cx>
 {
   pub fn typed_grammar(agrammar: AGrammar<'cx>) -> TGrammar<'cx> {
     let exprs_info = agrammar.exprs_info;
-    let grammar = TGrammar {
-      cx: self.cx,
-      name: self.name,
-      rules: self.rules,
-      exprs: self.exprs,
+    let mut grammar = TGrammar {
+      cx: agrammar.cx,
+      name: agrammar.name,
+      rules: agrammar.rules,
+      exprs: agrammar.exprs,
       exprs_info: vec![],
-      rust_functions: self.rust_functions,
-      rust_items: self.rust_items,
-      attributes: self.attributes
+      rust_functions: agrammar.rust_functions,
+      rust_items: agrammar.rust_items,
+      attributes: agrammar.attributes
     };
     for (expr_idx, expr_info) in exprs_info.into_iter().enumerate() {
-      self.push_expr_info(expr_idx, expr_info.span, expr_info.ty);
-    }
+      grammar.push_expr_info(expr_idx, expr_info.span, expr_info.ty);
+    };
+    grammar
   }
 
   fn push_expr_info(&mut self, expr_idx: usize, span: Span,
@@ -66,21 +68,21 @@ impl<'cx> TGrammar<'cx>
   }
 
   fn infer_type(&self, expr_idx: usize, span: Span) -> ExpressionInfo {
-    match &self.exprs[expr_idx] {
-      &StrLiteral(_)
-    | &NotPredicate(_)
-    | &AndPredicate(_) => ExpressionInfo::invisible(span),
-      &AnySingleChar
-    | &CharacterClass(_)
-    | &NonTerminalSymbol(_)
-    | &ZeroOrMore(_)
-    | &OneOrMore(_)
-    | &Optional(_)
-    | &Choice(_) => ExpressionInfo::new(span, Identity),
-      &Sequence(seq) => ExpressionInfo::new(span, Tuple(seq.clone())),
-      &SemanticAction(_, ident) => {
+    match self.expr_by_index(expr_idx) {
+      StrLiteral(_)
+    | NotPredicate(_)
+    | AndPredicate(_) => ExpressionInfo::invisible(span),
+      AnySingleChar
+    | CharacterClass(_)
+    | NonTerminalSymbol(_)
+    | ZeroOrMore(_)
+    | OneOrMore(_)
+    | Optional(_)
+    | Choice(_) => ExpressionInfo::new(span, Identity),
+      Sequence(seq) => ExpressionInfo::new(span, Tuple(seq)),
+      SemanticAction(_, ident) => {
         match self.rust_functions[&ident].node {
-          &rust::ItemKind::Fn(ref decl,..) => {
+          rust::ItemKind::Fn(ref decl,..) => {
             ExpressionInfo::new(span, Action(decl.output.clone()))
           },
           _ => {
@@ -138,6 +140,10 @@ impl ExpressionInfo
   //   }
   // }
 
+  pub fn is_invisible(&self) -> bool {
+    self.invisible
+  }
+
   pub fn to_unit_type(&mut self) {
     self.ty = ExprTy::unit();
   }
@@ -149,6 +155,15 @@ impl ExpressionInfo
 
   pub fn to_tuple_type(&mut self, indexes: Vec<usize>) {
     self.ty = Tuple(indexes);
+  }
+
+  pub fn tuple_indexes(&self) -> Option<Vec<usize>> {
+    if let Tuple(ref indexes) = self.ty {
+      Some(indexes.clone())
+    }
+    else {
+      None
+    }
   }
 }
 

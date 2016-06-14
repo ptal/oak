@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use middle::typing::inference::*;
-use middle::typing::bottom_up_unit::*;
-use middle::typing::top_down_unit::*;
-use middle::typing::bottom_up_tuple::*;
-// use middle::typing::printer::*;
+use middle::analysis::ast::AGrammar;
 use middle::typing::ast::*;
-use middle::typing::recursive_type::*;
-use monad::partial::Partial;
+use middle::typing::bottom_up_unit::*;
+// use middle::typing::top_down_unit::*;
+// use middle::typing::bottom_up_tuple::*;
+// use middle::typing::printer::*;
+// use middle::typing::recursive_type::*;
 
 pub mod ast;
-mod bottom_up_tuple;
 mod bottom_up_unit;
-mod top_down_unit;
-mod recursive_type;
+// mod bottom_up_tuple;
+// mod top_down_unit;
+// mod recursive_type;
 // mod printer;
 
-pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<TGrammar> {
-  let mut grammar = TGrammar::typed_grammar(agrammar);
-  bottom_up_unit_inference(&mut grammar);
-  top_down_unit_inference(&mut grammar);
+pub fn type_inference<'cx>(agrammar: AGrammar<'cx>) -> Partial<TGrammar<'cx>> {
+  let grammar = TGrammar::typed_grammar(agrammar);
+  let grammar = UnitTyping::infer(grammar);
+  Partial::Value(grammar)
+  // top_down_unit_inference(&mut grammar);
   // print_annotated_rules(&grammar);
-  recursive_type_analysis(cx, grammar)
-    .and_then(|grammar| bottom_up_tuple_inference(grammar))
+  // recursive_type_analysis(cx, grammar)
+  //   .and_then(|grammar| bottom_up_tuple_inference(grammar))
 }

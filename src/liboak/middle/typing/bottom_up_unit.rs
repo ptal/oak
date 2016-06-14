@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Bottom-up unit inference consists of propagating invisible unit types up in the expressions.
+//! Unit inference consists of propagating unit types and invisibility.
 //!
 //! The typing rules are of the form `expr:ty => expr':ty'` which means that if `expr` has type `ty` then `expr'` has type `ty'`:
 //! * Basic combinators (`e*`, `e+`, `e?`):
@@ -37,174 +37,147 @@
 //!    * `e:t -> () => e:()`
 //!    * `e:t -> (^) => e:(^)`
 //!
-//! One of the difficulty for implementing this is to deal with the recursion introduced by the typing rule of non-terminal symbol with the `R` function. Untypable recursive types must not generate errors here because the rule might be called in a context where the AST does not need to be build. The recursive type analysis will be performed after the top-down unit propagation (see `typing::top_down_unit`).
-//! The algorithm is divided in two steps, it first propagates unit types inside rules (`IntraRule`) and then between the rules (`InterRule`). The inter-rule propagation does not loop. We start from the root grammar rule, whenever we encounter an already visited node, it means that the expression is not typable and let the type of the non-terminal symbol to `Identity`. Of course, after the inter-rule propagation, `Identity`-type loop can arise but generating or not an error is decided by the recursive type analysis that uses the value context in addition.
 
 use middle::typing::ast::*;
-use middle::typing::ast::ExprTy::*;
 
-pub fn bottom_up_unit_inference(grammar: &mut Grammar) {
-  IntraRule::propagate(&grammar.rules);
-  // It is necessary to call `InterRule::propagate` twice. This is due to rules that form a loop `r1 -> r2 -> ... -> rN` while calling each other. If we start by propagating `ei`, it is possible that `e(i-1)` has not the good type, notably for invisibility, since the type of `ei` is being computed. More explanation in issue #65.
-  InterRule::propagate(&grammar.rules);
-  InterRule::propagate(&grammar.rules);
+pub struct UnitTyping<'cx>
+{
+  grammar: TGrammar<'cx>,
+  reached_fixpoint: bool
 }
 
-trait BottomUpAnalysis
+impl<'a> UnitTyping<'a>
 {
-  fn visit_rules(&mut self, rules: &HashMap<Ident, Rule>) {
-    for rule in rules.values() {
-      self.visit_rule(rule);
+  pub fn infer<'cx>(grammar: TGrammar<'cx>) -> TGrammar<'cx> {
+    let mut engine = UnitTyping::new(grammar);
+    let rules = engine.grammar.rules
+      .values()
+      .map(|rule| rule.expr_idx)
+      .collect();
+    engine.compute_fixpoint(rules);
+    engine.grammar
+  }
+
+  fn new<'cx>(grammar: TGrammar<'cx>) -> UnitTyping<'cx> {
+    UnitTyping {
+      grammar: grammar,
+      reached_fixpoint: false
     }
   }
 
-  fn visit_rule(&mut self, rule: &Rule) {
-    self.visit_expr(&rule.def);
-  }
-
-  fn visit_expr(&mut self, expr: &Box<Expression>) {
-    match &expr.node {
-        &ZeroOrMore(ref sub)
-      | &OneOrMore(ref sub)
-      | &Optional(ref sub) => self.propagate_from_inner(expr, sub),
-        &SemanticAction(ref sub, id) => self.visit_semantic_action(expr, sub, id),
-        &NotPredicate(ref sub)
-      | &AndPredicate(ref sub) => self.visit_syntactic_predicate(expr, sub),
-      &NonTerminalSymbol(id) => self.visit_non_terminal(expr, id),
-      &Sequence(ref subs) => self.visit_sequence(expr, subs),
-      &Choice(ref subs) => self.visit_choice(expr, subs),
-      _ => ()
-    }
-  }
-
-  fn propagate_from_inner(&mut self, parent: &Box<Expression>, expr: &Box<Expression>) {
-    self.visit_expr(expr);
-    if expr.is_invisible() {
-      parent.to_invisible_type();
-    }
-  }
-
-  fn visit_non_terminal(&mut self, _parent: &Box<Expression>, _ident: Ident) {}
-
-  fn visit_semantic_action(&mut self, _parent: &Box<Expression>,expr: &Box<Expression>, _ident: Ident) {
-    self.visit_expr(expr);
-  }
-
-  fn visit_syntactic_predicate(&mut self, _parent: &Box<Expression>, expr: &Box<Expression>) {
-    self.visit_expr(expr);
-  }
-
-  fn all_invisible(&self, exprs: &Vec<Box<Expression>>) -> bool {
-    exprs.iter().all(|expr| expr.is_invisible())
-  }
-
-  fn all_unit(&self, exprs: &Vec<Box<Expression>>) -> bool {
-    exprs.iter().all(|expr| expr.is_unit())
-  }
-
-  fn propagate_invisibility(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool {
-    let all_invisible = self.all_invisible(exprs);
-    if all_invisible {
-      parent.to_invisible_type();
-    }
-    all_invisible
-  }
-
-  fn propagate_unit(&self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) -> bool {
-    let all_unit = self.all_unit(&exprs);
-    if all_unit {
-      parent.to_unit_type();
-    }
-    all_unit
-  }
-
-  fn visit_choice(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) {
-    self.visit_exprs(exprs);
-    if !self.propagate_invisibility(parent, &exprs)
-    {
-      self.propagate_unit(parent, &exprs);
-    }
-  }
-
-  fn visit_sequence(&mut self, parent: &Box<Expression>, exprs: &Vec<Box<Expression>>) {
-    self.visit_exprs(exprs);
-    let parent_ty = parent.ty_clone();
-    if let Tuple(inners) = parent_ty {
-      if !self.propagate_invisibility(parent, exprs) {
-        // Remove unit types from the tuple.
-        let inners: Vec<usize> = inners.into_iter()
-          .filter(|&idx| !exprs[idx].is_unit())
-          .collect();
-
-        if inners.is_empty() {
-          parent.to_unit_type();
-        }
-        else {
-          parent.to_tuple_type(inners);
-        }
+  fn compute_fixpoint(&mut self, rules: Vec<usize>) {
+    while !self.reached_fixpoint {
+      self.reached_fixpoint = true;
+      for expr_idx in &rules {
+        self.visit_expr(*expr_idx);
       }
     }
   }
+}
 
-  fn visit_exprs(&mut self, exprs: &Vec<Box<Expression>>) {
-    for expr in exprs {
-      self.visit_expr(expr);
+impl<'a> ExprByIndex for UnitTyping<'a>
+{
+  fn expr_by_index(&self, index: usize) -> Expression {
+    self.grammar.expr_by_index(index)
+  }
+}
+
+impl<'a> Visitor<()> for UnitTyping<'a>
+{
+  unit_visitor_impl!(str_literal);
+  unit_visitor_impl!(character);
+  unit_visitor_impl!(any_single_char);
+  unit_visitor_impl!(character_class);
+
+  fn visit_repeat(&mut self, parent: usize, child: usize) {
+    self.propagate(parent, child);
+  }
+
+  fn visit_optional(&mut self, parent: usize, child: usize) {
+    self.propagate(parent, child);
+  }
+
+  fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
+    let rule_expr = self.grammar.expr_index_of_rule(id);
+    self.propagate_invisibility(rule_expr, parent);
+  }
+
+  fn visit_sequence(&mut self, parent: usize, children: Vec<usize>) {
+    self.propagate_all(parent, children.clone());
+    let indexes = self.grammar[parent].tuple_indexes()
+      .expect("A sequence can only be typed as a tuple.");
+    if self.are_invisible(&indexes) {
+      self.invisible(parent);
+    }
+    else {
+      let indexes = indexes.into_iter()
+        .filter(|&idx| !self.grammar[idx].ty.is_unit())
+        .collect();
+      self.tuple(parent, indexes);
+    }
+  }
+
+  fn visit_choice(&mut self, parent: usize, children: Vec<usize>) {
+    self.propagate_all(parent, children.clone());
+    if self.are_invisible(&children) {
+      self.invisible(parent);
+    }
+    else if self.are_unit(&children) {
+      self.unit(parent);
     }
   }
 }
 
-struct IntraRule;
-
-impl IntraRule
+impl<'a> UnitTyping<'a>
 {
-  pub fn propagate(rules: &HashMap<Ident, Rule>) {
-    IntraRule.visit_rules(rules);
-  }
-}
-
-impl BottomUpAnalysis for IntraRule {}
-
-struct InterRule<'a>
-{
-  rules: &'a HashMap<Ident, Rule>,
-  visited: HashMap<Ident, bool>
-}
-
-impl<'a> InterRule<'a>
-{
-  pub fn propagate(rules: &'a HashMap<Ident, Rule>) {
-    let mut visited = HashMap::with_capacity(rules.len());
-    for id in rules.keys() {
-      visited.insert(*id, false);
-    }
-    let mut propagator = InterRule {
-      rules: rules,
-      visited: visited
-    };
-    propagator.visit_rules(rules);
+    fn invisible(&mut self, expr_idx: usize) {
+    self.grammar[expr_idx].to_invisible_type();
+    self.reached_fixpoint = false;
   }
 
-  fn visit_rule(&mut self, rule: &Rule) {
-    let ident = &rule.name.node;
-    if !*self.visited.get(ident).unwrap() {
-      *self.visited.get_mut(ident).unwrap() = true;
-      self.visit_expr(&rule.def);
-    }
+  fn unit(&mut self, expr_idx: usize) {
+    self.grammar[expr_idx].to_unit_type();
+    self.reached_fixpoint = false;
   }
-}
 
-impl<'a> BottomUpAnalysis for InterRule<'a>
-{
-  fn visit_non_terminal(&mut self, parent: &Box<Expression>, id: Ident) {
-    let rule = self.rules.get(&id).unwrap();
-    self.visit_rule(rule);
-    if rule.def.is_invisible() {
-      parent.to_invisible_type();
-    } else if rule.def.is_unit() {
-      parent.to_unit_type();
+  fn tuple(&mut self, expr_idx: usize, indexes: Vec<usize>) {
+    self.grammar[expr_idx].to_tuple_type(indexes);
+    self.reached_fixpoint = false;
+  }
+
+  fn propagate_unit(&mut self, source: usize, target: usize) {
+    if self.grammar[source].ty.is_unit() {
+      self.unit(target);
     }
   }
 
-  fn visit_syntactic_predicate(&mut self, _parent: &Box<Expression>, _expr: &Box<Expression>)
-  {}
+  fn propagate_invisibility(&mut self, source: usize, target: usize) {
+    if self.grammar[source].is_invisible() {
+      self.invisible(target);
+    }
+    else {
+      self.propagate_unit(source, target);
+    }
+  }
+
+  fn propagate(&mut self, parent: usize, child: usize) {
+    self.propagate_unit(parent, child);
+    walk_expr(self, child);
+    self.propagate_invisibility(child, parent);
+  }
+
+  fn propagate_all(&mut self, parent: usize, children: Vec<usize>) {
+    for child in &children {
+      self.propagate_unit(parent, *child);
+    }
+    walk_exprs(self, children);
+  }
+
+  fn are_invisible(&self, exprs_indexes: &Vec<usize>) -> bool {
+    exprs_indexes.iter().all(|&idx| self.grammar[idx].is_invisible())
+  }
+
+  fn are_unit(&self, exprs_indexes: &Vec<usize>) -> bool {
+    exprs_indexes.iter().all(|&idx| self.grammar[idx].ty.is_unit())
+  }
 }

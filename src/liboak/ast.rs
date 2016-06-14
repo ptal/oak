@@ -32,6 +32,7 @@ use middle::analysis::ast::GrammarAttributes;
 
 use std::collections::HashMap;
 use std::default::Default;
+use std::ops::{Index, IndexMut};
 
 pub struct Grammar<'cx, ExprInfo>
 {
@@ -62,10 +63,6 @@ impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
     }
   }
 
-  pub fn info_by_index<'a>(&'a self, index: usize) -> &'a ExprInfo {
-    &self.exprs_info[index]
-  }
-
   pub fn warn(&self, msg: String) {
     self.cx.parse_sess.span_diagnostic.warn(msg.as_str());
   }
@@ -80,36 +77,58 @@ impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
   pub fn span_err(&self, span: Span, msg: String) {
     self.cx.span_err(span, msg.as_str());
   }
+
+  pub fn expr_index_of_rule(&self, id: Ident) -> usize {
+    self.rules
+      .get(&id)
+      .expect("Rule id not registered in the known rules.")
+      .expr_idx
+  }
+}
+
+impl<'cx, ExprInfo> Index<usize> for Grammar<'cx, ExprInfo>
+{
+  type Output = ExprInfo;
+
+  fn index<'a>(&'a self, index: usize) -> &'a Self::Output {
+    &self.exprs_info[index]
+  }
+}
+
+impl<'cx, ExprInfo> IndexMut<usize> for Grammar<'cx, ExprInfo>
+{
+  fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Self::Output {
+    &mut self.exprs_info[index]
+  }
 }
 
 impl<'cx, ExprInfo> Grammar<'cx, ExprInfo> where
  ExprInfo: ItemSpan
 {
   pub fn expr_err(&self, expr_idx: usize, msg: String) {
-    let expr_info = self.info_by_index(expr_idx);
-    self.span_err(expr_info.span(), msg);
+    self.span_err(self[expr_idx].span(), msg);
   }
 }
 
 impl<'cx, ExprInfo> ExprByIndex for Grammar<'cx, ExprInfo>
 {
-  fn expr_by_index<'a>(&'a self, index: usize) -> &'a Expression {
-    &self.exprs[index]
+  fn expr_by_index(&self, index: usize) -> Expression {
+    self.exprs[index].clone()
   }
 }
 
 pub struct Rule
 {
   pub name: SpannedIdent,
-  pub def: usize,
+  pub expr_idx: usize,
 }
 
 impl Rule
 {
-  pub fn new(name: SpannedIdent, def: usize) -> Rule {
+  pub fn new(name: SpannedIdent, expr_idx: usize) -> Rule {
     Rule{
       name: name,
-      def: def
+      expr_idx: expr_idx
     }
   }
 }
@@ -127,7 +146,6 @@ impl ItemSpan for Rule
     self.name.span.clone()
   }
 }
-
 
 #[derive(Clone, Debug)]
 pub enum Expression
@@ -203,7 +221,7 @@ impl Display for CharacterInterval
 
 pub trait ExprByIndex
 {
-  fn expr_by_index<'a>(&'a self, index: usize) -> &'a Expression;
+  fn expr_by_index(&self, index: usize) -> Expression;
 }
 
 pub trait Visitor<R> : ExprByIndex
@@ -265,6 +283,8 @@ macro_rules! unit_visitor_impl {
   (str_literal) => (fn visit_str_literal(&mut self, _parent: usize, _lit: String) -> () {});
   (non_terminal) => (fn visit_non_terminal_symbol(&mut self, _parent: usize, _id: Ident) -> () {});
   (character) => (fn visit_character(&mut self, _parent: usize) -> () {});
+  (any_single_char) => (fn visit_any_single_char(&mut self, _parent: usize) -> () {});
+  (character_class) => (fn visit_character_class(&mut self, _parent: usize, _expr: CharacterClassExpr) -> () {});
   (sequence) => (
     fn visit_sequence(&mut self, _parent: usize, exprs: Vec<usize>) -> () {
       walk_exprs(self, exprs);
@@ -281,7 +301,7 @@ pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, parent: usize) -> R where
   V: Visitor<R>
 {
   use self::Expression::*;
-  match visitor.expr_by_index(parent).clone() {
+  match visitor.expr_by_index(parent) {
     StrLiteral(lit) => {
       visitor.visit_str_literal(parent, lit)
     }

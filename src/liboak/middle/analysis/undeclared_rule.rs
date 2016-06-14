@@ -38,7 +38,7 @@ impl<'a> UndeclaredRule<'a>
       has_undeclared: false
     };
     for rule in grammar.rules.values() {
-      analyser.visit_expr(rule.def);
+      analyser.visit_expr(rule.expr_idx);
     }
     analyser.has_undeclared
   }
@@ -46,8 +46,8 @@ impl<'a> UndeclaredRule<'a>
 
 impl<'a> ExprByIndex for UndeclaredRule<'a>
 {
-  fn expr_by_index<'b>(&'b self, index: usize) -> &'b Expression {
-    self.grammar.expr_by_index(index)
+  fn expr_by_index(&self, index: usize) -> Expression {
+    self.grammar.expr_by_index(index).clone()
   }
 }
 
