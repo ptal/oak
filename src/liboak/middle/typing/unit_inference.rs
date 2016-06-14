@@ -97,8 +97,8 @@ impl<'a> Visitor<()> for UnitInference<'a>
     self.propagate(parent, child);
   }
 
-  fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
-    let rule_expr = self.grammar.expr_index_of_rule(id);
+  fn visit_non_terminal_symbol(&mut self, parent: usize, _id: Ident) {
+    let rule_expr = self.grammar[parent].expr_of_projection();
     self.propagate_invisibility(rule_expr, parent);
   }
 

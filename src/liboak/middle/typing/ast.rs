@@ -22,7 +22,6 @@ pub use std::collections::HashMap;
 pub use std::cell::RefCell;
 
 use rust;
-use middle::typing::ast::EvaluationContext::*;
 use middle::typing::ast::ExprTy::*;
 use front::ast::TypeAnnotation;
 use middle::analysis::ast::AGrammar;
@@ -74,12 +73,15 @@ impl<'cx> TGrammar<'cx>
     | AndPredicate(_) => ExpressionInfo::invisible(span),
       AnySingleChar
     | CharacterClass(_)
-    | NonTerminalSymbol(_)
     | ZeroOrMore(_)
     | OneOrMore(_)
-    | Optional(_)
-    | Choice(_) => ExpressionInfo::new(span, Identity),
-      Sequence(seq) => ExpressionInfo::new(span, Tuple(seq)),
+    | Optional(_) => ExpressionInfo::new(span, Identity),
+      Choice(indexes) => ExpressionInfo::new(span, Tuple(vec![indexes[0]])),
+      Sequence(indexes) => ExpressionInfo::new(span, Tuple(indexes)),
+      NonTerminalSymbol(ident) => {
+        let expr_idx = self.expr_index_of_rule(ident);
+        ExpressionInfo::new(span, Tuple(vec![expr_idx]))
+      }
       SemanticAction(_, ident) => {
         match self.rust_functions[&ident].node {
           rust::ItemKind::Fn(ref decl,..) => {
@@ -130,14 +132,6 @@ impl ExpressionInfo
     expr_info
   }
 
-  // pub fn is_forwading_type(&self) -> bool {
-  //   match self.node {
-  //     NonTerminalSymbol(_) => true,
-  //     Choice(_) => true,
-  //     _ => self.ty.borrow().is_projection()
-  //   }
-  // }
-
   pub fn is_invisible(&self) -> bool {
     self.invisible
   }
@@ -163,17 +157,20 @@ impl ExpressionInfo
       None
     }
   }
+
+  pub fn expr_of_projection(&self) -> usize {
+    self.tuple_indexes().expect("Expected a projection type `Tuple(vec![i])`.")[0]
+  }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ExprTy
 {
-  /// The type of the expression is given with a trivial mapping between expressions and types.
-  /// For example, `e?` has type `Option<T>` if the type of `e` is `T`.
+  /// The expression indicates that a value must be built. For example `e?`, with `e:T`, implies the type `Option<T>` so a new value must be built.
   Identity,
   /// `Tuple(vec![])` is the unit type.
   /// `Tuple(vec![i])` is a projection of the type of a sub-expression.
-  /// `Tuple(vec![i,..,j])` is a tuple for the sub-expressions at index `{i,..,j}`.
+  /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
   Tuple(Vec<usize>),
   Action(rust::FunctionRetTy)
 }
