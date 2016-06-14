@@ -101,8 +101,7 @@ pub struct ExpressionInfo
 {
   pub span: Span,
   pub invisible: bool,
-  pub ty: ExprTy,
-  pub context: EvaluationContext
+  pub ty: ExprTy
 }
 
 impl ItemSpan for ExpressionInfo {
@@ -117,8 +116,7 @@ impl ExpressionInfo
     ExpressionInfo {
       span: sp,
       invisible: false,
-      ty: ty,
-      context: UnValued
+      ty: ty
     }
   }
 
@@ -164,21 +162,6 @@ impl ExpressionInfo
     else {
       None
     }
-  }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum EvaluationContext
-{
-  UnValued,
-  Both
-}
-
-impl EvaluationContext
-{
-  pub fn merge(self, other: EvaluationContext) -> EvaluationContext {
-    if self != other { Both }
-    else { self }
   }
 }
 

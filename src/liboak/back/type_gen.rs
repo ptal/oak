@@ -78,7 +78,6 @@ impl TypeGenerator
   fn tuple_ty<F>(cx: &ExtCtxt, expr: &Box<TExpression>, mut rty_of_idx: F) -> RTy where
    F: FnMut(usize) -> RTy
   {
-    // cx.ty(expr.span, rust::TyKind::Tup(vec![]))
     let expr_ty = expr.ty_clone();
     if let ExprTy::Tuple(indexes) = expr_ty {
       let tys: Vec<_> = indexes.iter().map(|&idx| rty_of_idx(idx)).collect();
