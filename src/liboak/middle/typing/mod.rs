@@ -14,14 +14,14 @@
 
 use middle::analysis::ast::AGrammar;
 use middle::typing::ast::*;
-use middle::typing::bottom_up_unit::*;
+use middle::typing::unit_inference::*;
 // use middle::typing::top_down_unit::*;
 // use middle::typing::bottom_up_tuple::*;
 // use middle::typing::printer::*;
 // use middle::typing::recursive_type::*;
 
 pub mod ast;
-mod bottom_up_unit;
+mod unit_inference;
 // mod bottom_up_tuple;
 // mod top_down_unit;
 // mod recursive_type;
@@ -29,7 +29,7 @@ mod bottom_up_unit;
 
 pub fn type_inference<'cx>(agrammar: AGrammar<'cx>) -> Partial<TGrammar<'cx>> {
   let grammar = TGrammar::typed_grammar(agrammar);
-  let grammar = UnitTyping::infer(grammar);
+  let grammar = UnitInference::infer(grammar);
   Partial::Value(grammar)
   // top_down_unit_inference(&mut grammar);
   // print_annotated_rules(&grammar);

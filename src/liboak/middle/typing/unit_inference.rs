@@ -40,16 +40,16 @@
 
 use middle::typing::ast::*;
 
-pub struct UnitTyping<'cx>
+pub struct UnitInference<'cx>
 {
   grammar: TGrammar<'cx>,
   reached_fixpoint: bool
 }
 
-impl<'a> UnitTyping<'a>
+impl<'a> UnitInference<'a>
 {
   pub fn infer<'cx>(grammar: TGrammar<'cx>) -> TGrammar<'cx> {
-    let mut engine = UnitTyping::new(grammar);
+    let mut engine = UnitInference::new(grammar);
     let rules = engine.grammar.rules
       .values()
       .map(|rule| rule.expr_idx)
@@ -58,8 +58,8 @@ impl<'a> UnitTyping<'a>
     engine.grammar
   }
 
-  fn new<'cx>(grammar: TGrammar<'cx>) -> UnitTyping<'cx> {
-    UnitTyping {
+  fn new<'cx>(grammar: TGrammar<'cx>) -> UnitInference<'cx> {
+    UnitInference {
       grammar: grammar,
       reached_fixpoint: false
     }
@@ -75,14 +75,14 @@ impl<'a> UnitTyping<'a>
   }
 }
 
-impl<'a> ExprByIndex for UnitTyping<'a>
+impl<'a> ExprByIndex for UnitInference<'a>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a> Visitor<()> for UnitTyping<'a>
+impl<'a> Visitor<()> for UnitInference<'a>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);
@@ -128,7 +128,7 @@ impl<'a> Visitor<()> for UnitTyping<'a>
   }
 }
 
-impl<'a> UnitTyping<'a>
+impl<'a> UnitInference<'a>
 {
     fn invisible(&mut self, expr_idx: usize) {
     self.grammar[expr_idx].to_invisible_type();
