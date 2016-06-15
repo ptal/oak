@@ -191,6 +191,15 @@ impl ExprTy
     }
   }
 
+  /// True if the type indicates that a value must be built automatically by the generator.
+  pub fn is_value_constructor(&self) -> bool {
+    match *self {
+      Identity => true,
+      Tuple(ref indexes) if indexes.len() > 1 => true,
+      _ => false
+    }
+  }
+
   pub fn unit() -> ExprTy {
     Tuple(vec![])
   }

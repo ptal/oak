@@ -15,18 +15,18 @@
 use middle::analysis::ast::AGrammar;
 use middle::typing::ast::*;
 use middle::typing::unit_inference::*;
+use middle::typing::recursive_type::*;
 // use middle::typing::bottom_up_tuple::*;
-// use middle::typing::recursive_type::*;
 
 pub mod ast;
 mod unit_inference;
+mod recursive_type;
 // mod bottom_up_tuple;
-// mod recursive_type;
 
 pub fn type_inference<'cx>(agrammar: AGrammar<'cx>) -> Partial<TGrammar<'cx>> {
   let grammar = TGrammar::typed_grammar(agrammar);
   let grammar = UnitInference::infer(grammar);
-  Partial::Value(grammar)
+  RecursiveType::analyse(grammar)
   // recursive_type_analysis(cx, grammar)
   //   .and_then(|grammar| bottom_up_tuple_inference(grammar))
 }

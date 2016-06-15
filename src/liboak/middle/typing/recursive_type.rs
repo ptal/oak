@@ -15,55 +15,47 @@
 //! The recursive type analysis ensures that mutual recursive rules that need to be typed can actually be typed.
 
 use middle::typing::ast::*;
-use monad::partial::Partial;
 
-pub fn recursive_type_analysis(cx: &ExtCtxt, grammar: Grammar)
-  -> Partial<Grammar>
+pub struct RecursiveType<'cx>
 {
-  if RecursiveType::analyse(cx, &grammar.rules) {
-    Partial::Value(grammar)
-  }
-  else {
-    Partial::Nothing
-  }
-}
-
-pub struct RecursiveType<'a>
-{
-  cx: &'a ExtCtxt<'a>,
-  rules: &'a HashMap<Ident, Rule>,
+  grammar: TGrammar<'cx>,
   visited: HashMap<Ident, bool>,
   current_inline_path: Vec<Ident>,
   cycle_detected: bool,
-  /// This boolean stays true if we only forward type along the recursive cycle. In this case, it means that no new value must be built.
-  forwarding_type: bool
+  /// This boolean becomes true if we must automatically generate a value.
+  value_built: bool
 }
 
-impl<'a> RecursiveType<'a>
+impl<'cx> RecursiveType<'cx>
 {
-  fn analyse(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> bool {
-    let mut inlining_loop = RecursiveType::new(cx, rules);
-    inlining_loop.visit_rules();
-    !inlining_loop.cycle_detected
+  pub fn analyse(grammar: TGrammar) -> Partial<TGrammar> {
+    let mut engine = RecursiveType::new(grammar);
+    engine.visit_rules();
+    if engine.cycle_detected {
+      Partial::Nothing
+    }
+    else {
+      Partial::Value(engine.grammar)
+    }
   }
 
-  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a> {
-    let mut visited = HashMap::with_capacity(rules.len());
-    for id in rules.keys() {
+  fn new(grammar: TGrammar<'cx>) -> RecursiveType<'cx> {
+    let mut visited = HashMap::with_capacity(grammar.rules.len());
+    for id in grammar.rules.keys() {
       visited.insert(id.clone(), false);
     }
     RecursiveType {
-      cx: cx,
-      rules: rules,
+      grammar: grammar,
       visited: visited,
       current_inline_path: vec![],
       cycle_detected: false,
-      forwarding_type: true
+      value_built: false
     }
   }
 
   fn visit_rules(&mut self) {
-    for rule in self.rules.values() {
+    let rules: Vec<_> = self.grammar.rules.values().cloned().collect();
+    for rule in rules {
       if self.cycle_detected {
         break;
       }
@@ -72,12 +64,12 @@ impl<'a> RecursiveType<'a>
     }
   }
 
-  fn visit_rule(&mut self, rule: &Rule) {
-    let ident = rule.name.node;
+  fn visit_rule(&mut self, rule: Rule) {
+    let ident = rule.ident();
     *self.visited.get_mut(&ident).unwrap() = true;
-    if !rule.def.is_unit() {
+    if !self.grammar[rule.expr_idx].ty.is_unit() {
       self.current_inline_path.push(ident);
-      self.visit_expr(&rule.def);
+      self.visit_expr(rule.expr_idx);
       self.current_inline_path.pop();
     }
   }
@@ -94,59 +86,66 @@ impl<'a> RecursiveType<'a>
       trimmed_cycle.push(id.clone());
     }
 
-    let mut db = self.cx.struct_span_err(self.rules.get(&in_cycle).unwrap().name.span,
-      "Inlining cycle detected. \
-      The type of a rule must be inlined into itself (indirectly or not), which is impossible.");
+    let mut errors = vec![(
+      self.grammar.rules[&in_cycle].span(),
+      format!("Inlining cycle detected. \
+      The type of a rule must be inlined into itself (indirectly or not), which is impossible.")
+    )];
     for cycle_node in trimmed_cycle.iter() {
-      db.span_note(self.rules.get(cycle_node).unwrap().name.span,
-        "This rule is part of the recursive type.");
+      errors.push((
+        self.grammar.rules[cycle_node].span(),
+        format!("This rule is part of the recursive type.")));
     }
-    db.note("Recursive data types are not handled automatically, \
+    errors.push((
+      self.grammar.rules[&in_cycle].span(),
+      format!("Recursive data types are not handled automatically, \
       you must create it yourself with a semantic action.\nIf you don't care about the value of this rule, \
-      annotate it with `rule = (e) -> ()` or annotate leaf rules that produce values with `rule = (e) -> (^)`.");
-    db.emit();
+      annotate it with `rule = e -> ()` or annotate leaf rules that produce values with `rule = e -> (^)`.")));
+    self.grammar.multi_locations_err(errors);
   }
 }
 
-impl<'a> Visitor<Expression, ()> for RecursiveType<'a>
+impl<'a> ExprByIndex for RecursiveType<'a>
 {
-  unit_visitor_impl!(Expression, str_literal);
-  unit_visitor_impl!(Expression, character);
-  unit_visitor_impl!(Expression, sequence);
-  unit_visitor_impl!(Expression, choice);
+  fn expr_by_index(&self, index: usize) -> Expression {
+    self.grammar.expr_by_index(index).clone()
+  }
+}
 
-  fn visit_non_terminal_symbol(&mut self, _parent: &Box<Expression>, ident: Ident) {
+impl<'a> Visitor<()> for RecursiveType<'a>
+{
+  unit_visitor_impl!(str_literal);
+  unit_visitor_impl!(character);
+  unit_visitor_impl!(sequence);
+  unit_visitor_impl!(choice);
+
+  /// Base case on type:
+  /// `Tuple(t1,t2,...)` or `Identity`: We must generate a type, so there is a risk of recursivity.
+  /// `Tuple(t1)`: Projection of the sub-expression type, it does not break any recursivity cycle, therefore we must explore more.
+  /// `Tuple()` or host-type: It breaks recursivity cycle, so we do not explore more.
+  fn visit_expr(&mut self, expr_idx: usize) {
+    if self.grammar[expr_idx].ty.is_value_constructor() {
+      let value_built_old = self.value_built;
+      self.value_built = true;
+      walk_expr(self, expr_idx);
+      self.value_built = value_built_old;
+    }
+    else if self.grammar[expr_idx].ty.is_projection() {
+      walk_expr(self, expr_idx);
+    }
+  }
+
+  fn visit_non_terminal_symbol(&mut self, parent: usize, ident: Ident) {
     if !self.cycle_detected {
-      let rule = self.rules.get(&ident).unwrap();
-      let ident = rule.name.node;
-      if !rule.def.is_unit() && self.current_inline_path.contains(&ident) && !self.forwarding_type {
+      let rule = self.grammar.rules[&ident].clone();
+      let ident = rule.ident();
+      if self.current_inline_path.contains(&ident) && self.value_built {
         self.current_inline_path.push(ident);
         self.loop_detected();
       }
-      else if !*self.visited.get(&ident).unwrap() {
+      else if !self.visited[&ident] {
         self.visit_rule(rule);
       }
     }
   }
-
-  /// Base case: Expression with a unit type does not generate a recursive type.
-  /// If the current expression is not only a projection, it means that a type must be built.
-  fn visit_expr(&mut self, expr: &Box<Expression>) {
-    if !expr.is_unit() {
-      if !expr.is_forwading_type() {
-        let forwading_old = self.forwarding_type;
-        self.forwarding_type = false;
-        walk_expr(self, expr);
-        self.forwarding_type = forwading_old;
-      }
-      else {
-        walk_expr(self, expr);
-      }
-    }
-  }
-
-  /// Base case: Semantic actions always have type given by the user, so recursivity is handled by the user.
-  fn visit_semantic_action(&mut self, _parent: &Box<Expression>,
-    _expr: &Box<Expression>, _id: Ident)
-  {}
 }

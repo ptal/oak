@@ -67,11 +67,16 @@ impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
     self.cx.parse_sess.span_diagnostic.warn(msg.as_str());
   }
 
-  pub fn multi_locations_err(&self, sp_err: Span, err: String, sp_note: Span, note: String) {
-    self.cx
-      .struct_span_err(sp_err, err.as_str())
-      .span_note(sp_note, note.as_str())
-      .emit();
+  /// The first element of `errors` will be rendered as an error and the other one as notes.
+  pub fn multi_locations_err(&self, errors: Vec<(Span, String)>) {
+    assert!(errors.len() > 0, "`errors` must at least contain one element.");
+    let mut errors_iter = errors.into_iter();
+    let (span, msg) = errors_iter.next().unwrap();
+    let mut db = self.cx.struct_span_err(span, msg.as_str());
+    for (span, msg) in errors_iter {
+      db.span_note(span, msg.as_str());
+    }
+    db.emit();
   }
 
   pub fn span_err(&self, span: Span, msg: String) {
@@ -117,6 +122,7 @@ impl<'cx, ExprInfo> ExprByIndex for Grammar<'cx, ExprInfo>
   }
 }
 
+#[derive(Clone)]
 pub struct Rule
 {
   pub name: SpannedIdent,

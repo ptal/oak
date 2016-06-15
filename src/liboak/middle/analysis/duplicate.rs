@@ -90,11 +90,11 @@ impl<'a, Item> DuplicateItem<'a, Item> where
   }
 
   fn duplicate_items(&self, pre: &Item, current: Item) {
-    self.grammar.multi_locations_err(
-      current.span(),
-      format!("duplicate definition of {} with name `{}`", self.what_is_duplicated, current.ident()),
-      pre.span(),
-      format!("previous definition of `{}` here", pre.ident())
+    self.grammar.multi_locations_err(vec![
+      (current.span(),
+      format!("duplicate definition of {} with name `{}`", self.what_is_duplicated, current.ident())),
+      (pre.span(),
+      format!("previous definition of `{}` here", pre.ident()))]
     );
   }
 
