@@ -130,7 +130,7 @@ impl<'a> Visitor<()> for UnitInference<'a>
 
 impl<'a> UnitInference<'a>
 {
-    fn invisible(&mut self, expr_idx: usize) {
+  fn invisible(&mut self, expr_idx: usize) {
     self.grammar[expr_idx].to_invisible_type();
     self.reached_fixpoint = false;
   }

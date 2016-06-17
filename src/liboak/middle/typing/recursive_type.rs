@@ -135,7 +135,7 @@ impl<'a> Visitor<()> for RecursiveType<'a>
     }
   }
 
-  fn visit_non_terminal_symbol(&mut self, parent: usize, ident: Ident) {
+  fn visit_non_terminal_symbol(&mut self, _parent: usize, ident: Ident) {
     if !self.cycle_detected {
       let rule = self.grammar.rules[&ident].clone();
       let ident = rule.ident();
