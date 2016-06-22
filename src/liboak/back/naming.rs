@@ -29,7 +29,7 @@ pub struct NameFactory<'cx>
 
 impl<'cx> NameFactory<'cx>
 {
-  pub fn new(cx: &'cx ExtCtxt) -> NameFactory<'cx> {
+  pub fn new(cx: &'cx ExtCtxt<'cx>) -> NameFactory<'cx> {
     NameFactory {
       cx: cx,
       unique_id: 0

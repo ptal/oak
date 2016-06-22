@@ -19,7 +19,7 @@ use monad::partial::Partial;
 use rust;
 
 /// Precondition: Expects that the recursive analysis has been done.
-pub fn sum_type_analysis(cx: &ExtCtxt, grammar: Grammar)
+pub fn sum_type_analysis<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar)
   -> Partial<Grammar>
 {
   if SumType::analyse(cx, &grammar.rules) {
@@ -39,13 +39,13 @@ pub struct SumType<'a>
 
 impl<'a> SumType<'a>
 {
-  fn analyse(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> bool {
+  fn analyse(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, Rule>) -> bool {
     let mut sum_type = SumType::new(cx, rules);
     sum_type.visit_rules();
     !sum_type.bad_type_detected
   }
 
-  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> SumType<'a> {
+  fn new(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, Rule>) -> SumType<'a> {
     SumType {
       cx: cx,
       rules: rules,

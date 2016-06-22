@@ -42,7 +42,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     rust::SyntaxExtension::IdentTT(Box::new(expand), None, true));
 }
 
-fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::Ident,
+fn expand<'cx>(cx: &'cx mut rust::ExtCtxt<'cx>, _sp: rust::Span, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
   parse(cx, grammar_name, tts)
@@ -66,7 +66,7 @@ fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -
   }
 }
 
-fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
+fn parse<'cx>(cx: &'cx mut rust::ExtCtxt<'cx>, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
 {
   let mut parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);

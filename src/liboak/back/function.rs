@@ -25,7 +25,7 @@ pub struct FunctionGenerator<'cx>
 
 impl<'cx> FunctionGenerator<'cx>
 {
-  pub fn new(cx: &'cx ExtCtxt) -> FunctionGenerator<'cx> {
+  pub fn new(cx: &'cx ExtCtxt<'cx>) -> FunctionGenerator<'cx> {
     FunctionGenerator {
       cx: cx,
       name_factory: NameFactory::new(cx),

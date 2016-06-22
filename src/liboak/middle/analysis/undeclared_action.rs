@@ -31,7 +31,7 @@ impl<'a> UndeclaredAction<'a>
     }
   }
 
-  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &Grammar) -> bool {
+  fn has_undeclared(cx: &'a ExtCtxt<'a>, grammar: &'a Grammar) -> bool {
     let mut analyser = UndeclaredAction {
       cx: cx,
       grammar: grammar,

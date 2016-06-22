@@ -54,7 +54,7 @@ fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
     if let &rust::ItemKind::Fn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
       try!(s.hardbreak_if_not_bol());
       try!(s.head(""));
-      try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, None, &item.vis));
+      try!(s.print_fn(decl, unsafety, constness, abi, Some(item.ident), generics, &item.vis));
       try!(s.end()); // end head-ibox
       try!(rust::pp::word(&mut s.s, ";"));
       try!(s.end()); // end the outer fn box
