@@ -29,7 +29,7 @@ mod top_down_unit;
 mod recursive_type;
 // mod printer;
 
-pub fn type_inference(cx: &ExtCtxt, agrammar: AGrammar) -> Partial<Grammar> {
+pub fn type_inference<'a>(cx: &'a ExtCtxt<'a>, agrammar: AGrammar) -> Partial<Grammar> {
   let mut grammar = Grammar {
     name: agrammar.name,
     rules: HashMap::with_capacity(agrammar.rules.len()),

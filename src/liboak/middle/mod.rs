@@ -24,7 +24,7 @@ pub use front::ast::Grammar as FGrammar;
 pub mod analysis;
 pub mod typing;
 
-pub fn analyse(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<Grammar> {
+pub fn analyse<'a>(cx: &'a ExtCtxt<'a>, fgrammar: FGrammar) -> Partial<Grammar> {
   if !at_least_one_rule_declared(cx, &fgrammar) {
     return Partial::Nothing
   }

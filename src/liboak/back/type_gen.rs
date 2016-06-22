@@ -30,7 +30,7 @@ use middle::typing::ast::EvaluationContext;
 use back::ast::*;
 use back::ast::Expression_::*;
 
-pub fn generate_rust_types(cx: &ExtCtxt, tgrammar: TGrammar) -> Grammar {
+pub fn generate_rust_types<'a>(cx: &'a ExtCtxt<'a>, tgrammar: TGrammar) -> Grammar {
   let mut grammar = Grammar {
     name: tgrammar.name,
     rules: HashMap::with_capacity(tgrammar.rules.len()),

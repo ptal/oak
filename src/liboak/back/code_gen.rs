@@ -26,7 +26,7 @@ use monad::partial::Partial;
 
 use std::iter::*;
 
-pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt, grammar: Grammar)
+pub fn generate_rust_code<'cx>(cx: &'cx ExtCtxt<'cx>, grammar: Grammar)
   -> Partial<Box<rust::MacResult + 'cx>>
 {
   Partial::Value(CodeGenerator::compile(cx, grammar))
@@ -64,7 +64,7 @@ struct CodeGenerator<'cx>
 
 impl<'cx> CodeGenerator<'cx>
 {
-  fn compile(cx: &'cx ExtCtxt, grammar: Grammar) -> Box<rust::MacResult + 'cx> {
+  fn compile(cx: &'cx ExtCtxt<'cx>, grammar: Grammar) -> Box<rust::MacResult + 'cx> {
     let mut compiler = CodeGenerator {
       cx: cx,
       function_gen: FunctionGenerator::new(cx),

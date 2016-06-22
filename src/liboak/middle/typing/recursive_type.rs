@@ -17,7 +17,7 @@
 use middle::typing::ast::*;
 use monad::partial::Partial;
 
-pub fn recursive_type_analysis(cx: &ExtCtxt, grammar: Grammar)
+pub fn recursive_type_analysis<'a>(cx: &'a ExtCtxt<'a>, grammar: Grammar)
   -> Partial<Grammar>
 {
   if RecursiveType::analyse(cx, &grammar.rules) {
@@ -41,13 +41,13 @@ pub struct RecursiveType<'a>
 
 impl<'a> RecursiveType<'a>
 {
-  fn analyse(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> bool {
+  fn analyse(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, Rule>) -> bool {
     let mut inlining_loop = RecursiveType::new(cx, rules);
     inlining_loop.visit_rules();
     !inlining_loop.cycle_detected
   }
 
-  fn new(cx: &'a ExtCtxt, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a> {
+  fn new(cx: &'a ExtCtxt<'a>, rules: &'a HashMap<Ident, Rule>) -> RecursiveType<'a> {
     let mut visited = HashMap::with_capacity(rules.len());
     for id in rules.keys() {
       visited.insert(id.clone(), false);

@@ -32,7 +32,7 @@ use back::type_gen::*;
 use rust;
 use rust::ExtCtxt;
 
-pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Partial<Box<rust::MacResult + 'cx>> {
+pub fn compile<'cx>(cx: &'cx ExtCtxt<'cx>, tgrammar: TGrammar) -> Partial<Box<rust::MacResult + 'cx>> {
   let grammar = generate_rust_types(cx, tgrammar);
   sum_type_analysis(cx, grammar)
     .and_then(|grammar| generate_rust_code(cx, grammar))
