@@ -27,6 +27,7 @@ use front::parser;
 use front::ast::FGrammar;
 
 mod ast;
+mod visitor;
 mod front;
 mod middle;
 // mod back;

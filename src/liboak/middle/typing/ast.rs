@@ -16,6 +16,7 @@
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
 pub use ast::*;
+pub use visitor::*;
 pub use ast::Expression::*;
 
 pub use std::collections::HashMap;

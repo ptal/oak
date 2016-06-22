@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub use ast::*;
+pub use visitor::*;
 pub use front::ast::FExpressionInfo;
 
 use std::default::Default;
