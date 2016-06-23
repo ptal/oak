@@ -17,34 +17,32 @@ use rust::ExtCtxt;
 
 pub type Namespace = Vec<Ident>;
 
-pub struct NameFactory<'cx>
+pub struct NameFactory
 {
-  cx: &'cx ExtCtxt<'cx>,
   namespaces: Vec<Namespace>,
   mark_uid: usize
 }
 
-impl<'cx> NameFactory<'cx>
+impl NameFactory
 {
-  pub fn new(cx: &'cx ExtCtxt) -> NameFactory<'cx> {
+  pub fn new() -> NameFactory {
     NameFactory {
-      cx: cx,
       namespaces: vec![],
       mark_uid: 0
     }
   }
 
-  pub fn parser_name(&self, rule_name: Ident) -> Ident {
-    self.ident_of(format!("parse_{}", id_to_string(rule_name)))
+  pub fn parser_name(&self, cx: &ExtCtxt, rule_name: Ident) -> Ident {
+    self.ident_of(cx, format!("parse_{}", id_to_string(rule_name)))
   }
 
-  pub fn recognizer_name(&self, rule_name: Ident) -> Ident {
-    self.ident_of(format!("recognize_{}", id_to_string(rule_name)))
+  pub fn recognizer_name(&self, cx: &ExtCtxt, rule_name: Ident) -> Ident {
+    self.ident_of(cx, format!("recognize_{}", id_to_string(rule_name)))
   }
 
-  pub fn next_mark_name(&mut self) -> Ident {
+  pub fn next_mark_name(&mut self, cx: &ExtCtxt) -> Ident {
     self.mark_uid += 1;
-    self.ident_of(format!("mark_{}", self.mark_uid))
+    self.ident_of(cx, format!("mark_{}", self.mark_uid))
   }
 
   pub fn next_data_name(&mut self) -> Ident {
@@ -52,9 +50,9 @@ impl<'cx> NameFactory<'cx>
       .expect("Request a data name in an empty namespace.")
   }
 
-  pub fn open_namespace(&mut self, cardinality: usize) -> Namespace {
+  pub fn open_namespace(&mut self, cx: &ExtCtxt, cardinality: usize) -> Namespace {
     let namespace: Namespace = (0..cardinality)
-      .map(|i| self.ident_of(format!("v_{}", i)))
+      .map(|i| self.ident_of(cx, format!("v_{}", i)))
       .collect();
     self.namespaces.push(namespace.clone());
     namespace
@@ -73,7 +71,7 @@ impl<'cx> NameFactory<'cx>
     &mut self.namespaces[len - 1]
   }
 
-  fn ident_of(&self, name: String) -> Ident {
-    self.cx.ident_of(name.as_str())
+  fn ident_of(&self, cx: &ExtCtxt, name: String) -> Ident {
+    cx.ident_of(name.as_str())
   }
 }

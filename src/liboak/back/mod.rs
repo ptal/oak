@@ -16,24 +16,19 @@
 
 //! It generates a recognizer and parser function for each rules. It builds the result value and type with the information provided by the AST.
 
-mod ast;
-mod naming;
-mod function;
-mod type_gen;
-mod code_gen;
+// mod ast;
+mod compiler;
+mod name_factory;
 mod code_printer;
-mod sum_type;
 
-use middle::typing::ast::Grammar as TGrammar;
-use monad::partial::Partial;
-use back::code_gen::*;
-use back::sum_type::*;
-use back::type_gen::*;
-use rust;
-use rust::ExtCtxt;
+// mod function;
+// mod type_gen;
+// mod code_gen;
+// mod sum_type;
 
-pub fn compile<'cx>(cx: &'cx ExtCtxt, tgrammar: TGrammar) -> Partial<Box<rust::MacResult + 'cx>> {
-  let grammar = generate_rust_types(cx, tgrammar);
-  sum_type_analysis(cx, grammar)
-    .and_then(|grammar| generate_rust_code(cx, grammar))
-}
+// use monad::partial::Partial;
+// use back::code_gen::*;
+// use back::sum_type::*;
+// use back::type_gen::*;
+// use rust;
+// use rust::ExtCtxt;

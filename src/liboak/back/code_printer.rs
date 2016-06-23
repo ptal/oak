@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use middle::typing::ast::*;
 use rust;
 use rust::{State, PrintState, Visibility, Mod};
-use back::ast::*;
-use middle::analysis::ast::PrintAttribute;
 use std::io;
 
-pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RItem) {
+pub fn print_code(grammar: &TGrammar, grammar_module: &RItem) {
+  let print_attr = grammar.attributes.print_attr;
   if print_attr.debug_api() {
-    cx.parse_sess.span_diagnostic.note_without_error(
+    grammar.cx.parse_sess.span_diagnostic.note_without_error(
       rust::item_to_string(grammar_module).as_str());
   }
   else if print_attr.show_api() {
@@ -28,7 +28,7 @@ pub fn print_code(cx: &ExtCtxt, print_attr: PrintAttribute, grammar_module: &RIt
       let res = rust::to_string(|s| {
         print_module(s, module, grammar_module.ident, grammar_module.vis.clone(), grammar_module.span)
       });
-      cx.parse_sess.span_diagnostic.note_without_error(res.as_str());
+      grammar.cx.parse_sess.span_diagnostic.note_without_error(res.as_str());
     } else {
       panic!("Expected the grammar module.");
     }
