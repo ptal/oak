@@ -16,15 +16,15 @@
 
 use middle::typing::ast::*;
 
-pub struct TupleUnpacking<'cx>
+pub struct TupleUnpacking<'a, 'b: 'a>
 {
-  grammar: TGrammar<'cx>,
+  grammar: TGrammar<'a, 'b>,
   reached_fixpoint: bool
 }
 
-impl<'a> TupleUnpacking<'a>
+impl<'a, 'b> TupleUnpacking<'a, 'b>
 {
-  pub fn infer<'cx>(grammar: TGrammar<'cx>) -> TGrammar<'cx> {
+  pub fn infer(grammar: TGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
     let mut engine = TupleUnpacking::new(grammar);
     let rules = engine.grammar.rules
       .values()
@@ -34,7 +34,7 @@ impl<'a> TupleUnpacking<'a>
     engine.grammar
   }
 
-  fn new<'cx>(grammar: TGrammar<'cx>) -> TupleUnpacking<'cx> {
+  fn new<'cx>(grammar: TGrammar<'a, 'b>) -> TupleUnpacking<'a, 'b> {
     TupleUnpacking {
       grammar: grammar,
       reached_fixpoint: false
@@ -51,14 +51,14 @@ impl<'a> TupleUnpacking<'a>
   }
 }
 
-impl<'a> ExprByIndex for TupleUnpacking<'a>
+impl<'a, 'b> ExprByIndex for TupleUnpacking<'a, 'b>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a> Visitor<()> for TupleUnpacking<'a>
+impl<'a, 'b> Visitor<()> for TupleUnpacking<'a, 'b>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);
@@ -80,7 +80,7 @@ impl<'a> Visitor<()> for TupleUnpacking<'a>
   }
 }
 
-impl<'a> TupleUnpacking<'a>
+impl<'a, 'b> TupleUnpacking<'a, 'b>
 {
   fn unpack_tuple(&mut self, indexes: Vec<usize>) -> Vec<usize> {
     let mut unpacked_indexes = vec![];

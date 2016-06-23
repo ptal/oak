@@ -20,19 +20,19 @@ use rust;
 
 mod str_literal;
 
-pub struct Context<'cx>
+pub struct Context<'a: 'c, 'b: 'a, 'c>
 {
-  pub grammar: &'cx TGrammar<'cx>,
-  pub name_factory: &'cx mut NameFactory,
+  pub grammar: &'c TGrammar<'a, 'b>,
+  pub name_factory: &'c mut NameFactory,
   pub success: RExpr,
   pub failure: RExpr
 }
 
-impl<'cx> Context<'cx>
+impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 {
-  pub fn new<'a>(grammar: &'a TGrammar<'a>,
-    name_factory: &'a mut NameFactory,
-    success: RExpr, failure: RExpr) -> Context<'a>
+  pub fn new(grammar: &'c TGrammar<'a, 'b>,
+    name_factory: &'c mut NameFactory,
+    success: RExpr, failure: RExpr) -> Context<'a, 'b, 'c>
   {
     Context {
       grammar: grammar,
@@ -45,8 +45,8 @@ impl<'cx> Context<'cx>
 
 pub trait CompileParser
 {
-  fn compile_parser<'cx>(&self, context: Context<'cx>) -> RExpr;
-  fn compile_recognizer<'cx>(&self, context: Context<'cx>) -> RExpr;
+  fn compile_parser<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
+  fn compile_recognizer<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
 }
 
 pub fn expression_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileParser> {
@@ -67,14 +67,14 @@ pub fn expression_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileParser>
   }
 }
 
-struct GrammarCompiler<'cx>
+struct GrammarCompiler<'a, 'b: 'a>
 {
-  grammar: TGrammar<'cx>
+  grammar: TGrammar<'a, 'b>
 }
 
-impl<'cx> GrammarCompiler<'cx>
+impl<'a, 'b> GrammarCompiler<'a, 'b>
 {
-  pub fn compile(grammar: TGrammar<'cx>) -> Box<rust::MacResult + 'cx> {
+  pub fn compile(grammar: TGrammar<'a, 'b>) -> Box<rust::MacResult + 'a> {
     let mut compiler = GrammarCompiler::new(grammar);
     let mod_content = compiler.compile_mod_content();
     let module = compiler.compile_grammar_module(mod_content);
@@ -82,7 +82,7 @@ impl<'cx> GrammarCompiler<'cx>
     rust::MacEager::items(rust::SmallVector::one(module))
   }
 
-  fn new(grammar: TGrammar<'cx>) -> GrammarCompiler<'cx> {
+  fn new(grammar: TGrammar<'a, 'b>) -> GrammarCompiler<'a, 'b> {
     GrammarCompiler {
       grammar: grammar
     }
@@ -180,7 +180,7 @@ impl<'cx> GrammarCompiler<'cx>
     ).expect("Quotation of a generated function.")
   }
 
-  fn cx(&self) -> &'cx ExtCtxt {
+  fn cx(&self) -> &'a ExtCtxt<'b> {
     &self.grammar.cx
   }
 }

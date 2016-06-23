@@ -16,15 +16,15 @@
 use middle::analysis::ast::*;
 use monad::partial::Partial::*;
 
-pub struct UndeclaredRule<'a>
+pub struct UndeclaredRule<'a: 'c, 'b: 'a, 'c>
 {
-  grammar: &'a AGrammar<'a>,
+  grammar: &'c AGrammar<'a, 'b>,
   has_undeclared: bool
 }
 
-impl<'a> UndeclaredRule<'a>
+impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
 {
-  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
+  pub fn analyse(grammar: AGrammar<'a, 'b>) -> Partial<AGrammar<'a, 'b>> {
     if UndeclaredRule::has_undeclared(&grammar) {
       Nothing
     } else {
@@ -32,7 +32,7 @@ impl<'a> UndeclaredRule<'a>
     }
   }
 
-  fn has_undeclared(grammar: &AGrammar) -> bool {
+  fn has_undeclared(grammar: &'a AGrammar<'a, 'b>) -> bool {
     let mut analyser = UndeclaredRule {
       grammar: grammar,
       has_undeclared: false
@@ -44,14 +44,14 @@ impl<'a> UndeclaredRule<'a>
   }
 }
 
-impl<'a> ExprByIndex for UndeclaredRule<'a>
+impl<'a, 'b, 'c> ExprByIndex for UndeclaredRule<'a, 'b, 'c>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index).clone()
   }
 }
 
-impl<'a> Visitor<()> for UndeclaredRule<'a>
+impl<'a, 'b, 'c> Visitor<()> for UndeclaredRule<'a, 'b, 'c>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);

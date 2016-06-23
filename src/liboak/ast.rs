@@ -37,9 +37,9 @@ pub trait ExprByIndex
   fn expr_by_index(&self, index: usize) -> Expression;
 }
 
-pub struct Grammar<'cx, ExprInfo>
+pub struct Grammar<'a, 'b:'a, ExprInfo>
 {
-  pub cx: &'cx ExtCtxt<'cx>,
+  pub cx: &'a ExtCtxt<'b>,
   pub name: Ident,
   pub rules: HashMap<Ident, Rule>,
   pub exprs: Vec<Expression>,
@@ -49,10 +49,10 @@ pub struct Grammar<'cx, ExprInfo>
   pub attributes: GrammarAttributes
 }
 
-impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
+impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
 {
-  pub fn new(cx: &'cx ExtCtxt<'cx>, name: Ident, exprs: Vec<Expression>,
-    exprs_info: Vec<ExprInfo>) -> Grammar<'cx, ExprInfo>
+  pub fn new(cx: &'a ExtCtxt<'b>, name: Ident, exprs: Vec<Expression>,
+    exprs_info: Vec<ExprInfo>) -> Grammar<'a, 'b, ExprInfo>
   {
     Grammar {
       cx: cx,
@@ -94,23 +94,23 @@ impl<'cx, ExprInfo> Grammar<'cx, ExprInfo>
   }
 }
 
-impl<'cx, ExprInfo> Index<usize> for Grammar<'cx, ExprInfo>
+impl<'a, 'b, ExprInfo> Index<usize> for Grammar<'a, 'b, ExprInfo>
 {
   type Output = ExprInfo;
 
-  fn index<'a>(&'a self, index: usize) -> &'a Self::Output {
+  fn index<'c>(&'c self, index: usize) -> &'c Self::Output {
     &self.exprs_info[index]
   }
 }
 
-impl<'cx, ExprInfo> IndexMut<usize> for Grammar<'cx, ExprInfo>
+impl<'a, 'b, ExprInfo> IndexMut<usize> for Grammar<'a, 'b, ExprInfo>
 {
-  fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Self::Output {
+  fn index_mut<'c>(&'c mut self, index: usize) -> &'c mut Self::Output {
     &mut self.exprs_info[index]
   }
 }
 
-impl<'cx, ExprInfo> Grammar<'cx, ExprInfo> where
+impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo> where
  ExprInfo: ItemSpan
 {
   pub fn expr_err(&self, expr_idx: usize, msg: String) {
@@ -118,7 +118,7 @@ impl<'cx, ExprInfo> Grammar<'cx, ExprInfo> where
   }
 }
 
-impl<'cx, ExprInfo> ExprByIndex for Grammar<'cx, ExprInfo>
+impl<'a, 'b, ExprInfo> ExprByIndex for Grammar<'a, 'b, ExprInfo>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.exprs[index].clone()

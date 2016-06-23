@@ -25,7 +25,7 @@ mod undeclared_action;
 mod attribute;
 pub mod ast;
 
-pub fn analyse<'cx>(cx: &'cx ExtCtxt, fgrammar: FGrammar) -> Partial<AGrammar<'cx>> {
+pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGrammar<'a, 'b>> {
   let grammar = Grammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
   let frules = fgrammar.rules.clone();
   let frust_items = fgrammar.rust_items;

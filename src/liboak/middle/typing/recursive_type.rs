@@ -16,9 +16,9 @@
 
 use middle::typing::ast::*;
 
-pub struct RecursiveType<'cx>
+pub struct RecursiveType<'a, 'b: 'a>
 {
-  grammar: TGrammar<'cx>,
+  grammar: TGrammar<'a, 'b>,
   visited: HashMap<Ident, bool>,
   current_inline_path: Vec<Ident>,
   cycle_detected: bool,
@@ -26,9 +26,9 @@ pub struct RecursiveType<'cx>
   value_built: bool
 }
 
-impl<'cx> RecursiveType<'cx>
+impl<'a, 'b> RecursiveType<'a, 'b>
 {
-  pub fn analyse(grammar: TGrammar) -> Partial<TGrammar> {
+  pub fn analyse(grammar: TGrammar<'a, 'b>) -> Partial<TGrammar<'a, 'b>> {
     let mut engine = RecursiveType::new(grammar);
     engine.visit_rules();
     if engine.cycle_detected {
@@ -39,7 +39,7 @@ impl<'cx> RecursiveType<'cx>
     }
   }
 
-  fn new(grammar: TGrammar<'cx>) -> RecursiveType<'cx> {
+  fn new(grammar: TGrammar<'a, 'b>) -> RecursiveType<'a, 'b> {
     let mut visited = HashMap::with_capacity(grammar.rules.len());
     for id in grammar.rules.keys() {
       visited.insert(id.clone(), false);
@@ -105,14 +105,14 @@ impl<'cx> RecursiveType<'cx>
   }
 }
 
-impl<'a> ExprByIndex for RecursiveType<'a>
+impl<'a, 'b> ExprByIndex for RecursiveType<'a, 'b>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index).clone()
   }
 }
 
-impl<'a> Visitor<()> for RecursiveType<'a>
+impl<'a, 'b> Visitor<()> for RecursiveType<'a, 'b>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);

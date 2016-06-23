@@ -18,7 +18,7 @@ pub use front::ast::FExpressionInfo;
 
 use std::default::Default;
 
-pub type AGrammar<'cx> = Grammar<'cx, FExpressionInfo>;
+pub type AGrammar<'a, 'b> = Grammar<'a, 'b, FExpressionInfo>;
 
 #[derive(Default)]
 pub struct GrammarAttributes

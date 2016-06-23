@@ -40,15 +40,15 @@
 
 use middle::typing::ast::*;
 
-pub struct UnitInference<'cx>
+pub struct UnitInference<'a, 'b: 'a>
 {
-  grammar: TGrammar<'cx>,
+  grammar: TGrammar<'a, 'b>,
   reached_fixpoint: bool
 }
 
-impl<'a> UnitInference<'a>
+impl<'a, 'b> UnitInference<'a, 'b>
 {
-  pub fn infer<'cx>(grammar: TGrammar<'cx>) -> TGrammar<'cx> {
+  pub fn infer(grammar: TGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
     let mut engine = UnitInference::new(grammar);
     let rules = engine.grammar.rules
       .values()
@@ -58,7 +58,7 @@ impl<'a> UnitInference<'a>
     engine.grammar
   }
 
-  fn new<'cx>(grammar: TGrammar<'cx>) -> UnitInference<'cx> {
+  fn new(grammar: TGrammar<'a, 'b>) -> UnitInference<'a, 'b> {
     UnitInference {
       grammar: grammar,
       reached_fixpoint: false
@@ -75,14 +75,14 @@ impl<'a> UnitInference<'a>
   }
 }
 
-impl<'a> ExprByIndex for UnitInference<'a>
+impl<'a, 'b> ExprByIndex for UnitInference<'a, 'b>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a> Visitor<()> for UnitInference<'a>
+impl<'a, 'b> Visitor<()> for UnitInference<'a, 'b>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);
@@ -128,7 +128,7 @@ impl<'a> Visitor<()> for UnitInference<'a>
   }
 }
 
-impl<'a> UnitInference<'a>
+impl<'a, 'b> UnitInference<'a, 'b>
 {
   fn invisible(&mut self, expr_idx: usize) {
     self.grammar[expr_idx].to_invisible_type();

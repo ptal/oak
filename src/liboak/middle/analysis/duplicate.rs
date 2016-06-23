@@ -20,7 +20,7 @@ use monad::partial::Partial::*;
 
 use rust;
 
-pub fn rule_duplicate(mut grammar: AGrammar, rules: Vec<FRule>) -> Partial<AGrammar>
+pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<FRule>) -> Partial<AGrammar<'a, 'b>>
 {
   DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
   .map(|rules|
@@ -28,8 +28,8 @@ pub fn rule_duplicate(mut grammar: AGrammar, rules: Vec<FRule>) -> Partial<AGram
   .map(move |rules| { grammar.rules = rules; grammar })
 }
 
-pub fn rust_functions_duplicate(mut grammar: AGrammar,
-  items: Vec<RItem>) -> Partial<AGrammar>
+pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
+  items: Vec<RItem>) -> Partial<AGrammar<'a, 'b>>
 {
   let mut functions = vec![];
   let mut others = vec![];
@@ -49,18 +49,18 @@ pub fn rust_functions_duplicate(mut grammar: AGrammar,
     })
 }
 
-struct DuplicateItem<'a, Item>
+struct DuplicateItem<'a: 'c, 'b: 'a, 'c, Item>
 {
-  grammar: &'a AGrammar<'a>,
+  grammar: &'c AGrammar<'a, 'b>,
   items: HashMap<Ident, Item>,
   has_duplicate: bool,
   what_is_duplicated: String
 }
 
-impl<'a, Item> DuplicateItem<'a, Item> where
+impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
  Item: ItemIdent + ItemSpan
 {
-  pub fn analyse<ItemIter>(grammar: &'a AGrammar<'a>, iter: ItemIter, item_kind: String)
+  pub fn analyse<ItemIter>(grammar: &'c AGrammar<'a, 'b>, iter: ItemIter, item_kind: String)
     -> Partial<HashMap<Ident, Item>> where
    ItemIter: Iterator<Item=Item>
   {
@@ -75,7 +75,7 @@ impl<'a, Item> DuplicateItem<'a, Item> where
   }
 
   fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter)
-    -> DuplicateItem<'a, Item>
+    -> DuplicateItem<'a, 'b, 'c, Item>
   {
     for item in iter {
       let ident = item.ident();

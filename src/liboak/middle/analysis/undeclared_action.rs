@@ -14,15 +14,15 @@
 
 use middle::analysis::ast::*;
 
-pub struct UndeclaredAction<'a>
+pub struct UndeclaredAction<'a: 'c, 'b: 'a, 'c>
 {
-  grammar: &'a AGrammar<'a>,
+  grammar: &'c AGrammar<'a, 'b>,
   has_undeclared: bool
 }
 
-impl<'a> UndeclaredAction<'a>
+impl<'a, 'b, 'c> UndeclaredAction<'a, 'b, 'c>
 {
-  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
+  pub fn analyse(grammar: AGrammar<'a, 'b>) -> Partial<AGrammar<'a, 'b>> {
     if UndeclaredAction::has_undeclared(&grammar) {
       Partial::Nothing
     } else {
@@ -30,7 +30,7 @@ impl<'a> UndeclaredAction<'a>
     }
   }
 
-  fn has_undeclared(grammar: &AGrammar) -> bool {
+  fn has_undeclared(grammar: &'a AGrammar<'a, 'b>) -> bool {
     let mut analyser = UndeclaredAction {
       grammar: grammar,
       has_undeclared: false
@@ -42,14 +42,14 @@ impl<'a> UndeclaredAction<'a>
   }
 }
 
-impl<'a> ExprByIndex for UndeclaredAction<'a>
+impl<'a, 'b, 'c> ExprByIndex for UndeclaredAction<'a, 'b, 'c>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a> Visitor<()> for UndeclaredAction<'a>
+impl<'a, 'b, 'c> Visitor<()> for UndeclaredAction<'a, 'b, 'c>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(character);

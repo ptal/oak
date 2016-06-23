@@ -27,11 +27,11 @@ use middle::typing::ast::ExprTy::*;
 use front::ast::TypeAnnotation;
 use middle::analysis::ast::AGrammar;
 
-pub type TGrammar<'cx> = Grammar<'cx, ExpressionInfo>;
+pub type TGrammar<'a, 'b> = Grammar<'a, 'b, ExpressionInfo>;
 
-impl<'cx> TGrammar<'cx>
+impl<'a, 'b> TGrammar<'a, 'b>
 {
-  pub fn typed_grammar(agrammar: AGrammar<'cx>) -> TGrammar<'cx> {
+  pub fn typed_grammar(agrammar: AGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
     let exprs_info = agrammar.exprs_info;
     let mut grammar = TGrammar {
       cx: agrammar.cx,

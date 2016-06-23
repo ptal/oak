@@ -42,8 +42,8 @@ pub fn plugin_registrar(reg: &mut Registry) {
     rust::SyntaxExtension::IdentTT(Box::new(expand), None, true));
 }
 
-fn expand<'cx>(cx: &'cx mut rust::ExtCtxt, _sp: rust::Span, grammar_name: rust::Ident,
-  tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
+fn expand<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, _sp: rust::Span, grammar_name: rust::Ident,
+  tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'a>
 {
   parse(cx, grammar_name, tts)
 }
@@ -66,14 +66,14 @@ fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -
   }
 }
 
-fn parse<'cx>(cx: &'cx mut rust::ExtCtxt, grammar_name: rust::Ident,
-  tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'cx>
+fn parse<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, grammar_name: rust::Ident,
+  tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'a>
 {
   let parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
   let ast = parser.parse_grammar();
   let ast = unwrap_parser_ast(cx, ast);
-  let cx: &'cx rust::ExtCtxt = cx;
-  middle::analyse(cx, ast);
+  let cx: &'a rust::ExtCtxt = cx;
+  let grammar = middle::typecheck(cx, ast);
   rust::DummyResult::any(rust::DUMMY_SP)
   // middle::analyse(cx, ast)
   //   .and_next(|ast| back::compile(cx, ast))

@@ -17,8 +17,8 @@ use front::ast::FRule;
 
 use rust::{P, MetaItemKind, MetaItem};
 
-pub fn decorate_with_attributes(mut grammar: AGrammar,
-  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar>
+pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
+  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar<'a, 'b>>
 {
   check_rules_attributes(&grammar, frules);
   let print_attr = check_grammar_attributes(&grammar, attributes);
@@ -26,7 +26,7 @@ pub fn decorate_with_attributes(mut grammar: AGrammar,
   Partial::Value(grammar)
 }
 
-fn check_grammar_attributes(grammar: &AGrammar, attrs: Vec<Attribute>) -> PrintAttribute {
+fn check_grammar_attributes<'a, 'b>(grammar: &AGrammar<'a, 'b>, attrs: Vec<Attribute>) -> PrintAttribute {
   let mut print_attr = PrintAttribute::Nothing;
   for attr in attrs {
     let meta_item = attr.node.value;
@@ -35,7 +35,7 @@ fn check_grammar_attributes(grammar: &AGrammar, attrs: Vec<Attribute>) -> PrintA
   print_attr
 }
 
-fn check_grammar_attr(grammar: &AGrammar, meta_item: P<MetaItem>) -> PrintAttribute {
+fn check_grammar_attr<'a, 'b>(grammar: &AGrammar<'a, 'b>, meta_item: P<MetaItem>) -> PrintAttribute {
   match &meta_item.node {
     &MetaItemKind::Word(ref name) if *name == "debug_api" => {
       PrintAttribute::DebugApi
@@ -54,7 +54,7 @@ fn check_grammar_attr(grammar: &AGrammar, meta_item: P<MetaItem>) -> PrintAttrib
   }
 }
 
-fn check_rules_attributes(grammar: &AGrammar, rules: Vec<FRule>) {
+fn check_rules_attributes<'a, 'b>(grammar: &AGrammar<'a, 'b>, rules: Vec<FRule>) {
   for rule in rules {
     for attr in rule.attributes {
       let meta_item = attr.node.value;
@@ -63,7 +63,7 @@ fn check_rules_attributes(grammar: &AGrammar, rules: Vec<FRule>) {
   }
 }
 
-fn check_rule_attr(grammar: &AGrammar, rule_name: Ident, meta_item: P<MetaItem>) {
+fn check_rule_attr<'a, 'b>(grammar: &AGrammar<'a, 'b>, rule_name: Ident, meta_item: P<MetaItem>) {
   match &meta_item.node {
       &MetaItemKind::Word(ref name)
     | &MetaItemKind::List(ref name, _)

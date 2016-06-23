@@ -30,11 +30,11 @@ impl StrLiteralCompiler
 
 impl CompileParser for StrLiteralCompiler
 {
-  fn compile_parser<'cx>(&self, context: Context<'cx>) -> RExpr {
+  fn compile_parser<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
     self.compile_recognizer(context)
   }
 
-  fn compile_recognizer<'cx>(&self, context: Context<'cx>) -> RExpr {
+  fn compile_recognizer<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
     let lit = self.literal.as_str();
     let success = context.success;
     let failure = context.failure;

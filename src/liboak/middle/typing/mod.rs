@@ -23,7 +23,7 @@ mod unit_inference;
 mod recursive_type;
 mod tuple_unpacking;
 
-pub fn type_inference<'cx>(agrammar: AGrammar<'cx>) -> Partial<TGrammar<'cx>> {
+pub fn type_inference<'a, 'b>(agrammar: AGrammar<'a, 'b>) -> Partial<TGrammar<'a, 'b>> {
   let grammar = TGrammar::typed_grammar(agrammar);
   let grammar = UnitInference::infer(grammar);
   RecursiveType::analyse(grammar).map(|grammar|

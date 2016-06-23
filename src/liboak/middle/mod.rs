@@ -23,7 +23,7 @@ pub use front::ast::FGrammar;
 pub mod analysis;
 pub mod typing;
 
-pub fn analyse<'cx>(cx: &'cx ExtCtxt, fgrammar: FGrammar) -> Partial<TGrammar<'cx>> {
+pub fn typecheck<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<TGrammar<'a, 'b>> {
   Partial::Value(fgrammar)
     .and_then(|grammar| at_least_one_rule_declared(cx, grammar))
     .and_then(|grammar| analysis::analyse(cx, grammar))
