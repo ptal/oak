@@ -73,12 +73,10 @@ fn parse<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, grammar_name: rust::Ident,
   let ast = parser.parse_grammar();
   let ast = unwrap_parser_ast(cx, ast);
   let cx: &'a rust::ExtCtxt = cx;
-  let grammar = middle::typecheck(cx, ast);
-  rust::DummyResult::any(rust::DUMMY_SP)
-  // middle::analyse(cx, ast)
-  //   .and_next(|ast| back::compile(cx, ast))
-  //   .unwrap_or_else(|| {
-  //     abort_if_errors(cx);
-  //     rust::DummyResult::any(rust::DUMMY_SP)
-  //   })
+  middle::typecheck(cx, ast)
+    .and_next(|ast| back::compile(ast))
+    .unwrap_or_else(|| {
+      abort_if_errors(cx);
+      rust::DummyResult::any(rust::DUMMY_SP)
+    })
 }

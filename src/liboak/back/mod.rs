@@ -26,9 +26,16 @@ mod code_printer;
 // mod code_gen;
 // mod sum_type;
 
-// use monad::partial::Partial;
+use middle::typing::ast::*;
+use rust;
 // use back::code_gen::*;
 // use back::sum_type::*;
 // use back::type_gen::*;
 // use rust;
 // use rust::ExtCtxt;
+
+pub fn compile<'a, 'b>(grammar: TGrammar<'a, 'b>)
+  -> Partial<Box<rust::MacResult + 'a>>
+{
+  Partial::Value(compiler::grammar::GrammarCompiler::compile(grammar))
+}
