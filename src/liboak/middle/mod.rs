@@ -34,8 +34,8 @@ fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<FGram
   if fgrammar.rules.len() == 0 {
     cx.parse_sess.span_diagnostic.err(
       "At least one rule must be declared.");
-    Partial::Value(fgrammar)
-  } else {
     Partial::Nothing
+  } else {
+    Partial::Value(fgrammar)
   }
 }
