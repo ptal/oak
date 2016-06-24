@@ -18,17 +18,14 @@
 
 pub use str_stream::*;
 pub use stream::*;
-pub use parse_success::*;
-pub use parse_error::*;
+// pub use parse_success::*;
+// pub use parse_error::*;
 pub use parse_state::*;
-pub use combinators::*;
+// pub use combinators::*;
 
 pub mod str_stream;
-pub mod parse_success;
-pub mod parse_error;
+// pub mod parse_success;
+// pub mod parse_error;
 pub mod parse_state;
-pub mod combinators;
+// pub mod combinators;
 pub mod stream;
-
-/// Represents a final result from a parsing state. It is obtained with `ParseState::into_result`. `ParseError<S>` represents the expected items to continue the parsing, it is available even in case of success.
-pub type ParseResult<S, T> = Result<(ParseSuccess<S, T>, ParseError<S>), ParseError<S>>;

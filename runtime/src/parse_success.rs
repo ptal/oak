@@ -16,16 +16,6 @@
 
 use HasNext;
 
-/// Type `ParseSuccess` contains information of a successful parsing state.
-#[derive(Debug)]
-pub struct ParseSuccess<S, T>
-{
-  /// The current stream that can be partially or fully consumed.
-  pub stream: S,
-  /// AST built from items read in `stream` that are before the current state of `stream`. It does not necessarily contains `data` built from the beginning of `stream` since it depends on the state in which `stream` was before starting the parsing.
-  pub data: T
-}
-
 impl<S, T> ParseSuccess<S, T>
 {
   #[inline]
@@ -48,19 +38,6 @@ impl<S, T> ParseSuccess<S, T>
   }
 }
 
-impl<S, T> ParseSuccess<S, T> where
- S: HasNext
-{
-  /// Returns `true` if `stream` is entirely consumed.
-  pub fn full_read(&self) -> bool {
-    !self.stream.has_next()
-  }
-
-  /// Returns `true` if `stream` still contains at least one item.
-  pub fn partial_read(&self) -> bool {
-    !self.full_read()
-  }
-}
 
 impl<S> ParseSuccess<S, ()>
 {

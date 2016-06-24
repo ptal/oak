@@ -43,12 +43,14 @@ fn test_data_directory()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  test_engine.register("ntcc", Box::new(|content|
-    ntcc::recognize_ntcc(content.stream())));
-  test_engine.register("type_name", Box::new(|content|
-    type_name::recognize_type_names(content.stream())));
-  test_engine.register("calc", Box::new(|content|
-    calc::recognize_program(content.stream())));
+  // test_engine.register("ntcc", Box::new(|content|
+  //   ntcc::recognize_ntcc(content.into_state())));
+  // test_engine.register("type_name", Box::new(|content|
+  //   type_name::recognize_type_names(content.into_state())));
+  // test_engine.register("calc", Box::new(|content|
+  //   calc::recognize_program(content.into_state())));
+  test_engine.register("str_literal", Box::new(|content|
+    str_literal::recognize_return_kw(content.into_state())));
 
   test_engine.run();
 }

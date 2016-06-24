@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod ntcc;
-pub mod type_name;
-pub mod calc;
-pub mod recursive_type;
+// pub mod ntcc;
+// pub mod type_name;
+// pub mod calc;
+// pub mod recursive_type;
+pub mod combinators_test;
+
+pub use grammars::combinators_test::*;

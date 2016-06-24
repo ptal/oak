@@ -23,10 +23,7 @@ use std::fmt::{Formatter, Display, Error};
 #[derive(Clone, Debug)]
 pub struct ParseError<S>
 {
-  /// The farthest read into the stream at which we encountered an error.
-  pub farthest_read: S,
-  /// Expected items at position `farthest_read`. Duplicate entries are possible.
-  pub expected: Vec<&'static str>
+
 }
 
 impl<S> ParseError<S>
@@ -82,20 +79,6 @@ impl<S> ParseError<S> where
     }
   }
 }
-
-/// Prints an error message of the form: ```1:1: unexpected `a+1`, expecting `(` or `["0-9"]`.``` where `1:1` is the line and the column where the error occurred.
-impl<S> Display for ParseError<S> where
- S: Location + CodeSnippet
-{
-  fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
-    let location = self.farthest_read.location();
-    let expected = self.expected_items();
-    let snippet = self.farthest_read.code_snippet(10usize);
-    formatter.write_fmt(
-      format_args!("{}: unexpected `{}`, expecting {}.", location, snippet, expected))
-  }
-}
-
 
 #[cfg(test)]
 mod test {
