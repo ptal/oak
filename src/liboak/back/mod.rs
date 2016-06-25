@@ -21,6 +21,12 @@ mod compiler;
 mod name_factory;
 mod code_printer;
 
+mod grammar;
+mod rule;
+mod str_literal;
+mod sequence;
+
+
 // mod function;
 // mod type_gen;
 // mod code_gen;
@@ -37,5 +43,5 @@ use rust;
 pub fn compile<'a, 'b>(grammar: TGrammar<'a, 'b>)
   -> Partial<Box<rust::MacResult + 'a>>
 {
-  Partial::Value(compiler::grammar::GrammarCompiler::compile(grammar))
+  Partial::Value(grammar::GrammarCompiler::compile(grammar))
 }

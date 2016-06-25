@@ -12,56 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub struct Context<'a>
+use back::compiler::*;
+
+pub struct StrLiteralCompiler
 {
-  grammar: &'a TGrammar<'a>,
-  variables: Vec<Ident>,
-  continuation_success: Box<CompileCombinator>,
-  continuation_failure: Box<CompileCombinator>
+  literal: String
 }
 
-pub trait CompileCombinator
+impl StrLiteralCompiler
 {
-  fn compile_combinator<'a>(self, context: Context<'a>) -> RExpr;
-}
-
-
-struct Sequence
-{
-  grammar: TGrammar,
-  sequence: Vec<usize>
-}
-
-impl CompileCombinator for Sequence
-{
-  fn compile_combinator<'a>(self, mut success_cont: RExpr, failure_cont: RExpr, ident: &mut Vec<Ident>) -> RExpr {
-    for idx in self.seq.rev() {
-      success_cont = compile_combinator(idx, success_cont, failure_cont.clone(), ident);
+  pub fn recognizer(literal: String) -> StrLiteralCompiler {
+    StrLiteralCompiler {
+      literal: literal
     }
-    success_cont
+  }
+
+  pub fn parser(literal: String) -> StrLiteralCompiler {
+    StrLiteralCompiler::recognizer(literal)
   }
 }
 
-struct Choice
+impl CompileExpr for StrLiteralCompiler
 {
-  grammar: TGrammar,
-  choice: Vec<usize>
-}
-
-impl CompileCombinator for Choice
-{
-  fn compile_combinator<'a>(self, mut success_cont: RExpr, failure_cont: RExpr, ident: &mut Vec<Ident>) -> RExpr {
-    let mark = self.gen_mark_name();
-    for idx in self.choice.rev() {
-      failure_cont = quote_expr!(self.cx,
-        state.restore($mark);
-        $failure_cont
-      );
-      failure_cont = compile_combinator(idx, success_cont, failure_cont, &mut ident.clone());
-    }
-    quote_expr!(self.cx,
-      let $mark = state.mark();
-      $failure_cont
-    )
+  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
+    let lit = self.literal.as_str();
+    let success = context.success;
+    let failure = context.failure;
+    quote_expr!(context.grammar.cx,
+      if state.consume_prefix($lit) {
+        $success
+      }
+      else {
+        state.error($lit);
+        $failure
+      })
   }
 }

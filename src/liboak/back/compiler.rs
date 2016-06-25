@@ -14,13 +14,8 @@
 
 pub use middle::typing::ast::*;
 pub use back::name_factory::*;
-use back::compiler::str_literal::*;
-use back::compiler::sequence::*;
-
-pub mod grammar;
-mod rule;
-mod str_literal;
-mod sequence;
+use back::str_literal::*;
+use back::sequence::*;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
 {

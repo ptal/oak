@@ -14,7 +14,7 @@
 
 use back::compiler::*;
 use back::code_printer::*;
-use back::compiler::rule::*;
+use back::rule::*;
 use rust;
 
 pub struct GrammarCompiler<'a, 'b: 'a>
