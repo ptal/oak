@@ -159,6 +159,15 @@ impl ExpressionInfo
     }
   }
 
+  pub fn eq_tuple_indexes(&self, indexes: &Vec<usize>) -> bool {
+    if let Tuple(ref self_indexes) = self.ty {
+      self_indexes == indexes
+    }
+    else {
+      false
+    }
+  }
+
   pub fn expr_of_projection(&self) -> usize {
     self.tuple_indexes().expect("Expected a projection type `Tuple(vec![i])`.")[0]
   }

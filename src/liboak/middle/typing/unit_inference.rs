@@ -131,18 +131,24 @@ impl<'a, 'b> Visitor<()> for UnitInference<'a, 'b>
 impl<'a, 'b> UnitInference<'a, 'b>
 {
   fn invisible(&mut self, expr_idx: usize) {
-    self.grammar[expr_idx].to_invisible_type();
-    self.reached_fixpoint = false;
+    if !self.grammar[expr_idx].is_invisible() {
+      self.grammar[expr_idx].to_invisible_type();
+      self.reached_fixpoint = false;
+    }
   }
 
   fn unit(&mut self, expr_idx: usize) {
-    self.grammar[expr_idx].to_unit_type();
-    self.reached_fixpoint = false;
+    if !self.grammar[expr_idx].ty.is_unit() {
+      self.grammar[expr_idx].to_unit_type();
+      self.reached_fixpoint = false;
+    }
   }
 
   fn tuple(&mut self, expr_idx: usize, indexes: Vec<usize>) {
-    self.grammar[expr_idx].to_tuple_type(indexes);
-    self.reached_fixpoint = false;
+    if !self.grammar[expr_idx].eq_tuple_indexes(&indexes) {
+      self.grammar[expr_idx].to_tuple_type(indexes);
+      self.reached_fixpoint = false;
+    }
   }
 
   fn propagate_unit(&mut self, source: usize, target: usize) {

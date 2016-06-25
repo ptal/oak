@@ -58,6 +58,8 @@ fn test_data_directory()
   //   calc::recognize_program(content.into_state())));
   test_engine.register("combinators", Some(format!("str_literal")), Box::new(
     |s| combinators::recognize_str_literal(s)));
+  test_engine.register("combinators", Some(format!("sequence")), Box::new(
+    |s| combinators::recognize_sequence(s)));
 
   test_engine.run();
 }

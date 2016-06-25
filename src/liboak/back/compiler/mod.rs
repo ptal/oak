@@ -15,10 +15,12 @@
 pub use middle::typing::ast::*;
 pub use back::name_factory::*;
 use back::compiler::str_literal::*;
+use back::compiler::sequence::*;
 
 pub mod grammar;
 mod rule;
 mod str_literal;
+mod sequence;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
 {
@@ -52,10 +54,10 @@ pub trait CompileParser
 pub fn expression_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileParser> {
   match grammar.expr_by_index(idx) {
     StrLiteral(lit) => Box::new(StrLiteralCompiler::new(lit)),
+    Sequence(seq) => Box::new(SequenceCompiler::new(seq)),
     _ => unimplemented!()
     // AnySingleChar =>
     // NonTerminalSymbol(id) =>
-    // Sequence(seq) =>
     // Choice(choices) =>
     // ZeroOrMore(expr) =>
     // OneOrMore(expr) =>

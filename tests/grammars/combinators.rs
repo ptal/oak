@@ -18,4 +18,6 @@ grammar! combinators {
   #![debug_api]
 
   str_literal = "return"
+
+  sequence = "if" " " "then" " " "else"
 }
