@@ -19,7 +19,7 @@ use rust::{FunctionRetTy, AstBuilder};
 use middle::typing::ast::*;
 use middle::typing::ast::ExprTy::*;
 
-struct TypeCompiler<'a: 'c, 'b: 'a, 'c>
+pub struct TypeCompiler<'a: 'c, 'b: 'a, 'c>
 {
   grammar: &'c TGrammar<'a, 'b>
 }

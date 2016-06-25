@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Bottom-up inference of tuple types. It will unpack every possible tuple type, therefore type of the form `(T1, (T2, T3))` are flatten into `(T1, T2, T3)`. This transformation always terminates since we checked for recursive type in the `typing::recursive_type` analysis.
+//! Bottom-up inference of tuple types. It will unpack every possible tuple type, therefore type of the form `(T1, (T2, T3))` are flatten into `(T1, T2, T3)`. This transformation always terminates since we checked for recursive type in the `typing::recursive_type` analysis. It also eliminates "forwarding types" of the form `Tuple(vec![idx])` when `idx` points to a tuple type. It is only kept if `idx` points to a identity or action type.
 
 use middle::typing::ast::*;
 
