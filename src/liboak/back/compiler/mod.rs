@@ -45,16 +45,38 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
   }
 }
 
-pub trait CompileParser
+pub trait CompileExpr
 {
-  fn compile_parser<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
-  fn compile_recognizer<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
+  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
 }
 
-pub fn expression_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileParser> {
+pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
+  if grammar[idx].ty.is_unit() {
+    recognizer_compiler(grammar, idx)
+  }
+  else {
+    match grammar.expr_by_index(idx) {
+      StrLiteral(lit) => Box::new(StrLiteralCompiler::parser(lit)),
+      Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
+      _ => unimplemented!()
+      // AnySingleChar =>
+      // NonTerminalSymbol(id) =>
+      // Choice(choices) =>
+      // ZeroOrMore(expr) =>
+      // OneOrMore(expr) =>
+      // Optional(expr) =>
+      // NotPredicate(expr) =>
+      // AndPredicate(expr) =>
+      // CharacterClass(char_class) =>
+      // SemanticAction(expr, id) =>
+    }
+  }
+}
+
+pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   match grammar.expr_by_index(idx) {
-    StrLiteral(lit) => Box::new(StrLiteralCompiler::new(lit)),
-    Sequence(seq) => Box::new(SequenceCompiler::new(seq)),
+    StrLiteral(lit) => Box::new(StrLiteralCompiler::recognizer(lit)),
+    Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
     _ => unimplemented!()
     // AnySingleChar =>
     // NonTerminalSymbol(id) =>

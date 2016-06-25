@@ -16,35 +16,39 @@ use back::compiler::*;
 
 pub struct SequenceCompiler
 {
-  seq: Vec<usize>
+  seq: Vec<usize>,
+  compiler: fn(&TGrammar, usize) -> Box<CompileExpr>
 }
 
 impl SequenceCompiler
 {
-  pub fn new(seq: Vec<usize>) -> SequenceCompiler {
+  pub fn recognizer(seq: Vec<usize>) -> SequenceCompiler {
     SequenceCompiler {
-      seq: seq
+      seq: seq,
+      compiler: recognizer_compiler
+    }
+  }
+
+  pub fn parser(seq: Vec<usize>) -> SequenceCompiler {
+    SequenceCompiler {
+      seq: seq,
+      compiler: parser_compiler
     }
   }
 }
 
-impl CompileParser for SequenceCompiler
+impl CompileExpr for SequenceCompiler
 {
-  fn compile_parser<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
-    self.compile_recognizer(context)
-  }
-
-  fn compile_recognizer<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
+  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
     let mut success = context.success;
     let failure = context.failure;
     let grammar = context.grammar;
     let name_factory = context.name_factory;
 
     for idx in self.seq.iter().rev().cloned() {
-      let expr_compiler = expression_compiler(grammar, idx);
-      success = expr_compiler.compile_recognizer(Context::new(
-        grammar, name_factory, success, failure.clone()
-      ))
+      let compiler = (self.compiler)(grammar, idx);
+      success = compiler.compile_expr(Context::new(
+        grammar, name_factory, success, failure.clone()));
     }
     success
   }

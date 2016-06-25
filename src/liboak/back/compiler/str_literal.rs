@@ -21,20 +21,20 @@ pub struct StrLiteralCompiler
 
 impl StrLiteralCompiler
 {
-  pub fn new(literal: String) -> StrLiteralCompiler {
+  pub fn recognizer(literal: String) -> StrLiteralCompiler {
     StrLiteralCompiler {
       literal: literal
     }
   }
+
+  pub fn parser(literal: String) -> StrLiteralCompiler {
+    StrLiteralCompiler::recognizer(literal)
+  }
 }
 
-impl CompileParser for StrLiteralCompiler
+impl CompileExpr for StrLiteralCompiler
 {
-  fn compile_parser<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
-    self.compile_recognizer(context)
-  }
-
-  fn compile_recognizer<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
+  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
     let lit = self.literal.as_str();
     let success = context.success;
     let failure = context.failure;

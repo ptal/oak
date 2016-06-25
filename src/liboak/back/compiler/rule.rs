@@ -38,7 +38,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
 
   fn compile_recognizer(&self, name_factory: &mut NameFactory) -> RItem {
     let recognizer_fn_name = name_factory.recognizer_name(self.cx(), self.rule.ident());
-    let expr_compiler = expression_compiler(&self.grammar, self.rule.expr_idx);
+    let compiler = recognizer_compiler(&self.grammar, self.rule.expr_idx);
     let success =
       if self.grammar[self.rule.expr_idx].ty.is_unit() {
         quote_expr!(self.cx(), state.success(()))
@@ -54,7 +54,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
         state
       )
     );
-    let recognizer_body = expr_compiler.compile_recognizer(context);
+    let recognizer_body = compiler.compile_expr(context);
     let unit_ty = quote_ty!(self.cx(), ());
     self.function(recognizer_fn_name, recognizer_body, unit_ty)
   }
