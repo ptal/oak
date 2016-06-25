@@ -16,7 +16,6 @@
 
 //! It generates a recognizer and parser function for each rules. It builds the result value and type with the information provided by the AST.
 
-// mod ast;
 mod compiler;
 mod name_factory;
 mod code_printer;
@@ -27,19 +26,8 @@ mod rule;
 mod str_literal;
 mod sequence;
 
-
-// mod function;
-// mod type_gen;
-// mod code_gen;
-// mod sum_type;
-
 use middle::typing::ast::*;
 use rust;
-// use back::code_gen::*;
-// use back::sum_type::*;
-// use back::type_gen::*;
-// use rust;
-// use rust::ExtCtxt;
 
 pub fn compile<'a, 'b>(grammar: TGrammar<'a, 'b>)
   -> Partial<Box<rust::MacResult + 'a>>
