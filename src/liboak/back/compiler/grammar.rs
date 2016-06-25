@@ -45,7 +45,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
       {
         // #![allow(dead_code)]
         // #![allow(unused_parens, unused_variables, unused_mut, unused_imports)]
-        // use oak_runtime::parse_state::MergeSuccess;
+        use oak_runtime::stream::*;
 
         $module_content
       }

@@ -41,10 +41,10 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     let expr_compiler = expression_compiler(&self.grammar, self.rule.expr_idx);
     let success =
       if self.grammar[self.rule.expr_idx].ty.is_unit() {
-        quote_expr!(self.cx(), state)
+        quote_expr!(self.cx(), state.success(()))
       }
       else {
-        quote_expr!(self.cx(), state)//state.to_data($data))
+        quote_expr!(self.cx(), state)//state.success($data))
       };
     let context = Context::new(
       &self.grammar,

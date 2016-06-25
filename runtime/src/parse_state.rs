@@ -151,6 +151,17 @@ impl<S, T> ParseState<S, T> where
     }
   }
 
+  // TODO: find a way to specialize success when U = T.
+  #[inline]
+  pub fn success<U>(self, data: U) -> ParseState<S, U> {
+    ParseState {
+      farthest_read: self.farthest_read,
+      expected: self.expected,
+      current: self.current,
+      data: Some(data)
+    }
+  }
+
   /// Transforms `self` into a more usable `ParseResult` value. It is useful when the state is terminal or if the state will not be further transformed.
   pub fn into_result(self) -> ParseResult<S, T> {
     let expectation = ParseExpectation::new(self.farthest_read, self.expected);
