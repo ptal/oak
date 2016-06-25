@@ -162,6 +162,15 @@ impl<S, T> ParseState<S, T> where
     }
   }
 
+  pub fn failure<U>(self) -> ParseState<S, U> {
+    ParseState {
+      farthest_read: self.farthest_read,
+      expected: self.expected,
+      current: self.current,
+      data: None
+    }
+  }
+
   /// Transforms `self` into a more usable `ParseResult` value. It is useful when the state is terminal or if the state will not be further transformed.
   pub fn into_result(self) -> ParseResult<S, T> {
     let expectation = ParseExpectation::new(self.farthest_read, self.expected);
@@ -180,6 +189,16 @@ impl<S, T> ParseState<S, T> where
     }
   }
 }
+
+impl<S, T, I> Iterator for ParseState<S, T> where
+ S: Iterator<Item=I>
+{
+  type Item = I;
+  fn next(&mut self) -> Option<Self::Item> {
+    self.current.next()
+  }
+}
+
 
 impl<S, T, P> ConsumePrefix<P> for ParseState<S, T> where
   S: ConsumePrefix<P>

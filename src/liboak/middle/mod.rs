@@ -27,7 +27,7 @@ pub fn typecheck<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<TGr
   Partial::Value(fgrammar)
     .and_then(|grammar| at_least_one_rule_declared(cx, grammar))
     .and_then(|grammar| analysis::analyse(cx, grammar))
-    .and_then(|grammar| {println!("typing"); typing::type_inference(grammar)})
+    .and_then(|grammar| typing::type_inference(grammar))
 }
 
 fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<FGrammar> {

@@ -25,6 +25,7 @@ mod grammar;
 mod rule;
 mod str_literal;
 mod sequence;
+mod any_single_char;
 
 use middle::typing::ast::*;
 use rust;

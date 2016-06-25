@@ -43,14 +43,14 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     let fn_name = self.recognizer_name(name_factory);
     let success = quote_expr!(self.cx(), state.success(()));
     let body = self.compile_expr(name_factory, recognizer_compiler, success);
-    self.function(fn_name, true, body)
+    self.unit_function(fn_name, true, body)
   }
 
   fn compile_parser(&self, name_factory: &mut NameFactory) -> RItem {
     let fn_name = self.parser_name(name_factory);
     if self.parser_equals_recognizer() {
       let recognizer_fn = self.recognizer_name(name_factory);
-      self.function(fn_name, false,
+      self.unit_function(fn_name, false,
         quote_expr!(self.cx(), $recognizer_fn(state)))
     }
     else {
@@ -59,7 +59,8 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
       let success = quote_expr!(self.cx(), state.success($value));
       let body = self.compile_expr(name_factory, parser_compiler, success);
       name_factory.close_namespace();
-      self.function(fn_name, true, body)
+      let ty = TypeCompiler::compile(self.grammar, self.rule.expr_idx);
+      self.function(fn_name, true, body, ty)
     }
   }
 
@@ -71,7 +72,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
       &self.grammar,
       name_factory,
       success,
-      quote_expr!(self.cx(), state)
+      quote_expr!(self.cx(), state.failure())
     );
     compiler.compile_expr(context)
   }
@@ -93,9 +94,12 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     name_factory.open_namespace(self.grammar.cx, cardinality)
   }
 
+  fn unit_function(&self, name: Ident, state_mut: bool, body: RExpr) -> RItem {
+    self.function(name, state_mut, body, quote_ty!(self.cx(), ()))
+  }
+
   #[allow(unused_imports)] // `quote_tokens` generates a warning.
-  fn function(&self, name: Ident, state_mut: bool, body: RExpr) -> RItem {
-    let ty = TypeCompiler::compile(self.grammar, self.rule.expr_idx);
+  fn function(&self, name: Ident, state_mut: bool, body: RExpr, ty: RTy) -> RItem {
     let mut_kw = if state_mut {
       Some(quote_tokens!(self.cx(), mut))
     } else {

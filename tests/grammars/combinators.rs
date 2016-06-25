@@ -20,4 +20,6 @@ grammar! combinators {
   str_literal = "return"
 
   sequence = "if" " " "then" " " "else"
+
+  any_single_char = . .
 }

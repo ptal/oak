@@ -24,11 +24,8 @@ mod recursive_type;
 mod tuple_unpacking;
 
 pub fn type_inference<'a, 'b>(agrammar: AGrammar<'a, 'b>) -> Partial<TGrammar<'a, 'b>> {
-  println!("naive typing...");
   let grammar = TGrammar::typed_grammar(agrammar);
-  println!("unit inference...");
   let grammar = UnitInference::infer(grammar);
-  println!("recursive type analysis...");
   RecursiveType::analyse(grammar).map(|grammar|
     TupleUnpacking::infer(grammar)
   )
