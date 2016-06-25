@@ -45,6 +45,8 @@ pub trait CompileExpr
   fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
 }
 
+pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;
+
 pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   if grammar[idx].ty.is_unit() {
     recognizer_compiler(grammar, idx)

@@ -15,12 +15,21 @@
 //! Generates Rust value from Oak expression.
 
 use middle::typing::ast::*;
+use rust::AstBuilder;
 
 pub fn tuple_value<'a, 'b>(grammar: &TGrammar<'a, 'b>, expr_idx: usize, values_names: Vec<Ident>) -> RExpr
 {
-  let span = self.grammar[expr_idx].span;
-  let values = values_names.into_iter()
-    .map(|name| quote_expr!(self.grammar.cx, $name))
+  let span = grammar[expr_idx].span;
+  let values: Vec<_> = values_names.into_iter()
+    .map(|name| quote_expr!(grammar.cx, $name))
     .collect();
-  self.grammar.cx.expr_tuple(span, values)
+  if values.len() == 0 {
+    quote_expr!(grammar.cx, ())
+  }
+  else if values.len() == 1 {
+    values[0].clone()
+  }
+  else {
+    grammar.cx.expr_tuple(span, values)
+  }
 }

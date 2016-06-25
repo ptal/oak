@@ -21,6 +21,7 @@ mod compiler;
 mod name_factory;
 mod code_printer;
 mod rtype;
+mod value;
 mod grammar;
 mod rule;
 mod str_literal;

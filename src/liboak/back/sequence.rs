@@ -17,7 +17,7 @@ use back::compiler::*;
 pub struct SequenceCompiler
 {
   seq: Vec<usize>,
-  compiler: fn(&TGrammar, usize) -> Box<CompileExpr>
+  compiler: ExprCompilerFn
 }
 
 impl SequenceCompiler

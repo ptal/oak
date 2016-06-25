@@ -13,6 +13,8 @@
 // limitations under the License.
 
 use back::compiler::*;
+use back::rtype::*;
+use back::value::*;
 
 pub struct RuleCompiler<'a: 'c, 'b: 'a, 'c>
 {
@@ -25,7 +27,8 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
   pub fn compile(grammar: &'c TGrammar<'a, 'b>, rule: Rule, name_factory: &mut NameFactory) -> Vec<RItem> {
     let compiler = RuleCompiler::new(grammar, rule);
     vec![
-      compiler.compile_recognizer(name_factory)
+      compiler.compile_recognizer(name_factory),
+      compiler.compile_parser(name_factory)
     ]
   }
 
@@ -37,32 +40,70 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
   }
 
   fn compile_recognizer(&self, name_factory: &mut NameFactory) -> RItem {
-    let recognizer_fn_name = name_factory.recognizer_name(self.cx(), self.rule.ident());
-    let compiler = recognizer_compiler(&self.grammar, self.rule.expr_idx);
-    let success =
-      if self.grammar[self.rule.expr_idx].ty.is_unit() {
-        quote_expr!(self.cx(), state.success(()))
-      }
-      else {
-        quote_expr!(self.cx(), state)//state.success($data))
-      };
+    let fn_name = self.recognizer_name(name_factory);
+    let success = quote_expr!(self.cx(), state.success(()));
+    let body = self.compile_expr(name_factory, recognizer_compiler, success);
+    self.function(fn_name, true, body)
+  }
+
+  fn compile_parser(&self, name_factory: &mut NameFactory) -> RItem {
+    let fn_name = self.parser_name(name_factory);
+    if self.parser_equals_recognizer() {
+      let recognizer_fn = self.recognizer_name(name_factory);
+      self.function(fn_name, false,
+        quote_expr!(self.cx(), $recognizer_fn(state)))
+    }
+    else {
+      let values_names = self.open_namespace(name_factory);
+      let value = tuple_value(self.grammar, self.rule.expr_idx, values_names);
+      let success = quote_expr!(self.cx(), state.success($value));
+      let body = self.compile_expr(name_factory, parser_compiler, success);
+      name_factory.close_namespace();
+      self.function(fn_name, true, body)
+    }
+  }
+
+  fn compile_expr(&self, name_factory: &mut NameFactory,
+    compiler_fn: ExprCompilerFn, success: RExpr) -> RExpr
+  {
+    let compiler = compiler_fn(&self.grammar, self.rule.expr_idx);
     let context = Context::new(
       &self.grammar,
       name_factory,
       success,
-      quote_expr!(self.cx(),
-        state
-      )
+      quote_expr!(self.cx(), state)
     );
-    let recognizer_body = compiler.compile_expr(context);
-    let unit_ty = quote_ty!(self.cx(), ());
-    self.function(recognizer_fn_name, recognizer_body, unit_ty)
+    compiler.compile_expr(context)
   }
 
-  fn function(&self, name: Ident, body: RExpr, ty: RTy) -> RItem {
+  fn parser_equals_recognizer(&self) -> bool {
+    self.grammar[self.rule.expr_idx].ty.is_unit()
+  }
+
+  fn parser_name(&self, name_factory: &mut NameFactory) -> Ident {
+    name_factory.parser_name(self.cx(), self.rule.ident())
+  }
+
+  fn recognizer_name(&self, name_factory: &mut NameFactory) -> Ident {
+    name_factory.recognizer_name(self.cx(), self.rule.ident())
+  }
+
+  fn open_namespace(&self, name_factory: &mut NameFactory) -> Vec<Ident> {
+    let cardinality = self.grammar[self.rule.expr_idx].type_cardinality();
+    name_factory.open_namespace(self.grammar.cx, cardinality)
+  }
+
+  #[allow(unused_imports)] // `quote_tokens` generates a warning.
+  fn function(&self, name: Ident, state_mut: bool, body: RExpr) -> RItem {
+    let ty = TypeCompiler::compile(self.grammar, self.rule.expr_idx);
+    let mut_kw = if state_mut {
+      Some(quote_tokens!(self.cx(), mut))
+    } else {
+      None
+    };
     quote_item!(self.cx(),
       #[inline]
-      pub fn $name<S>(mut state: oak_runtime::ParseState<S, ()>) -> oak_runtime::ParseState<S, $ty> where
+      pub fn $name<S>($mut_kw state: oak_runtime::ParseState<S, ()>) -> oak_runtime::ParseState<S, $ty> where
        S: oak_runtime::CharStream
       {
         $body

@@ -171,6 +171,10 @@ impl ExpressionInfo
   pub fn expr_of_projection(&self) -> usize {
     self.tuple_indexes().expect("Expected a projection type `Tuple(vec![i])`.")[0]
   }
+
+  pub fn type_cardinality(&self) -> usize {
+    self.ty.cardinality()
+  }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -212,5 +216,13 @@ impl ExprTy
 
   pub fn unit() -> ExprTy {
     Tuple(vec![])
+  }
+
+  pub fn cardinality(&self) -> usize {
+    match *self {
+      Identity => 1,
+      Action(_) => 1,
+      Tuple(ref indexes) => indexes.len()
+    }
   }
 }
