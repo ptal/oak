@@ -22,4 +22,8 @@ grammar! combinators {
   sequence = "if" " " "then" " " "else"
 
   any_single_char = . .
+
+  choice = "if" . "else" .
+         / "let" . .
+         / "if " ("-" . / .) " else " ("-" . / "+" .)
 }

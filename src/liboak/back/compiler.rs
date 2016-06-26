@@ -16,6 +16,7 @@ pub use middle::typing::ast::*;
 pub use back::name_factory::*;
 use back::str_literal::*;
 use back::sequence::*;
+use back::choice::*;
 use back::any_single_char::*;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
@@ -57,9 +58,9 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       StrLiteral(lit) => Box::new(StrLiteralCompiler::parser(lit)),
       Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
       AnySingleChar => Box::new(AnySingleCharCompiler::parser()),
+      Choice(choices) => Box::new(ChoiceCompiler::parser(choices)),
       _ => unimplemented!()
       // NonTerminalSymbol(id) =>
-      // Choice(choices) =>
       // ZeroOrMore(expr) =>
       // OneOrMore(expr) =>
       // Optional(expr) =>
@@ -76,9 +77,9 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     StrLiteral(lit) => Box::new(StrLiteralCompiler::recognizer(lit)),
     Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
     AnySingleChar => Box::new(AnySingleCharCompiler::recognizer()),
+      Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
-    // Choice(choices) =>
     // ZeroOrMore(expr) =>
     // OneOrMore(expr) =>
     // Optional(expr) =>

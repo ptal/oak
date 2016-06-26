@@ -67,8 +67,27 @@ impl NameFactory
   }
 
   fn current_namespace<'a>(&'a mut self) -> &'a mut Namespace {
-    let len = self.namespaces.len();
-    &mut self.namespaces[len - 1]
+    assert!(self.namespaces.len() > 0,
+      "current_namespace: There is no namespace opened.");
+    let last = self.namespaces.len() - 1;
+    &mut self.namespaces[last]
+  }
+
+  pub fn save_namespace(&self) -> Option<Namespace> {
+    if self.namespaces.len() == 0 {
+      None
+    }
+    else {
+      let last = self.namespaces.len() - 1;
+      Some(self.namespaces[last].clone())
+    }
+  }
+
+  pub fn restore_namespace(&mut self, namespace: Option<Namespace>) {
+    if let Some(namespace) = namespace {
+      let last = self.namespaces.len() - 1;
+      self.namespaces[last] = namespace;
+    }
   }
 
   fn ident_of(&self, cx: &ExtCtxt, name: String) -> Ident {

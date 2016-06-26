@@ -1,0 +1,6 @@
+if else!
+let x
+if x else -y
+if -x else +y
+if -x else -y
+if x else +y

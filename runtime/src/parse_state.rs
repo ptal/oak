@@ -171,6 +171,14 @@ impl<S, T> ParseState<S, T> where
     }
   }
 
+  pub fn mark(&self) -> S {
+    self.current.clone()
+  }
+
+  pub fn restore(&mut self, mark: S) {
+    self.current = mark;
+  }
+
   /// Transforms `self` into a more usable `ParseResult` value. It is useful when the state is terminal or if the state will not be further transformed.
   pub fn into_result(self) -> ParseResult<S, T> {
     let expectation = ParseExpectation::new(self.farthest_read, self.expected);

@@ -55,6 +55,7 @@ impl CompileExpr for AnySingleCharCompiler
   }
 }
 
+#[allow(unused_imports)]
 fn ignore_value(cx: &ExtCtxt, _: &mut NameFactory) -> Vec<rust::TokenTree> {
   quote_tokens!(cx, _)
 }
