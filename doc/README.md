@@ -17,7 +17,7 @@ The code is available on [github](https://github.com/ptal/oak).
 
 | Expression      | Type                  | Precedence level | Description |
 | --------------- | --------------------- |----------------- | ----------- |
-| `"literal"`     | `()`                  | 0                | Match a string literal. |
+| `"literal"`     | `(^)`                 | 0                | Match a string literal. |
 | `.`             | `char`                | 0                | Match any single character. |
 | `["a-zA-Z-"]`   | `char`                | 0                | Match a character from one of the specified classes. |
 | `(e)`           | `T`                   | 0                | Group an expression. |

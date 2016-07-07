@@ -31,7 +31,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 {
   pub fn new(grammar: &'c TGrammar<'a, 'b>,
     name_factory: &'c mut NameFactory,
-    success: RExpr, failure: RExpr) -> Context<'a, 'b, 'c>
+    success: RExpr, failure: RExpr) -> Self
   {
     Context {
       grammar: grammar,
@@ -40,7 +40,67 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
       failure: failure
     }
   }
+
+  pub fn compile_success(mut self, compiler: ExprCompilerFn, idx: usize) -> Self {
+    let compiler = compiler(self.grammar, idx);
+    self.success = compiler.compile_expr(Context::new(
+      self.grammar, self.name_factory, self.success, self.failure.clone()));
+    self
+  }
+
+  pub fn compile_failure(mut self, compiler: ExprCompilerFn, idx: usize) -> Self {
+    let compiler = compiler(self.grammar, idx);
+    self.failure = compiler.compile_expr(Context::new(
+      self.grammar, self.name_factory, self.success.clone(), self.failure));
+    self
+  }
+
+  pub fn wrap_failure<F>(&mut self, f: F) where
+   F: FnOnce(&ExtCtxt) -> RStmt
+  {
+    let stmt = f(self.cx())
+      .expect("Statement in wrap_failure.");
+    self.failure = {
+      let failure = &self.failure;
+      quote_expr!(self.cx(), {
+        $stmt
+        $failure
+      })
+    }
+  }
+
+  pub fn unwrap<F>(self, f: F) -> RExpr where
+   F: FnOnce(&ExtCtxt, RExpr, RExpr) -> RExpr
+  {
+    f(self.cx(), self.success, self.failure)
+  }
+
+  pub fn unwrap_failure(self) -> RExpr {
+    self.failure
+  }
+
+  pub fn unwrap_success(self) -> RExpr {
+    self.success
+  }
+
+  pub fn next_mark_name(&mut self) -> Ident {
+    let cx = self.cx();
+    self.name_factory.next_mark_name(cx)
+  }
+
+  pub fn save_namespace(&self) -> Option<Namespace> {
+    self.name_factory.save_namespace()
+  }
+
+  pub fn restore_namespace(&mut self, namespace: Option<Namespace>) {
+    self.name_factory.restore_namespace(namespace)
+  }
+
+  pub fn cx(&self) -> &'a ExtCtxt<'b> {
+    &self.grammar.cx
+  }
 }
+
 
 pub trait CompileExpr
 {

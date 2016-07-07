@@ -35,40 +35,28 @@ impl ChoiceCompiler
       compiler: parser_compiler
     }
   }
-
-  fn compile<'a, 'b, 'c>(&self, expr_idx: usize, context: Context<'a, 'b, 'c>) -> RExpr {
-    let compiler = (self.compiler)(context.grammar, expr_idx);
-    compiler.compile_expr(context)
-  }
 }
 
 impl CompileExpr for ChoiceCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
-    let success = context.success;
-    let mut failure = context.failure;
-    let grammar = context.grammar;
-    let name_factory = context.name_factory;
+  fn compile_expr<'a, 'b, 'c>(&self, mut context: Context<'a, 'b, 'c>) -> RExpr {
     // Each branch of the choice must be compiled with the same data namespace.
-    let namespace = name_factory.save_namespace();
-    let mark_var = name_factory.next_mark_name(grammar.cx);
+    let namespace = context.save_namespace();
+    let mark_var = context.next_mark_name();
 
     let mut choices = self.choices.iter().rev().cloned();
-    failure = self.compile(choices.next().unwrap(), Context::new(
-      grammar, name_factory, success.clone(), failure));
+    context = context.compile_failure(self.compiler, choices.next().unwrap());
 
-    for idx in choices {
-      name_factory.restore_namespace(namespace.clone());
-      failure = quote_expr!(grammar.cx, {
+    context = choices.fold(context, |mut context, idx| {
+      context.restore_namespace(namespace.clone());
+      context.wrap_failure(|cx| quote_stmt!(cx,
         state.restore($mark_var.clone());
-        $failure
-      });
-      failure = self.compile(idx, Context::new(
-        grammar, name_factory, success.clone(), failure));
-    }
-    quote_expr!(grammar.cx, {
+      ));
+      context.compile_failure(self.compiler, idx)
+    });
+    context.wrap_failure(|cx| quote_stmt!(cx,
       let $mark_var = state.mark();
-      $failure
-    })
+    ));
+    context.unwrap_failure()
   }
 }

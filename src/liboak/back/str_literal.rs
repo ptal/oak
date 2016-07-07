@@ -36,15 +36,14 @@ impl CompileExpr for StrLiteralCompiler
 {
   fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
     let lit = self.literal.as_str();
-    let success = context.success;
-    let failure = context.failure;
-    quote_expr!(context.grammar.cx,
+    context.unwrap(|cx, success, failure| quote_expr!(cx,
       if state.consume_prefix($lit) {
         $success
       }
       else {
         state.error($lit);
         $failure
-      })
+      }
+    ))
   }
 }

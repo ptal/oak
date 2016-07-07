@@ -22,6 +22,8 @@ use std::fmt::{Formatter, Write, Display, Error};
 pub type RTy = rust::P<rust::Ty>;
 pub type RExpr = rust::P<rust::Expr>;
 pub type RItem = rust::P<rust::Item>;
+pub type RStmt = Option<rust::Spanned<rust::StmtKind>>;
+pub type RPat = rust::P<rust::Pat>;
 
 pub use rust::{ExtCtxt, Attribute, SpannedIdent};
 pub use monad::partial::Partial;

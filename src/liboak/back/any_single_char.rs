@@ -13,37 +13,44 @@
 // limitations under the License.
 
 use back::compiler::*;
-use rust;
 
 pub struct AnySingleCharCompiler
 {
-  matched_value: fn(&ExtCtxt, &mut NameFactory) -> Vec<rust::TokenTree>
+  matched_pattern: fn(&ExtCtxt, &mut NameFactory) -> RPat
 }
 
 impl AnySingleCharCompiler
 {
   pub fn recognizer() -> AnySingleCharCompiler {
     AnySingleCharCompiler {
-      matched_value: ignore_value
+      matched_pattern: AnySingleCharCompiler::ignore_value
     }
   }
 
   pub fn parser() -> AnySingleCharCompiler {
     AnySingleCharCompiler {
-      matched_value: bind_value
+      matched_pattern: AnySingleCharCompiler::bind_value
     }
+  }
+
+  #[allow(unused_imports)]
+  fn ignore_value(cx: &ExtCtxt, _: &mut NameFactory) -> RPat {
+    quote_pat!(cx, _)
+  }
+
+  fn bind_value(cx: &ExtCtxt, name_factory: &mut NameFactory) -> RPat {
+    let value_name = name_factory.next_data_name();
+    quote_pat!(cx, $value_name)
   }
 }
 
 impl CompileExpr for AnySingleCharCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
-    let success = context.success;
-    let failure = context.failure;
-    let value = (self.matched_value)(context.grammar.cx, context.name_factory);
-    quote_expr!(context.grammar.cx,
+  fn compile_expr<'a, 'b, 'c>(&self, mut context: Context<'a, 'b, 'c>) -> RExpr {
+    let pattern = (self.matched_pattern)(context.grammar.cx, context.name_factory);
+    context.unwrap(|cx, success, failure| quote_expr!(cx,
       match state.next() {
-        Some($value) => {
+        Some($pattern) => {
           $success
         }
         None => {
@@ -51,16 +58,6 @@ impl CompileExpr for AnySingleCharCompiler
           $failure
         }
       }
-    )
+    ))
   }
-}
-
-#[allow(unused_imports)]
-fn ignore_value(cx: &ExtCtxt, _: &mut NameFactory) -> Vec<rust::TokenTree> {
-  quote_tokens!(cx, _)
-}
-
-fn bind_value(cx: &ExtCtxt, name_factory: &mut NameFactory) -> Vec<rust::TokenTree> {
-  let value_name = name_factory.next_data_name();
-  quote_tokens!(cx, $value_name)
 }

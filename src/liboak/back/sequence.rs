@@ -40,16 +40,9 @@ impl SequenceCompiler
 impl CompileExpr for SequenceCompiler
 {
   fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
-    let mut success = context.success;
-    let failure = context.failure;
-    let grammar = context.grammar;
-    let name_factory = context.name_factory;
-
-    for idx in self.seq.iter().rev().cloned() {
-      let compiler = (self.compiler)(grammar, idx);
-      success = compiler.compile_expr(Context::new(
-        grammar, name_factory, success, failure.clone()));
-    }
-    success
+    self.seq.clone().into_iter()
+      .rev()
+      .fold(context, |context, idx| context.compile_success(self.compiler, idx))
+      .unwrap_success()
   }
 }
