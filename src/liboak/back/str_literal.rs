@@ -34,16 +34,20 @@ impl StrLiteralCompiler
 
 impl CompileExpr for StrLiteralCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr {
+  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
+    continuation: Continuation) -> RExpr
+  {
     let lit = self.literal.as_str();
-    context.unwrap(|cx, success, failure| quote_expr!(cx,
-      if state.consume_prefix($lit) {
-        $success
-      }
-      else {
-        state.error($lit);
-        $failure
-      }
-    ))
+    continuation
+      .map_success(|success, failure| quote_expr!(context.cx(),
+        if state.consume_prefix($lit) {
+          $success
+        }
+        else {
+          state.error($lit);
+          $failure
+        }
+      ))
+      .unwrap_success()
   }
 }

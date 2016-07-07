@@ -68,13 +68,9 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     compiler_fn: ExprCompilerFn, success: RExpr) -> RExpr
   {
     let compiler = compiler_fn(&self.grammar, self.rule.expr_idx);
-    let context = Context::new(
-      &self.grammar,
-      name_factory,
-      success,
-      quote_expr!(self.cx(), state.failure())
-    );
-    compiler.compile_expr(context)
+    let mut context = Context::new(&self.grammar, name_factory);
+    let failure = quote_expr!(self.cx(), state.failure());
+    compiler.compile_expr(&mut context, Continuation::new(success, failure))
   }
 
   fn parser_equals_recognizer(&self) -> bool {

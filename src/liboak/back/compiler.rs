@@ -19,60 +19,61 @@ use back::sequence::*;
 use back::choice::*;
 use back::any_single_char::*;
 
-pub struct Context<'a: 'c, 'b: 'a, 'c>
+pub struct Continuation
 {
-  pub grammar: &'c TGrammar<'a, 'b>,
-  pub name_factory: &'c mut NameFactory,
-  pub success: RExpr,
-  pub failure: RExpr
+  success: RExpr,
+  failure: RExpr
 }
 
-impl<'a, 'b, 'c> Context<'a, 'b, 'c>
+impl Continuation
 {
-  pub fn new(grammar: &'c TGrammar<'a, 'b>,
-    name_factory: &'c mut NameFactory,
-    success: RExpr, failure: RExpr) -> Self
-  {
-    Context {
-      grammar: grammar,
-      name_factory: name_factory,
+  pub fn new(success: RExpr, failure: RExpr) -> Self {
+    Continuation {
       success: success,
       failure: failure
     }
   }
 
-  pub fn compile_success(mut self, compiler: ExprCompilerFn, idx: usize) -> Self {
-    let compiler = compiler(self.grammar, idx);
-    self.success = compiler.compile_expr(Context::new(
-      self.grammar, self.name_factory, self.success, self.failure.clone()));
+  pub fn compile_success(self, context: &mut Context,
+    compiler: ExprCompilerFn, idx: usize) -> Self
+  {
+    self.map_success(|success, failure|
+      context.compile(compiler, idx, success, failure))
+  }
+
+  pub fn compile_failure(self, context: &mut Context,
+    compiler: ExprCompilerFn, idx: usize) -> Self
+  {
+    self.map_failure(|success, failure|
+      context.compile(compiler, idx, success, failure))
+  }
+
+  pub fn map_success<F>(mut self, f: F) -> Self where
+   F: FnOnce(RExpr, RExpr) -> RExpr
+  {
+    self.success = f(self.success, self.failure.clone());
     self
   }
 
-  pub fn compile_failure(mut self, compiler: ExprCompilerFn, idx: usize) -> Self {
-    let compiler = compiler(self.grammar, idx);
-    self.failure = compiler.compile_expr(Context::new(
-      self.grammar, self.name_factory, self.success.clone(), self.failure));
+  pub fn map_failure<F>(mut self, f: F) -> Self where
+   F: FnOnce(RExpr, RExpr) -> RExpr
+  {
+    self.failure = f(self.success.clone(), self.failure);
     self
   }
 
-  pub fn wrap_failure<F>(&mut self, f: F) where
+  pub fn wrap_failure<F>(self, context: &Context, f: F) -> Self where
    F: FnOnce(&ExtCtxt) -> RStmt
   {
-    let stmt = f(self.cx())
+    let stmt = f(context.cx())
       .expect("Statement in wrap_failure.");
-    self.failure = {
-      let failure = &self.failure;
-      quote_expr!(self.cx(), {
-        $stmt
-        $failure
-      })
-    }
-  }
-
-  pub fn unwrap<F>(self, f: F) -> RExpr where
-   F: FnOnce(&ExtCtxt, RExpr, RExpr) -> RExpr
-  {
-    f(self.cx(), self.success, self.failure)
+    self.map_failure(|_, failure|
+      quote_expr!(context.cx(),
+        {
+          $stmt
+          $failure
+        }
+      ))
   }
 
   pub fn unwrap_failure(self) -> RExpr {
@@ -82,10 +83,38 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
   pub fn unwrap_success(self) -> RExpr {
     self.success
   }
+}
+
+pub struct Context<'a: 'c, 'b: 'a, 'c>
+{
+  grammar: &'c TGrammar<'a, 'b>,
+  name_factory: &'c mut NameFactory,
+}
+
+impl<'a, 'b, 'c> Context<'a, 'b, 'c>
+{
+  pub fn new(grammar: &'c TGrammar<'a, 'b>, name_factory: &'c mut NameFactory) -> Self
+  {
+    Context {
+      grammar: grammar,
+      name_factory: name_factory
+    }
+  }
+
+  pub fn compile(&mut self, compiler: ExprCompilerFn, idx: usize,
+    success: RExpr, failure: RExpr) -> RExpr
+  {
+    let compiler = compiler(&self.grammar, idx);
+    compiler.compile_expr(self, Continuation::new(success, failure))
+  }
 
   pub fn next_mark_name(&mut self) -> Ident {
     let cx = self.cx();
     self.name_factory.next_mark_name(cx)
+  }
+
+  pub fn next_data_name(&mut self) -> Ident {
+    self.name_factory.next_data_name()
   }
 
   pub fn save_namespace(&self) -> Option<Namespace> {
@@ -104,7 +133,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 
 pub trait CompileExpr
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: Context<'a, 'b, 'c>) -> RExpr;
+  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>, cont: Continuation) -> RExpr;
 }
 
 pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;

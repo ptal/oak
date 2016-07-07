@@ -16,7 +16,7 @@ use back::compiler::*;
 
 pub struct AnySingleCharCompiler
 {
-  matched_pattern: fn(&ExtCtxt, &mut NameFactory) -> RPat
+  matched_pattern: for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat
 }
 
 impl AnySingleCharCompiler
@@ -34,30 +34,34 @@ impl AnySingleCharCompiler
   }
 
   #[allow(unused_imports)]
-  fn ignore_value(cx: &ExtCtxt, _: &mut NameFactory) -> RPat {
-    quote_pat!(cx, _)
+  fn ignore_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
+    quote_pat!(context.cx(), _)
   }
 
-  fn bind_value(cx: &ExtCtxt, name_factory: &mut NameFactory) -> RPat {
-    let value_name = name_factory.next_data_name();
-    quote_pat!(cx, $value_name)
+  fn bind_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
+    let value_name = context.next_data_name();
+    quote_pat!(context.cx(), $value_name)
   }
 }
 
 impl CompileExpr for AnySingleCharCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, mut context: Context<'a, 'b, 'c>) -> RExpr {
-    let pattern = (self.matched_pattern)(context.grammar.cx, context.name_factory);
-    context.unwrap(|cx, success, failure| quote_expr!(cx,
-      match state.next() {
-        Some($pattern) => {
-          $success
+  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
+    continuation: Continuation) -> RExpr
+  {
+    let pattern = (self.matched_pattern)(context);
+    continuation
+      .map_success(|success, failure| quote_expr!(context.cx(),
+        match state.next() {
+          Some($pattern) => {
+            $success
+          }
+          None => {
+            state.error("<character>");
+            $failure
+          }
         }
-        None => {
-          state.error("<character>");
-          $failure
-        }
-      }
-    ))
+      ))
+     .unwrap_success()
   }
 }
