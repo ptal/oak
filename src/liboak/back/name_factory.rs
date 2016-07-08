@@ -15,82 +15,85 @@
 use identifier::*;
 use rust::ExtCtxt;
 
+pub fn parser_name(cx: &ExtCtxt, rule_name: Ident) -> Ident {
+  string_to_ident(cx, format!("parse_{}", ident_to_string(rule_name)))
+}
+
+pub fn recognizer_name(cx: &ExtCtxt, rule_name: Ident) -> Ident {
+  string_to_ident(cx, format!("recognize_{}", ident_to_string(rule_name)))
+}
+
 pub type Namespace = Vec<Ident>;
 
 pub struct NameFactory
 {
   namespaces: Vec<Namespace>,
-  mark_uid: usize
+  num_vars_in_scope: usize,
+  mark_uid: usize,
+  closure_uid: usize
 }
 
 impl NameFactory
 {
   pub fn new() -> NameFactory {
     NameFactory {
-      namespaces: vec![],
-      mark_uid: 0
+      namespaces: vec![vec![]],
+      num_vars_in_scope: 0,
+      mark_uid: 0,
+      closure_uid: 0
     }
-  }
-
-  pub fn parser_name(&self, cx: &ExtCtxt, rule_name: Ident) -> Ident {
-    self.ident_of(cx, format!("parse_{}", id_to_string(rule_name)))
-  }
-
-  pub fn recognizer_name(&self, cx: &ExtCtxt, rule_name: Ident) -> Ident {
-    self.ident_of(cx, format!("recognize_{}", id_to_string(rule_name)))
   }
 
   pub fn next_mark_name(&mut self, cx: &ExtCtxt) -> Ident {
     self.mark_uid += 1;
-    self.ident_of(cx, format!("mark_{}", self.mark_uid))
+    string_to_ident(cx, format!("mark_{}", self.mark_uid))
   }
 
-  pub fn next_data_name(&mut self) -> Ident {
-    self.current_namespace().pop()
-      .expect("Request a data name in an empty namespace.")
+  pub fn next_closure_name(&mut self, cx: &ExtCtxt) -> Ident {
+    self.closure_uid += 1;
+    string_to_ident(cx, format!("success_continuation_{}", self.closure_uid))
+  }
+
+  pub fn vars_in_scope(&self) -> Vec<Ident> {
+    self.current_namespace()[0..self.num_vars_in_scope]
+      .iter().cloned().collect()
+  }
+
+  pub fn next_unbounded_var(&mut self) -> Ident {
+    assert!(self.num_vars_in_scope > 0, "Request a variable name in an empty namespace.");
+    self.num_vars_in_scope -= 1;
+    self.current_namespace()[self.num_vars_in_scope]
   }
 
   pub fn open_namespace(&mut self, cx: &ExtCtxt, cardinality: usize) -> Namespace {
     let namespace: Namespace = (0..cardinality)
-      .map(|i| self.ident_of(cx, format!("v_{}", i)))
+      .map(|i| string_to_ident(cx, format!("v_{}", i)))
       .collect();
     self.namespaces.push(namespace.clone());
+    self.num_vars_in_scope = namespace.len();
     namespace
   }
 
   pub fn close_namespace(&mut self) {
-    assert!(self.namespaces.len() > 0,
-      "Try to close a namespace that has not been opened.");
-    assert!(self.current_namespace().len() == 0,
+    assert!(self.namespaces.len() > 1,
+      "close_namespace: There is no namespace opened.");
+    assert!(self.num_vars_in_scope == 0,
       "Try to close a namespace that has not been fully consumed.");
     self.namespaces.pop();
   }
 
-  fn current_namespace<'a>(&'a mut self) -> &'a mut Namespace {
-    assert!(self.namespaces.len() > 0,
-      "current_namespace: There is no namespace opened.");
+  fn current_namespace<'a>(&'a self) -> &'a Namespace {
     let last = self.namespaces.len() - 1;
-    &mut self.namespaces[last]
+    &self.namespaces[last]
   }
 
-  pub fn save_namespace(&self) -> Option<Namespace> {
-    if self.namespaces.len() == 0 {
-      None
-    }
-    else {
-      let last = self.namespaces.len() - 1;
-      Some(self.namespaces[last].clone())
-    }
+  pub fn save_namespace(&self) -> usize {
+    self.num_vars_in_scope
   }
 
-  pub fn restore_namespace(&mut self, namespace: Option<Namespace>) {
-    if let Some(namespace) = namespace {
-      let last = self.namespaces.len() - 1;
-      self.namespaces[last] = namespace;
-    }
-  }
-
-  fn ident_of(&self, cx: &ExtCtxt, name: String) -> Ident {
-    cx.ident_of(name.as_str())
+  pub fn restore_namespace(&mut self, num_vars_in_scope: usize) {
+    assert!(self.current_namespace().len() >= num_vars_in_scope,
+      "Mismatch between the number of variable in scope and the current namespace.");
+    self.num_vars_in_scope = num_vars_in_scope;
   }
 }

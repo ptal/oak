@@ -24,6 +24,7 @@ pub type RExpr = rust::P<rust::Expr>;
 pub type RItem = rust::P<rust::Item>;
 pub type RStmt = Option<rust::Spanned<rust::StmtKind>>;
 pub type RPat = rust::P<rust::Pat>;
+pub type RArg = rust::Arg;
 
 pub use rust::{ExtCtxt, Attribute, SpannedIdent};
 pub use monad::partial::Partial;
@@ -127,7 +128,7 @@ impl<'a, 'b, ExprInfo> ExprByIndex for Grammar<'a, 'b, ExprInfo>
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Rule
 {
   pub name: SpannedIdent,

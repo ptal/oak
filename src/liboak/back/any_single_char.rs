@@ -39,7 +39,7 @@ impl AnySingleCharCompiler
   }
 
   fn bind_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
-    let value_name = context.next_data_name();
+    let value_name = context.next_unbounded_var();
     quote_pat!(context.cx(), $value_name)
   }
 }

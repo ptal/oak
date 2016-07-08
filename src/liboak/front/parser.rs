@@ -70,7 +70,7 @@ impl<'a> Parser<'a>
     let outer_attrs = try!(self.rp.parse_outer_attributes());
     let name = try!(self.parse_rule_decl());
     try!(self.rp.expect(&rtok::Eq));
-    let body = try!(self.parse_rule_rhs(id_to_string(name.node).as_str()));
+    let body = try!(self.parse_rule_rhs(ident_to_string(name.node).as_str()));
     self.grammar.push_rule(name, outer_attrs, body);
     Ok(())
   }

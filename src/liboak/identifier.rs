@@ -17,8 +17,12 @@ pub use rust::{Ident, Name, Span, str_lit};
 use rust;
 use std::ops::Deref;
 
-pub fn id_to_string(id: Ident) -> String {
-  id.to_string()
+pub fn ident_to_string(ident: Ident) -> String {
+  ident.to_string()
+}
+
+pub fn string_to_ident(cx: &rust::ExtCtxt, name: String) -> Ident {
+  cx.ident_of(name.as_str())
 }
 
 pub fn cook_lit(name: Name) -> String {
