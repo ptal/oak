@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use back::compiler::*;
-use back::value::*;
+use back::compiler::value::*;
 
 pub struct RuleCompiler<'a: 'c, 'b: 'a, 'c>
 {

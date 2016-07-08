@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use back::compiler::*;
+use middle::typing::ast::*;
 use back::code_printer::*;
-use back::rule::*;
+use back::compiler::rule::*;
 use rust;
 
 pub struct GrammarCompiler<'a, 'b: 'a>

@@ -16,17 +16,11 @@
 
 //! It generates a recognizer and parser function for each rules. It builds the result value and type with the information provided by the AST.
 
-mod compiler;
+mod context;
+mod continuation;
 mod name_factory;
 mod code_printer;
-mod rtype;
-mod value;
-mod grammar;
-mod rule;
-mod str_literal;
-mod sequence;
-mod choice;
-mod any_single_char;
+mod compiler;
 
 use middle::typing::ast::*;
 use rust;
@@ -34,5 +28,5 @@ use rust;
 pub fn compile<'a, 'b>(grammar: TGrammar<'a, 'b>)
   -> Partial<Box<rust::MacResult + 'a>>
 {
-  Partial::Value(grammar::GrammarCompiler::compile(grammar))
+  Partial::Value(compiler::GrammarCompiler::compile(grammar))
 }
