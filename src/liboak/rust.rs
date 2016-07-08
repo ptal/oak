@@ -32,6 +32,7 @@ pub use syntax::parse::PResult;
 pub use syntax::parse::new_parser_from_tts;
 pub use syntax::parse::token::str_to_ident;
 pub use syntax::parse::token::Token;
+pub use syntax::tokenstream::*;
 pub use syntax::parse::token;
 pub use syntax::parse::token::keywords::Keyword;
 pub use syntax::parse::token::DelimToken;

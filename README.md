@@ -5,7 +5,7 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
-Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels. You can download the exact same version of the compiler used with `rustup override add nightly-2016-06-22`.
+Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels. You can download the exact same version of the compiler used with `rustup override add nightly-2016-07-06`.
 
 Please consult the [Oak manual](http://hyc.io/oak).
 
