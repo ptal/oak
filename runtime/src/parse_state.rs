@@ -121,6 +121,7 @@ pub struct ParseState<S, T>
   pub farthest_read: S,
   /// Expected items at position `farthest_read`. Duplicate entries are possible.
   pub expected: Vec<&'static str>,
+  pub failed: bool,
   /// The current stream that can be partially or fully consumed.
   pub current: S,
   /// Contains the AST if the current state is successful and `None` if it is erroneous.
@@ -135,13 +136,23 @@ impl<S, T> ParseState<S, T> where
     ParseState {
       farthest_read: stream.clone(),
       expected: vec![],
+      failed: false,
       current: stream,
       data: None
     }
   }
 
+  pub fn is_failed(&self) -> bool {
+    self.failed
+  }
+
+  pub fn is_successful(&self) -> bool {
+    !self.is_failed()
+  }
+
   #[inline]
   pub fn error(&mut self, expect: &'static str) {
+    self.failed = true;
     if self.current > self.farthest_read {
       self.farthest_read = self.current.clone();
       self.expected = vec![expect];
@@ -157,6 +168,7 @@ impl<S, T> ParseState<S, T> where
     ParseState {
       farthest_read: self.farthest_read,
       expected: self.expected,
+      failed: false,
       current: self.current,
       data: Some(data)
     }
@@ -166,16 +178,20 @@ impl<S, T> ParseState<S, T> where
     ParseState {
       farthest_read: self.farthest_read,
       expected: self.expected,
+      failed: true,
       current: self.current,
       data: None
     }
   }
 
   pub fn mark(&self) -> S {
+    assert!(!self.failed, "Marking a failed ParseState is not allowed.");
     self.current.clone()
   }
 
   pub fn restore(&mut self, mark: S) {
+    assert!(self.failed, "Restoring a successful ParseState is not allowed.");
+    self.failed = false;
     self.current = mark;
   }
 
@@ -192,6 +208,7 @@ impl<S, T> ParseState<S, T> where
         }
       }
       None => {
+        assert!(self.failed, "Failure status must be true when extracting a failed result.");
         Failure(expectation)
       }
     }

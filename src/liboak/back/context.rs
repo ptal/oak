@@ -136,7 +136,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
       .into_iter()
       .chain(self.mut_ref_free_variables
         .iter()
-        .map(|var| quote_arg!(self.cx(), $var:_)))
+        .map(|var| quote_arg!(self.cx(), $var: &mut Vec<_>)))
       .chain(self.free_variables
         .iter()
         .map(|var| quote_arg!(self.cx(), $var:_)))
@@ -151,7 +151,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
         .map(|var| quote_expr!(self.cx(), &mut $var)))
       .chain(self.free_variables
         .iter()
-        .map(|var| quote_expr!(self.cx(), $var)))
+        .map(|var| quote_expr!(self.cx(), $var))) // TODO: compute the type of var.
       .collect()
   }
 

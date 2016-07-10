@@ -14,7 +14,6 @@
 
 use back::compiler::*;
 use back::compiler::value::*;
-use rust::TokenTree;
 
 pub struct RepeatCompiler
 {
@@ -42,7 +41,7 @@ impl RepeatCompiler
   }
 
   fn compile<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation, exit_label: TokenTree, body: RExpr) -> RExpr
+    continuation: Continuation, body: RExpr) -> RExpr
   {
     let mark = context.next_mark_name();
     continuation.map_success(|success, failure|
@@ -53,12 +52,17 @@ impl RepeatCompiler
           {
             let mut $mark = state.mark();
             let mut $counter = 0;
-            $exit_label: loop {
+            loop {
               state = {
                 $body
               };
-              $counter += 1;
-              $mark = state.mark();
+              if state.is_successful() {
+                $counter += 1;
+                $mark = state.mark();
+              }
+              else {
+                break;
+              }
             }
             if $counter < $cardinality_min {
               $failure
@@ -74,11 +78,16 @@ impl RepeatCompiler
         quote_expr!(context.cx(),
           {
             let mut $mark = state.mark();
-            $exit_label: loop {
+            loop {
               state = {
                 $body
               };
-              $mark = state.mark();
+              if state.is_successful() {
+                $mark = state.mark();
+              }
+              else {
+                break;
+              }
             }
             state.restore($mark);
             $success
@@ -90,20 +99,20 @@ impl RepeatCompiler
   }
 
   fn compile_recognizer<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation, exit_label: TokenTree) -> RExpr
+    continuation: Continuation) -> RExpr
   {
     let body =
       Continuation::new(
         quote_expr!(context.cx(), state),
-        quote_expr!(context.cx(), break $exit_label)
+        quote_expr!(context.cx(), state.failure())
       )
       .compile_success(context, recognizer_compiler, self.expr_idx)
       .unwrap_success();
-    self.compile(context, continuation, exit_label, body)
+    self.compile(context, continuation, body)
   }
 
   fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation, exit_label: TokenTree) -> RExpr
+    continuation: Continuation) -> RExpr
   {
     let result_var = context.next_free_var();
     let scope = context.open_scope(self.expr_idx, vec![result_var]);
@@ -115,11 +124,11 @@ impl RepeatCompiler
           $result_var.push($result_value);
           state
         }),
-        quote_expr!(context.cx(), break $exit_label)
+        quote_expr!(context.cx(), state.failure())
       )
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
-    let repeat_expr = self.compile(context, continuation, exit_label, body);
+    let repeat_expr = self.compile(context, continuation, body);
     context.close_scope(scope);
     quote_expr!(context.cx(),
       {
@@ -135,10 +144,9 @@ impl CompileExpr for RepeatCompiler
   fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
     continuation: Continuation) -> RExpr
   {
-    let exit_label = context.next_exit_label();
     match self.compiler_kind {
-      CompilerKind::Recognizer => self.compile_recognizer(context, continuation, exit_label),
-      CompilerKind::Parser => self.compile_parser(context, continuation, exit_label)
+      CompilerKind::Recognizer => self.compile_recognizer(context, continuation),
+      CompilerKind::Parser => self.compile_parser(context, continuation)
     }
   }
 }

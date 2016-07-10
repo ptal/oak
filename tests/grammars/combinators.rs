@@ -15,7 +15,7 @@
 pub use self::combinators::*;
 
 grammar! combinators {
-  #![debug_api]
+  // #![debug_api]
 
   str_literal = "return"
 
@@ -27,5 +27,5 @@ grammar! combinators {
          / "let" . .
          / "if " ("-" . / .) " else " ("-" . / "+" .)
 
-  repeat = ("a" . / "b"+ .)* "c"*
+  repeat = (("a" / "b"+ ) .)* "c"*
 }
