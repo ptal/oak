@@ -28,6 +28,7 @@ pub struct NameFactory
   prefix_uid: usize,
   mark_uid: usize,
   label_uid: usize,
+  counter_uid: usize,
   closure_uid: usize
 }
 
@@ -38,6 +39,7 @@ impl NameFactory
       prefix_uid: 1,
       mark_uid: 0,
       label_uid: 0,
+      counter_uid: 0,
       closure_uid: 0
     }
   }
@@ -55,6 +57,11 @@ impl NameFactory
   pub fn next_closure_name(&mut self, cx: &ExtCtxt) -> Ident {
     self.closure_uid += 1;
     string_to_ident(cx, format!("success_continuation_{}", self.closure_uid))
+  }
+
+  pub fn next_counter_name(&mut self, cx: &ExtCtxt) -> Ident {
+    self.counter_uid += 1;
+    string_to_ident(cx, format!("counter{}", self.counter_uid))
   }
 
   pub fn fresh_vars(&mut self, cx: &ExtCtxt, cardinality: usize) -> Vec<Ident> {

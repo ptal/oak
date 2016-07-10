@@ -160,6 +160,11 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.name_factory.next_mark_name(cx)
   }
 
+  pub fn next_counter_name(&mut self) -> Ident {
+    let cx = self.cx();
+    self.name_factory.next_counter_name(cx)
+  }
+
   pub fn next_exit_label(&mut self) -> TokenTree {
     let cx = self.cx();
     let label = self.name_factory.next_exit_label(cx);

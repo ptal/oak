@@ -45,21 +45,46 @@ impl RepeatCompiler
     continuation: Continuation, exit_label: TokenTree, body: RExpr) -> RExpr
   {
     let mark = context.next_mark_name();
-
-    continuation.map_success(|success, _|
-      quote_expr!(context.cx(),
-        {
-          let mut $mark = state.mark();
-          $exit_label: loop {
-            state = {
-              $body
-            };
-            $mark = state.mark();
+    continuation.map_success(|success, failure|
+      if self.cardinality_min > 0 {
+        let counter = context.next_counter_name();
+        let cardinality_min = self.cardinality_min;
+        quote_expr!(context.cx(),
+          {
+            let mut $mark = state.mark();
+            let mut $counter = 0;
+            $exit_label: loop {
+              state = {
+                $body
+              };
+              $counter += 1;
+              $mark = state.mark();
+            }
+            if $counter < $cardinality_min {
+              $failure
+            }
+            else {
+              state.restore($mark);
+              $success
+            }
           }
-          state.restore($mark);
-          $success
-        }
-      )
+        )
+      }
+      else {
+        quote_expr!(context.cx(),
+          {
+            let mut $mark = state.mark();
+            $exit_label: loop {
+              state = {
+                $body
+              };
+              $mark = state.mark();
+            }
+            state.restore($mark);
+            $success
+          }
+        )
+      }
     )
     .unwrap_success()
   }
