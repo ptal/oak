@@ -17,7 +17,7 @@ pub use back::continuation::*;
 use back::name_factory::*;
 use back::compiler::ExprCompilerFn;
 use back::compiler::rtype::*;
-use rust::{AstBuilder, TokenTree, Token};
+use rust::AstBuilder;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
 {
@@ -25,7 +25,7 @@ pub struct Context<'a: 'c, 'b: 'a, 'c>
   closures: Vec<RStmt>,
   name_factory: NameFactory,
   free_variables: Vec<Ident>,
-  mut_ref_free_variables: Vec<Ident>,
+  mut_ref_free_variables: Vec<(Ident, RTy)>,
   num_combinators_compiled: usize
 }
 
@@ -135,8 +135,8 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     vec![self.state_param(true)]
       .into_iter()
       .chain(self.mut_ref_free_variables
-        .iter()
-        .map(|var| quote_arg!(self.cx(), $var: &mut Vec<_>)))
+        .iter().cloned()
+        .map(|(var, ty)| quote_arg!(self.cx(), $var: &mut $ty)))
       .chain(self.free_variables
         .iter()
         .map(|var| quote_arg!(self.cx(), $var:_)))
@@ -147,8 +147,8 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     vec![quote_expr!(self.cx(), state)]
       .into_iter()
       .chain(self.mut_ref_free_variables
-        .iter()
-        .map(|var| quote_expr!(self.cx(), &mut $var)))
+        .iter().cloned()
+        .map(|(var, _)| quote_expr!(self.cx(), &mut $var)))
       .chain(self.free_variables
         .iter()
         .map(|var| quote_expr!(self.cx(), $var))) // TODO: compute the type of var.
@@ -165,10 +165,9 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.name_factory.next_counter_name(cx)
   }
 
-  pub fn next_exit_label(&mut self) -> TokenTree {
+  pub fn next_branch_failed_name(&mut self) -> Ident {
     let cx = self.cx();
-    let label = self.name_factory.next_exit_label(cx);
-    TokenTree::Token(cx.call_site(), Token::Lifetime(label))
+    self.name_factory.next_branch_failed_name(cx)
   }
 
   pub fn next_free_var(&mut self) -> Ident {
@@ -179,11 +178,20 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.free_variables.clone()
   }
 
-  pub fn open_scope(&mut self, expr_idx: usize, mut_ref_fv: Vec<Ident>) -> Scope {
+  pub fn push_mut_ref_fv(&mut self, mut_ref_var: Ident, mut_ref_ty: RTy) {
+    self.mut_ref_free_variables.push((mut_ref_var,mut_ref_ty));
+  }
+
+  pub fn pop_mut_ref_fv(&mut self) {
+    self.mut_ref_free_variables.pop()
+      .expect("There is no mut ref free variables.");
+  }
+
+  pub fn open_scope(&mut self, expr_idx: usize) -> Scope {
     let cx = self.cx();
     let scope = self.save_scope();
     self.num_combinators_compiled = 0;
-    self.mut_ref_free_variables = mut_ref_fv;
+    self.mut_ref_free_variables = vec![];
     let cardinality = self.grammar[expr_idx].type_cardinality();
     let free_vars = self.name_factory.fresh_vars(cx, cardinality);
     self.free_variables = free_vars;
@@ -219,11 +227,11 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 pub struct Scope {
   num_combinators_compiled: usize,
   free_variables: Vec<Ident>,
-  mut_ref_free_variables: Vec<Ident>
+  mut_ref_free_variables: Vec<(Ident, RTy)>
 }
 
 impl Scope {
-  fn new(n: usize, fv: Vec<Ident>, mfv: Vec<Ident>) -> Self {
+  fn new(n: usize, fv: Vec<Ident>, mfv: Vec<(Ident, RTy)>) -> Self {
     Scope {
       num_combinators_compiled: n,
       free_variables: fv,

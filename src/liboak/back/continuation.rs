@@ -38,11 +38,17 @@ impl Continuation
       context.compile_success(compiler, idx, success, failure))
   }
 
-  pub fn compile_failure(self, context: &mut Context,
-    compiler: ExprCompilerFn, idx: usize) -> Self
+  pub fn compile_and_wrap(&self, context: &mut Context,
+    compiler: ExprCompilerFn, idx: usize, before_success: RStmt) -> RExpr
   {
-    self.map_failure(|success, failure|
-      context.compile(compiler, idx, success, failure))
+    let cx = context.cx();
+    let success = self.success.clone();
+    context.compile_success(compiler, idx,
+      quote_expr!(cx, {
+        $before_success
+        $success
+      }),
+      self.failure.clone())
   }
 
   pub fn map_success<F>(mut self, f: F) -> Self where
@@ -52,33 +58,11 @@ impl Continuation
     self
   }
 
-  pub fn map_failure<F>(mut self, f: F) -> Self where
-   F: FnOnce(RExpr, RExpr) -> RExpr
-  {
-    self.failure = f(self.success.clone(), self.failure);
-    self
-  }
-
-  pub fn wrap_failure<F>(self, context: &Context, f: F) -> Self where
-   F: FnOnce(&ExtCtxt) -> RStmt
-  {
-    let stmt = f(context.cx())
-      .expect("Statement in wrap_failure.");
-    self.map_failure(|_, failure|
-      quote_expr!(context.cx(),
-        {
-          $stmt
-          $failure
-        }
-      )
-    )
-  }
-
-  pub fn unwrap_failure(self) -> RExpr {
-    self.failure
-  }
-
   pub fn unwrap_success(self) -> RExpr {
     self.success
+  }
+
+  pub fn unwrap(self) -> (RExpr, RExpr) {
+    (self.success, self.failure)
   }
 }

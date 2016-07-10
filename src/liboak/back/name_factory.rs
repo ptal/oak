@@ -27,7 +27,7 @@ pub struct NameFactory
 {
   prefix_uid: usize,
   mark_uid: usize,
-  label_uid: usize,
+  branch_failed_uid: usize,
   counter_uid: usize,
   closure_uid: usize
 }
@@ -38,7 +38,7 @@ impl NameFactory
     NameFactory {
       prefix_uid: 1,
       mark_uid: 0,
-      label_uid: 0,
+      branch_failed_uid: 0,
       counter_uid: 0,
       closure_uid: 0
     }
@@ -49,9 +49,9 @@ impl NameFactory
     string_to_ident(cx, format!("mark{}", self.mark_uid))
   }
 
-  pub fn next_exit_label(&mut self, cx: &ExtCtxt) -> Ident {
-    self.label_uid += 1;
-    string_to_ident(cx, format!("'exit{}", self.label_uid))
+  pub fn next_branch_failed_name(&mut self, cx: &ExtCtxt) -> Ident {
+    self.branch_failed_uid += 1;
+    string_to_ident(cx, format!("branch_failed_{}", self.branch_failed_uid))
   }
 
   pub fn next_closure_name(&mut self, cx: &ExtCtxt) -> Ident {

@@ -55,7 +55,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
       context.into_parser_alias(self.rule)
     }
     else {
-      let scope = context.open_scope(self.expr(), vec![]);
+      let scope = context.open_scope(self.expr());
       let span = self.grammar[self.expr()].span;
       let vars = tuple_value(self.cx(), span, context.free_variables());
 

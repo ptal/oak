@@ -53,9 +53,7 @@ impl RepeatCompiler
             let mut $mark = state.mark();
             let mut $counter = 0;
             loop {
-              state = {
-                $body
-              };
+              state = $body;
               if state.is_successful() {
                 $counter += 1;
                 $mark = state.mark();
@@ -68,7 +66,7 @@ impl RepeatCompiler
               $failure
             }
             else {
-              state.restore($mark);
+              let mut state = state.restore($mark);
               $success
             }
           }
@@ -79,9 +77,7 @@ impl RepeatCompiler
           {
             let mut $mark = state.mark();
             loop {
-              state = {
-                $body
-              };
+              state = $body;
               if state.is_successful() {
                 $mark = state.mark();
               }
@@ -89,7 +85,7 @@ impl RepeatCompiler
                 break;
               }
             }
-            state.restore($mark);
+            let mut state = state.restore($mark);
             $success
           }
         )
@@ -114,23 +110,25 @@ impl RepeatCompiler
   fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
     continuation: Continuation) -> RExpr
   {
+    let cx = context.cx();
     let result_var = context.next_free_var();
-    let scope = context.open_scope(self.expr_idx, vec![result_var]);
-    let span = context.cx().call_site();
-    let result_value = tuple_value(context.cx(), span, context.free_variables());
+    let scope = context.open_scope(self.expr_idx);
+    context.push_mut_ref_fv(result_var, quote_ty!(cx, Vec<_>));
+    let span = cx.call_site();
+    let result_value = tuple_value(cx, span, context.free_variables());
     let body =
       Continuation::new(
-        quote_expr!(context.cx(), {
+        quote_expr!(cx, {
           $result_var.push($result_value);
           state
         }),
-        quote_expr!(context.cx(), state.failure())
+        quote_expr!(cx, state.failure())
       )
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
     let repeat_expr = self.compile(context, continuation, body);
     context.close_scope(scope);
-    quote_expr!(context.cx(),
+    quote_expr!(cx,
       {
         let mut $result_var = vec![];
         $repeat_expr

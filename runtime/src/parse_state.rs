@@ -189,10 +189,16 @@ impl<S, T> ParseState<S, T> where
     self.current.clone()
   }
 
-  pub fn restore(&mut self, mark: S) {
+  pub fn restore(self, mark: S) -> ParseState<S, ()> {
     assert!(self.failed, "Restoring a successful ParseState is not allowed.");
-    self.failed = false;
-    self.current = mark;
+    assert!(self.data.is_none(), "Restoring a ParseState with data is not allowed.");
+    ParseState {
+      farthest_read: self.farthest_read,
+      expected: self.expected,
+      failed: false,
+      current: mark,
+      data: None
+    }
   }
 
   /// Transforms `self` into a more usable `ParseResult` value. It is useful when the state is terminal or if the state will not be further transformed.

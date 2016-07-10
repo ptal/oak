@@ -42,30 +42,52 @@ impl CompileExpr for ChoiceCompiler
   fn compile_expr<'a, 'b, 'c>(&self,  context: &mut Context<'a, 'b, 'c>,
     mut continuation: Continuation) -> RExpr
   {
+    let cx = context.cx();
     // Since we copy the success continuation for each branch, to avoid code explosion, we can extract it into a closure shared by all branches under criterion maintained by the context.
     continuation = context.success_as_closure(continuation);
 
     let mark = context.next_mark_name();
-    let mut choices = self.choices.clone().into_iter().rev();
-    let last = choices.next().unwrap();
+    let branch_failed = context.next_branch_failed_name();
+    context.push_mut_ref_fv(branch_failed, quote_ty!(cx, bool));
 
     // Each branch of the choice must be compiled in the same variable names environment (they share names of the variables they are building) and with a fresh success continuation size (each branch might create independent success continuation).
     let scope = context.save_scope();
 
-    // Each branch is compiled and they are nested inside the failure continuation of each other. We must restore the value namespace because each branch has the same type, therefore the success continuation is the same so is the value constructor.
-    choices
-      .fold(continuation.compile_failure(context, self.compiler, last),
-        |continuation, idx| {
-          context.restore_scope(scope.clone());
-          continuation
-            .wrap_failure(context, |cx| quote_stmt!(cx,
-              state.restore($mark.clone());
-            ))
-            .compile_failure(context, self.compiler, idx)
-        })
-      .wrap_failure(context, |cx| quote_stmt!(cx,
-        let $mark = state.mark();
-      ))
-      .unwrap_failure()
+    let mut choices = self.choices.clone();
+    let last = choices.pop().unwrap();
+    let mut branches: Vec<_> = choices.into_iter()
+      .map(|idx| {
+        context.restore_scope(scope.clone());
+        continuation.compile_and_wrap(context, self.compiler, idx,
+          quote_stmt!(cx, $branch_failed = false;))
+      })
+      .collect();
+    // The last branch does not need to assign `false` to the variable `branch_failed`.
+    context.restore_scope(scope.clone());
+    context.pop_mut_ref_fv();
+    let (success, failure) = continuation.unwrap();
+    branches.push(context.compile(self.compiler, last, success, failure));
+
+    let mut branches_iter = branches.into_iter();
+    let first = branches_iter.next().unwrap();
+
+    let choice = branches_iter
+      .rev()
+      .fold(quote_expr!(cx, state), |accu, branch|
+        quote_expr!(cx,
+          if $branch_failed {
+            let mut state = state.restore($mark.clone());
+            let state = $branch;
+            $accu
+          }
+          else { state }
+        ));
+
+    quote_expr!(cx, {
+      let $mark = state.mark();
+      let mut $branch_failed = true;
+      let state = $first;
+      $choice
+    })
   }
 }

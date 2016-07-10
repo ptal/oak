@@ -76,8 +76,6 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
-    // ZeroOrMore(expr) =>
-    // OneOrMore(expr) =>
     // Optional(expr) =>
     // NotPredicate(expr) =>
     // AndPredicate(expr) =>
