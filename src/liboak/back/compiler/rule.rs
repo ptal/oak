@@ -26,7 +26,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
   pub fn compile(grammar: &'c TGrammar<'a, 'b>, rule: Rule) -> Vec<RItem> {
     let compiler = RuleCompiler::new(grammar, rule);
     vec![
-      // compiler.compile_recognizer(),
+      compiler.compile_recognizer(),
       compiler.compile_parser()
     ]
   }
@@ -55,16 +55,16 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
       context.into_parser_alias(self.rule)
     }
     else {
-      let vars_names = context.open_scope(self.expr());
+      let scope = context.open_scope(self.expr(), vec![]);
       let span = self.grammar[self.expr()].span;
-      let vars = tuple_value(self.cx(), span, vars_names);
+      let vars = tuple_value(self.cx(), span, context.free_variables());
 
       let success = quote_expr!(self.cx(), state.success($vars));
       let failure = quote_expr!(self.cx(), state.failure());
       let body = context.compile(parser_compiler,
         self.expr(), success, failure);
 
-      context.close_scope();
+      context.close_scope(scope);
       context.into_parser_function(body, self.rule)
     }
   }

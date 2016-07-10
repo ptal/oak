@@ -51,7 +51,9 @@ impl RepeatCompiler
         {
           let mut $mark = state.mark();
           $exit_label: loop {
-            $body
+            state = {
+              $body
+            };
             $mark = state.mark();
           }
           state.restore($mark);
@@ -67,7 +69,7 @@ impl RepeatCompiler
   {
     let body =
       Continuation::new(
-        quote_expr!(context.cx(), ()),
+        quote_expr!(context.cx(), state),
         quote_expr!(context.cx(), break $exit_label)
       )
       .compile_success(context, recognizer_compiler, self.expr_idx)
@@ -78,20 +80,22 @@ impl RepeatCompiler
   fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
     continuation: Continuation, exit_label: TokenTree) -> RExpr
   {
-    let result_var = context.next_unbounded_var();
-    let vars_names = context.open_scope(self.expr_idx);
-    context.push_closure_arg(result_var);
+    let result_var = context.next_free_var();
+    let scope = context.open_scope(self.expr_idx, vec![result_var]);
     let span = context.cx().call_site();
-    let result_value = tuple_value(context.cx(), span, vars_names);
+    let result_value = tuple_value(context.cx(), span, context.free_variables());
     let body =
       Continuation::new(
-        quote_expr!(context.cx(), $result_var.push($result_value)),
+        quote_expr!(context.cx(), {
+          $result_var.push($result_value);
+          state
+        }),
         quote_expr!(context.cx(), break $exit_label)
       )
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
     let repeat_expr = self.compile(context, continuation, exit_label, body);
-    context.close_scope();
+    context.close_scope(scope);
     quote_expr!(context.cx(),
       {
         let mut $result_var = vec![];

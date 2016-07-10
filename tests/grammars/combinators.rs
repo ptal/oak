@@ -17,16 +17,15 @@ pub use self::combinators::*;
 grammar! combinators {
   #![debug_api]
 
-  // str_literal = "return"
+  str_literal = "return"
 
-  // sequence = "if" " " "then" " " "else"
+  sequence = "if" " " "then" " " "else"
 
-  // any_single_char = . .
+  any_single_char = . .
 
-  // choice = "if" . "else" .
-  //        / "let" . .
-  //        / "if " ("-" . / .) " else " ("-" . / "+" .)
+  choice = "if" . "else" .
+         / "let" . .
+         / "if " ("-" . / .) " else " ("-" . / "+" .)
 
-  // repeat = ("a" . / "b"+ .)* "c"*
-  repeat = ("a" . / "b"+ .)* "c"
+  repeat = ("a" . / "b"+ .)* "c"*
 }
