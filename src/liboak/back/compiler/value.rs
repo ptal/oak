@@ -17,19 +17,18 @@
 use middle::typing::ast::*;
 use rust::AstBuilder;
 
-pub fn tuple_value<'a, 'b>(grammar: &TGrammar<'a, 'b>, expr_idx: usize, values_names: Vec<Ident>) -> RExpr
+pub fn tuple_value<'a, 'b>(cx: &ExtCtxt, span: Span, values_names: Vec<Ident>) -> RExpr
 {
-  let span = grammar[expr_idx].span;
   let values: Vec<_> = values_names.into_iter()
-    .map(|name| quote_expr!(grammar.cx, $name))
+    .map(|name| quote_expr!(cx, $name))
     .collect();
   if values.len() == 0 {
-    quote_expr!(grammar.cx, ())
+    quote_expr!(cx, ())
   }
   else if values.len() == 1 {
     values[0].clone()
   }
   else {
-    grammar.cx.expr_tuple(span, values)
+    cx.expr_tuple(span, values)
   }
 }

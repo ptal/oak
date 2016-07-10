@@ -20,6 +20,7 @@ mod str_literal;
 mod sequence;
 mod choice;
 mod any_single_char;
+mod repeat;
 
 pub use back::compiler::grammar::*;
 pub use back::context::*;
@@ -27,13 +28,20 @@ use back::compiler::str_literal::*;
 use back::compiler::sequence::*;
 use back::compiler::choice::*;
 use back::compiler::any_single_char::*;
+use back::compiler::repeat::*;
+
+pub enum CompilerKind
+{
+  Recognizer,
+  Parser
+}
+
+pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;
 
 pub trait CompileExpr
 {
   fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>, cont: Continuation) -> RExpr;
 }
-
-pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;
 
 pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   if grammar[idx].ty.is_unit() {
@@ -45,10 +53,10 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
       AnySingleChar => Box::new(AnySingleCharCompiler::parser()),
       Choice(choices) => Box::new(ChoiceCompiler::parser(choices)),
+      ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 0)),
+      OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
       _ => unimplemented!()
       // NonTerminalSymbol(id) =>
-      // ZeroOrMore(expr) =>
-      // OneOrMore(expr) =>
       // Optional(expr) =>
       // NotPredicate(expr) =>
       // AndPredicate(expr) =>
@@ -63,7 +71,9 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     StrLiteral(lit) => Box::new(StrLiteralCompiler::recognizer(lit)),
     Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
     AnySingleChar => Box::new(AnySingleCharCompiler::recognizer()),
-      Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
+    Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
+    ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 0)),
+    OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
     // ZeroOrMore(expr) =>

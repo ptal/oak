@@ -42,7 +42,7 @@ impl CompileExpr for ChoiceCompiler
   fn compile_expr<'a, 'b, 'c>(&self,  context: &mut Context<'a, 'b, 'c>,
     mut continuation: Continuation) -> RExpr
   {
-    let mark_var = context.next_mark_name();
+    let mark = context.next_mark_name();
 
     let mut choices = self.choices.clone().into_iter().rev();
     let last = choices.next().unwrap();
@@ -57,12 +57,12 @@ impl CompileExpr for ChoiceCompiler
         context.restore(savepoint);
         continuation
           .wrap_failure(context, |cx| quote_stmt!(cx,
-            state.restore($mark_var.clone());
+            state.restore($mark.clone());
           ))
           .compile_failure(context, self.compiler, idx)
       })
       .wrap_failure(context, |cx| quote_stmt!(cx,
-        let $mark_var = state.mark();
+        let $mark = state.mark();
       ))
       .unwrap_failure()
   }

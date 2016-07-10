@@ -17,14 +17,15 @@ pub use back::continuation::*;
 use back::name_factory::*;
 use back::compiler::ExprCompilerFn;
 use back::compiler::rtype::*;
-use rust::AstBuilder;
+use rust::{AstBuilder, TokenTree, Token};
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
 {
   grammar: &'c TGrammar<'a, 'b>,
   name_factory: NameFactory,
+  closure_args: Vec<Vec<Ident>>,
   closures: Vec<RStmt>,
-  success_size: usize
+  num_combinators_compiled: usize
 }
 
 impl<'a, 'b, 'c> Context<'a, 'b, 'c>
@@ -34,8 +35,9 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     Context {
       grammar: grammar,
       name_factory: NameFactory::new(),
+      closure_args: vec![],
       closures: vec![],
-      success_size: 0
+      num_combinators_compiled: 0
     }
   }
 
@@ -96,23 +98,22 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     success: RExpr, failure: RExpr) -> RExpr
   {
     let expr = self.compile(compiler, idx, success, failure);
-    self.success_size += 1;
+    self.num_combinators_compiled += 1;
     expr
   }
 
   pub fn do_not_duplicate_success(&self) -> bool {
-    self.success_size > 0
+    self.num_combinators_compiled > 0
   }
 
   pub fn success_as_closure(&mut self, continuation: Continuation) -> Continuation {
     if self.do_not_duplicate_success() {
-      self.success_size = 0;
+      println!("create closure");
+      self.num_combinators_compiled = 0;
       let cx = self.cx();
       let closure_name = self.name_factory.next_closure_name(cx);
-      let mut args = vec![quote_expr!(cx, state)];
-      args.extend(self.vars_in_scope_as_args());
-      let mut params = vec![self.state_param(true)];
-      params.extend(self.vars_in_scope_as_params());
+      let args = self.closure_args();
+      let params = self.closure_params();
       continuation.map_success(|success, _| {
         let lambda = cx.lambda_fn_decl(cx.call_site(),
           cx.fn_decl(params, cx.ty_infer(cx.call_site())),
@@ -129,19 +130,23 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     }
   }
 
-  fn vars_in_scope_as_params(&self) -> Vec<RArg> {
-    self.name_factory
-      .vars_in_scope()
+  fn closure_params(&self) -> Vec<RArg> {
+    vec![self.state_param(true)]
       .into_iter()
-      .map(|var| quote_arg!(self.cx(), $var:_))
+      .chain(
+        self.last_closure_args()
+          .iter()
+          .map(|var| quote_arg!(self.cx(), $var:_)))
       .collect()
   }
 
-  fn vars_in_scope_as_args(&self) -> Vec<RExpr> {
-    self.name_factory
-      .vars_in_scope()
+  fn closure_args(&self) -> Vec<RExpr> {
+    vec![quote_expr!(self.cx(), state)]
       .into_iter()
-      .map(|var| quote_expr!(self.cx(), $var))
+      .chain(
+        self.last_closure_args()
+          .iter()
+          .map(|var| quote_expr!(self.cx(), $var)))
       .collect()
   }
 
@@ -150,31 +155,78 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.name_factory.next_mark_name(cx)
   }
 
+  pub fn next_exit_label(&mut self) -> TokenTree {
+    let cx = self.cx();
+    let label = self.name_factory.next_exit_label(cx);
+    TokenTree::Token(cx.call_site(), Token::Lifetime(label))
+  }
+
   pub fn next_unbounded_var(&mut self) -> Ident {
-    self.name_factory.next_unbounded_var()
+    let ident = self.name_factory.next_unbounded_var();
+    println!("next_unbounded_var: {}", ident);
+    self.push_closure_arg(ident);
+    ident
+  }
+
+  fn last_closure_args<'d>(&'d self) -> &'d Vec<Ident> {
+    self.closure_args.last()
+      .expect("Cannot save the context if no scope are opened.")
   }
 
   // Each branch of the choice must be compiled in a distinct variable names environment (they share names of the variables they are building) and with a fresh success continuation size (each branch might create independent success continuation).
-  pub fn save(&self) -> (usize, usize) {
-    (self.name_factory.save_namespace(), self.success_size)
+  pub fn save(&self) -> ContextSavepoint {
+    ContextSavepoint::new(
+      self.name_factory.save_namespace(),
+      self.num_combinators_compiled,
+      self.last_closure_args().len())
   }
 
-  pub fn restore(&mut self, savepoint: (usize, usize)) {
-    self.name_factory.restore_namespace(savepoint.0);
-    self.success_size = savepoint.1;
+  pub fn restore(&mut self, savepoint: ContextSavepoint) {
+    self.name_factory.restore_namespace(savepoint.name_factory);
+    self.num_combinators_compiled = savepoint.num_combinators_compiled;
+    self.closure_args.last_mut()
+      .expect("Cannot restore the context if no scope are opened.")
+      .truncate(savepoint.closure_args);
+  }
+
+  pub fn push_closure_arg(&mut self, ident: Ident) {
+    println!("push_closure_arg: {}", ident);
+    self.closure_args.last_mut()
+      .expect("Cannot add a closure argument because no scope is currently opened.")
+      .push(ident);
   }
 
   pub fn open_scope(&mut self, expr_idx: usize) -> Vec<Ident> {
     let cx = self.cx();
+    self.closure_args.push(vec![]);
     let cardinality = self.grammar[expr_idx].type_cardinality();
+    println!("new scope {}", cardinality);
     self.name_factory.open_namespace(cx, cardinality)
   }
 
   pub fn close_scope(&mut self) {
+    self.closure_args.pop();
     self.name_factory.close_namespace();
   }
 
   pub fn cx(&self) -> &'a ExtCtxt<'b> {
     &self.grammar.cx
+  }
+}
+
+#[derive(Clone, Copy)]
+pub struct ContextSavepoint {
+  name_factory: usize,
+  num_combinators_compiled: usize,
+  closure_args: usize
+}
+
+impl ContextSavepoint {
+  fn new(name_factory: usize, num_combinators_compiled: usize, closure_args: usize) -> Self {
+    ContextSavepoint {
+      name_factory: name_factory,
+      num_combinators_compiled: num_combinators_compiled,
+      closure_args: closure_args
+    }
   }
 }

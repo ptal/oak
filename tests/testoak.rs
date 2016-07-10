@@ -64,6 +64,8 @@ fn test_data_directory()
     |s| combinators::recognize_any_single_char(s)));
   test_engine.register("combinators", Some(format!("choice")), Box::new(
     |s| combinators::recognize_choice(s)));
+  test_engine.register("combinators", Some(format!("repeat")), Box::new(
+    |s| combinators::recognize_repeat(s)));
 
   test_engine.run();
 }
