@@ -14,27 +14,24 @@
 
 use back::compiler::*;
 
-pub struct RepeatCompiler
+pub struct OptionalCompiler
 {
   expr_idx: usize,
-  cardinality_min: usize,
   compiler_kind: CompilerKind
 }
 
-impl RepeatCompiler
+impl OptionalCompiler
 {
-  pub fn recognizer(expr_idx: usize, cardinality_min: usize) -> RepeatCompiler {
-    RepeatCompiler {
+  pub fn recognizer(expr_idx: usize) -> OptionalCompiler {
+    OptionalCompiler {
       expr_idx: expr_idx,
-      cardinality_min: cardinality_min,
       compiler_kind: CompilerKind::Recognizer
     }
   }
 
-  pub fn parser(expr_idx: usize, cardinality_min: usize) -> RepeatCompiler {
-    RepeatCompiler {
+  pub fn parser(expr_idx: usize) -> OptionalCompiler {
+    OptionalCompiler {
       expr_idx: expr_idx,
-      cardinality_min: cardinality_min,
       compiler_kind: CompilerKind::Parser
     }
   }
@@ -43,54 +40,18 @@ impl RepeatCompiler
     continuation: Continuation, body: RExpr) -> RExpr
   {
     let mark = context.next_mark_name();
-    continuation.map_success(|success, failure|
-      if self.cardinality_min > 0 {
-        let counter = context.next_counter_name();
-        let cardinality_min = self.cardinality_min;
-        quote_expr!(context.cx(),
-          {
-            let mut $mark = state.mark();
-            let mut $counter = 0;
-            loop {
-              state = $body;
-              if state.is_successful() {
-                $counter += 1;
-                $mark = state.mark();
-              }
-              else {
-                break;
-              }
-            }
-            if $counter < $cardinality_min {
-              $failure
-            }
-            else {
-              let mut state = state.restore_from_failure($mark);
-              $success
-            }
+    continuation
+      .map_success(|success, _|
+        quote_expr!(context.cx(), {
+          let $mark = state.mark();
+          state = $body;
+          if state.is_failed() {
+            state = state.restore_from_failure($mark);
           }
-        )
-      }
-      else {
-        quote_expr!(context.cx(),
-          {
-            let mut $mark = state.mark();
-            loop {
-              state = $body;
-              if state.is_successful() {
-                $mark = state.mark();
-              }
-              else {
-                break;
-              }
-            }
-            let mut state = state.restore_from_failure($mark);
-            $success
-          }
-        )
-      }
-    )
-    .unwrap_success()
+          $success
+        })
+      )
+      .unwrap_success()
   }
 
   fn compile_recognizer<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
@@ -102,7 +63,7 @@ impl RepeatCompiler
 
   fn value_constructor(cx: &ExtCtxt, result_var: Ident, result_value: RExpr) -> RExpr {
     quote_expr!(cx, {
-      $result_var.push($result_value);
+      $result_var = Some($result_value);
       state
     })
   }
@@ -110,21 +71,21 @@ impl RepeatCompiler
   fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
     continuation: Continuation) -> RExpr
   {
-    let ty = quote_ty!(context.cx(), Vec<_>);
+    let ty = quote_ty!(context.cx(), Option<_>);
     let (body, result_var) = context.value_constructor(
       self.expr_idx,
       ty,
-      RepeatCompiler::value_constructor
+      OptionalCompiler::value_constructor
     );
-    let repeat_expr = self.compile(context, continuation, body);
+    let optional_expr = self.compile(context, continuation, body);
     quote_expr!(context.cx(), {
-      let mut $result_var = vec![];
-      $repeat_expr
+      let mut $result_var = None;
+      $optional_expr
     })
   }
 }
 
-impl CompileExpr for RepeatCompiler
+impl CompileExpr for OptionalCompiler
 {
   fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
     continuation: Continuation) -> RExpr

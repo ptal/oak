@@ -30,4 +30,6 @@ grammar! combinators {
   repeat = (("a" / "b"+ ) .)* "c"*
 
   predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
+
+  optional = "a"? "b" ("c" . / "d" .)? "z"
 }

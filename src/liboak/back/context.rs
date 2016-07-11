@@ -17,6 +17,8 @@ pub use back::continuation::*;
 use back::name_factory::*;
 use back::compiler::ExprCompilerFn;
 use back::compiler::rtype::*;
+use back::compiler::{recognizer_compiler, parser_compiler};
+use back::compiler::value::*;
 use rust::AstBuilder;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
@@ -102,6 +104,37 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     let expr = self.compile(compiler, idx, success, failure);
     self.num_combinators_compiled += 1;
     expr
+  }
+
+  pub fn compile_recognizer_expr(&mut self, idx: usize) -> RExpr {
+    Continuation::new(
+      quote_expr!(self.cx(), state),
+      quote_expr!(self.cx(), state.failure())
+    )
+    .compile_success(self, recognizer_compiler, idx)
+    .unwrap_success()
+  }
+
+  pub fn value_constructor<F>(&mut self,
+    expr_idx: usize,
+    value_ty: RTy,
+    value_constructor: F) -> (RExpr, Ident) where
+   F: FnOnce(&ExtCtxt, Ident, RExpr) -> RExpr,
+  {
+    let result_var = self.next_free_var();
+    let scope = self.open_scope(expr_idx);
+    self.push_mut_ref_fv(result_var, value_ty);
+    let span = self.cx().call_site();
+    let result_value = tuple_value(self.cx(), span, self.free_variables());
+    let body =
+      Continuation::new(
+        value_constructor(self.cx(), result_var, result_value),
+        quote_expr!(self.cx(), state.failure())
+      )
+      .compile_success(self, parser_compiler, expr_idx)
+      .unwrap_success();
+    self.close_scope(scope);
+    (body, result_var)
   }
 
   pub fn do_not_duplicate_success(&self) -> bool {

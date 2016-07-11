@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub mod rtype;
-mod value;
+pub mod value;
 mod grammar;
 mod rule;
 mod str_literal;
@@ -21,6 +21,7 @@ mod sequence;
 mod choice;
 mod any_single_char;
 mod repeat;
+mod optional;
 mod syntactic_predicate;
 
 pub use back::compiler::grammar::*;
@@ -30,6 +31,7 @@ use back::compiler::sequence::*;
 use back::compiler::choice::*;
 use back::compiler::any_single_char::*;
 use back::compiler::repeat::*;
+use back::compiler::optional::*;
 use back::compiler::syntactic_predicate::*;
 
 pub enum CompilerKind
@@ -60,9 +62,9 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       NotPredicate(_)
     | AndPredicate(_) => unreachable!(
         "BUG: Syntactic predicate can not be compiled to parser (they do not generate data)."),
+      Optional(expr_idx) => Box::new(OptionalCompiler::parser(expr_idx)),
       _ => unimplemented!()
       // NonTerminalSymbol(id) =>
-      // Optional(expr_idx) =>
       // CharacterClass(char_class) =>
       // SemanticAction(expr_idx, id) =>
     }
@@ -79,6 +81,7 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
     NotPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::Not)),
     AndPredicate(expr_idx) =>Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::And)),
+    Optional(expr_idx) => Box::new(OptionalCompiler::recognizer(expr_idx)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
     // Optional(expr_idx) =>
