@@ -23,6 +23,7 @@ mod any_single_char;
 mod repeat;
 mod optional;
 mod syntactic_predicate;
+mod character_class;
 
 pub use back::compiler::grammar::*;
 pub use back::context::*;
@@ -33,6 +34,7 @@ use back::compiler::any_single_char::*;
 use back::compiler::repeat::*;
 use back::compiler::optional::*;
 use back::compiler::syntactic_predicate::*;
+use back::compiler::character_class::*;
 
 pub enum CompilerKind
 {
@@ -54,8 +56,9 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   else {
     match grammar.expr_by_index(idx) {
       StrLiteral(lit) => Box::new(StrLiteralCompiler::parser(lit)),
-      Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
+      CharacterClass(classes) => Box::new(CharacterClassCompiler::parser(classes)),
       AnySingleChar => Box::new(AnySingleCharCompiler::parser()),
+      Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
       Choice(choices) => Box::new(ChoiceCompiler::parser(choices)),
       ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 0)),
       OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
@@ -65,7 +68,6 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       Optional(expr_idx) => Box::new(OptionalCompiler::parser(expr_idx)),
       _ => unimplemented!()
       // NonTerminalSymbol(id) =>
-      // CharacterClass(char_class) =>
       // SemanticAction(expr_idx, id) =>
     }
   }
@@ -74,8 +76,9 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
 pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   match grammar.expr_by_index(idx) {
     StrLiteral(lit) => Box::new(StrLiteralCompiler::recognizer(lit)),
-    Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
+    CharacterClass(classes) => Box::new(CharacterClassCompiler::recognizer(classes)),
     AnySingleChar => Box::new(AnySingleCharCompiler::recognizer()),
+    Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
     Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
     ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 0)),
     OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
@@ -84,8 +87,6 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     Optional(expr_idx) => Box::new(OptionalCompiler::recognizer(expr_idx)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
-    // Optional(expr_idx) =>
-    // CharacterClass(char_class) =>
     // SemanticAction(expr_idx, id) =>
   }
 }

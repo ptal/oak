@@ -32,4 +32,6 @@ grammar! combinators {
   predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
 
   optional = "a"? "b" ("c" . / "d" .)? "z"
+
+  char_class = ["a-zA-Z12_"]+ ["\t "]? ["-"]
 }

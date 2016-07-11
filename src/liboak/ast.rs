@@ -17,7 +17,7 @@
 pub use identifier::*;
 
 use rust;
-use std::fmt::{Formatter, Write, Display, Error};
+use std::fmt::{Formatter, Display, Error};
 
 pub type RTy = rust::P<rust::Ty>;
 pub type RExpr = rust::P<rust::Expr>;
@@ -217,16 +217,24 @@ impl CharacterInterval
       hi: hi
     }
   }
+
+  pub fn escape_lo(&self) -> String {
+    self.lo.escape_default().collect()
+  }
+
+  pub fn escape_hi(&self) -> String {
+    self.hi.escape_default().collect()
+  }
 }
 
 impl Display for CharacterInterval
 {
   fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
     if self.lo == self.hi {
-      formatter.write_char(self.lo)
+      formatter.write_str(self.escape_lo().as_str())
     }
     else {
-      formatter.write_fmt(format_args!("{}-{}", self.lo, self.hi))
+      formatter.write_fmt(format_args!("{}-{}", self.escape_lo(), self.escape_hi()))
     }
   }
 }

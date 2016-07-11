@@ -70,6 +70,8 @@ fn test_data_directory()
     |s| combinators::recognize_predicate(s)));
   test_engine.register("combinators", Some(format!("optional")), Box::new(
     |s| combinators::recognize_optional(s)));
+  test_engine.register("combinators", Some(format!("char_class")), Box::new(
+    |s| combinators::recognize_char_class(s)));
   test_engine.run();
 }
 

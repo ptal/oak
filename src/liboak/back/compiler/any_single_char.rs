@@ -14,33 +14,34 @@
 
 use back::compiler::*;
 
+pub type MatchPatternFn = for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat;
+
+fn ignore_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
+  quote_pat!(context.cx(), _)
+}
+
+fn bind_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
+  let var = context.next_free_var();
+  quote_pat!(context.cx(), $var)
+}
+
 pub struct AnySingleCharCompiler
 {
-  matched_pattern: for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat
+  matched_pattern: MatchPatternFn
 }
 
 impl AnySingleCharCompiler
 {
   pub fn recognizer() -> AnySingleCharCompiler {
     AnySingleCharCompiler {
-      matched_pattern: AnySingleCharCompiler::ignore_value
+      matched_pattern: ignore_value
     }
   }
 
   pub fn parser() -> AnySingleCharCompiler {
     AnySingleCharCompiler {
-      matched_pattern: AnySingleCharCompiler::bind_value
+      matched_pattern: bind_value
     }
-  }
-
-  #[allow(unused_imports)]
-  fn ignore_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
-    quote_pat!(context.cx(), _)
-  }
-
-  fn bind_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
-    let var = context.next_free_var();
-    quote_pat!(context.cx(), $var)
   }
 }
 
