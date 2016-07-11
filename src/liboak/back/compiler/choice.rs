@@ -76,7 +76,7 @@ impl CompileExpr for ChoiceCompiler
       .fold(quote_expr!(cx, state), |accu, branch|
         quote_expr!(cx,
           if $branch_failed {
-            let mut state = state.restore($mark.clone());
+            let mut state = state.restore_from_failure($mark.clone());
             let state = $branch;
             $accu
           }

@@ -66,7 +66,7 @@ impl RepeatCompiler
               $failure
             }
             else {
-              let mut state = state.restore($mark);
+              let mut state = state.restore_from_failure($mark);
               $success
             }
           }
@@ -85,7 +85,7 @@ impl RepeatCompiler
                 break;
               }
             }
-            let mut state = state.restore($mark);
+            let mut state = state.restore_from_failure($mark);
             $success
           }
         )

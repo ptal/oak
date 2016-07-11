@@ -66,7 +66,8 @@ fn test_data_directory()
     |s| combinators::recognize_choice(s)));
   test_engine.register("combinators", Some(format!("repeat")), Box::new(
     |s| combinators::recognize_repeat(s)));
-
+  test_engine.register("combinators", Some(format!("syntactic_predicate")), Box::new(
+    |s| combinators::recognize_predicate(s)));
   test_engine.run();
 }
 

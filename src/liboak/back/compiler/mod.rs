@@ -21,6 +21,7 @@ mod sequence;
 mod choice;
 mod any_single_char;
 mod repeat;
+mod syntactic_predicate;
 
 pub use back::compiler::grammar::*;
 pub use back::context::*;
@@ -29,6 +30,7 @@ use back::compiler::sequence::*;
 use back::compiler::choice::*;
 use back::compiler::any_single_char::*;
 use back::compiler::repeat::*;
+use back::compiler::syntactic_predicate::*;
 
 pub enum CompilerKind
 {
@@ -55,13 +57,14 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       Choice(choices) => Box::new(ChoiceCompiler::parser(choices)),
       ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 0)),
       OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
+      NotPredicate(_)
+    | AndPredicate(_) => unreachable!(
+        "BUG: Syntactic predicate can not be compiled to parser (they do not generate data)."),
       _ => unimplemented!()
       // NonTerminalSymbol(id) =>
-      // Optional(expr) =>
-      // NotPredicate(expr) =>
-      // AndPredicate(expr) =>
+      // Optional(expr_idx) =>
       // CharacterClass(char_class) =>
-      // SemanticAction(expr, id) =>
+      // SemanticAction(expr_idx, id) =>
     }
   }
 }
@@ -74,12 +77,12 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
     ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 0)),
     OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
+    NotPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::Not)),
+    AndPredicate(expr_idx) =>Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::And)),
     _ => unimplemented!()
     // NonTerminalSymbol(id) =>
-    // Optional(expr) =>
-    // NotPredicate(expr) =>
-    // AndPredicate(expr) =>
+    // Optional(expr_idx) =>
     // CharacterClass(char_class) =>
-    // SemanticAction(expr, id) =>
+    // SemanticAction(expr_idx, id) =>
   }
 }

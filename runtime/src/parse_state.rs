@@ -189,8 +189,12 @@ impl<S, T> ParseState<S, T> where
     self.current.clone()
   }
 
-  pub fn restore(self, mark: S) -> ParseState<S, ()> {
+  pub fn restore_from_failure(self, mark: S) -> ParseState<S, ()> {
     assert!(self.failed, "Restoring a successful ParseState is not allowed.");
+    self.restore(mark)
+  }
+
+  pub fn restore(self, mark: S) -> ParseState<S, ()> {
     assert!(self.data.is_none(), "Restoring a ParseState with data is not allowed.");
     ParseState {
       farthest_read: self.farthest_read,

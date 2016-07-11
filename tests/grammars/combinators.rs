@@ -28,4 +28,6 @@ grammar! combinators {
          / "if " ("-" . / .) " else " ("-" . / "+" .)
 
   repeat = (("a" / "b"+ ) .)* "c"*
+
+  predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
 }
