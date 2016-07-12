@@ -97,6 +97,14 @@ impl<'a, 'b> TGrammar<'a, 'b>
       }
     }
   }
+
+  pub fn print_debug_typing(&self, stage_desc: &str) {
+
+  }
+
+  pub fn print_typing(&self) {
+
+  }
 }
 
 // Explicitly typed expression.

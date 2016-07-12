@@ -18,12 +18,12 @@ use rust::{State, PrintState, Visibility, Mod};
 use std::io;
 
 pub fn print_code(grammar: &TGrammar, grammar_module: &RItem) {
-  let print_attr = grammar.attributes.print_attr;
-  if print_attr.debug_api() {
+  let print_code = grammar.attributes.print_code;
+  if print_code.debug() {
     grammar.cx.parse_sess.span_diagnostic.note_without_error(
       rust::item_to_string(grammar_module).as_str());
   }
-  else if print_attr.show_api() {
+  else if print_code.show() {
     if let &rust::ItemKind::Mod(ref module) = &grammar_module.node {
       let res = rust::to_string(|s| {
         print_module(s, module, grammar_module.ident, grammar_module.vis.clone(), grammar_module.span)

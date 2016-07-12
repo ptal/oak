@@ -45,7 +45,6 @@ impl CompileExpr for SemanticActionCompiler
     let args: Vec<_> = context.free_variables().into_iter()
       .map(|var| quote_expr!(cx, $var))
       .collect();
-    println!("{}: {}", self.action, args.len());
     let action_call = cx.expr_call_ident(span, self.action, args);
     let expr = continuation
       .map_success(|success, _|

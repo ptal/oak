@@ -20,53 +20,65 @@ use std::default::Default;
 
 pub type AGrammar<'a, 'b> = Grammar<'a, 'b, FExpressionInfo>;
 
-#[derive(Default)]
-pub struct GrammarAttributes
+impl<'a, 'b> AGrammar<'a, 'b>
 {
-  pub print_attr: PrintAttribute
+  pub fn merge_print_code(&mut self, level: PrintLevel) {
+    self.attributes.print_code.merge(level);
+  }
+
+  pub fn merge_print_typing(&mut self, level: PrintLevel) {
+    self.attributes.print_typing.merge(level);
+  }
 }
 
-impl GrammarAttributes
+pub struct GrammarAttributes
 {
-  pub fn new(print_attr: PrintAttribute) -> GrammarAttributes {
+  pub print_code: PrintLevel,
+  pub print_typing: PrintLevel
+
+}
+
+impl Default for GrammarAttributes {
+  fn default() -> Self {
     GrammarAttributes {
-      print_attr: print_attr
+      print_code: PrintLevel::default(),
+      print_typing: PrintLevel::default()
     }
   }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PrintAttribute
+pub enum PrintLevel
 {
-  DebugApi,
-  ShowApi,
+  Debug,
+  Show,
   Nothing
 }
 
-impl PrintAttribute
+impl PrintLevel
 {
-  pub fn merge(self, other: PrintAttribute) -> PrintAttribute {
-    use self::PrintAttribute::*;
+  pub fn merge(self, other: PrintLevel) -> PrintLevel {
+    use self::PrintLevel::*;
     match (self, other) {
-        (Nothing, DebugApi)
-      | (ShowApi, DebugApi) => DebugApi,
-      (Nothing, ShowApi) => ShowApi,
+        (Nothing, Debug)
+      | (Show, Debug) => Debug,
+      (Nothing, Show) => Show,
       _ => Nothing
     }
   }
 
-  pub fn debug_api(self) -> bool {
-    self == PrintAttribute::DebugApi
+  pub fn debug(self) -> bool {
+    self == PrintLevel::Debug
   }
 
-  pub fn show_api(self) -> bool {
-    self == PrintAttribute::ShowApi
+  pub fn show(self) -> bool {
+    self == PrintLevel::Show
   }
 }
 
-impl Default for PrintAttribute
+impl Default for PrintLevel
 {
-  fn default() -> PrintAttribute {
-    PrintAttribute::Nothing
+  fn default() -> PrintLevel {
+    PrintLevel::Nothing
   }
 }

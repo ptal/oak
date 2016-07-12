@@ -21,27 +21,30 @@ pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
   attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar<'a, 'b>>
 {
   check_rules_attributes(&grammar, frules);
-  let print_attr = check_grammar_attributes(&grammar, attributes);
-  grammar.attributes = GrammarAttributes::new(print_attr);
+  merge_grammar_attributes(&mut grammar, attributes);
   Partial::Value(grammar)
 }
 
-fn check_grammar_attributes<'a, 'b>(grammar: &AGrammar<'a, 'b>, attrs: Vec<Attribute>) -> PrintAttribute {
-  let mut print_attr = PrintAttribute::Nothing;
+fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<Attribute>) {
   for attr in attrs {
     let meta_item = attr.node.value;
-    print_attr = print_attr.merge(check_grammar_attr(grammar, meta_item));
+    merge_grammar_attr(grammar, meta_item);
   }
-  print_attr
 }
 
-fn check_grammar_attr<'a, 'b>(grammar: &AGrammar<'a, 'b>, meta_item: P<MetaItem>) -> PrintAttribute {
+fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: P<MetaItem>) {
   match &meta_item.node {
     &MetaItemKind::Word(ref name) if *name == "debug_api" => {
-      PrintAttribute::DebugApi
+      grammar.merge_print_code(PrintLevel::Debug);
     },
     &MetaItemKind::Word(ref name) if *name == "show_api" => {
-      PrintAttribute::ShowApi
+      grammar.merge_print_code(PrintLevel::Show);
+    },
+    &MetaItemKind::Word(ref name) if *name == "debug_typing" => {
+      grammar.merge_print_typing(PrintLevel::Debug);
+    },
+    &MetaItemKind::Word(ref name) if *name == "show_typing" => {
+      grammar.merge_print_typing(PrintLevel::Show);
     },
       &MetaItemKind::Word(ref name)
     | &MetaItemKind::List(ref name, _)
@@ -49,7 +52,6 @@ fn check_grammar_attr<'a, 'b>(grammar: &AGrammar<'a, 'b>, meta_item: P<MetaItem>
       grammar.warn(format!(
         "Unknown attribute `{}`: it will be ignored.",
         name));
-      PrintAttribute::Nothing
     }
   }
 }

@@ -22,16 +22,17 @@ pub mod ast;
 mod unit_inference;
 mod recursive_type;
 mod tuple_unpacking;
+mod typing_printer;
 
 pub fn type_inference<'a, 'b>(agrammar: AGrammar<'a, 'b>) -> Partial<TGrammar<'a, 'b>> {
-  println!("Inference");
   let grammar = TGrammar::typed_grammar(agrammar);
-  println!("Unit inference");
+  grammar.print_debug_typing("TGrammar::typed_grammar");
   let grammar = UnitInference::infer(grammar);
-  println!("Recursive type");
+  grammar.print_debug_typing("UnitInference::infer");
   RecursiveType::analyse(grammar).map(|grammar| {
-    println!("Tuple unpacking");
-    TupleUnpacking::infer(grammar)
-  }
-  )
+    let grammar = TupleUnpacking::infer(grammar);
+    grammar.print_debug_typing("TupleUnpacking::infer");
+    grammar.print_typing();
+    grammar
+  })
 }
