@@ -54,7 +54,6 @@ fn map_foldr_init<T, U, V, I, F, G>(data: Vec<T>, init: I, f: F, g: G) -> V wher
   data.fold(init(accu), g)
 }
 
-
 struct CodeGenerator<'cx>
 {
   cx: &'cx ExtCtxt<'cx>,

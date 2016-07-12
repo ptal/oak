@@ -220,12 +220,20 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
       .expect("There is no mut ref free variables.");
   }
 
+  pub fn expr_cardinality(&self, expr_idx: usize) -> usize {
+    self.grammar[expr_idx].type_cardinality()
+  }
+
+  pub fn expr_span(&self, expr_idx: usize) -> Span {
+    self.grammar[expr_idx].span
+  }
+
   pub fn open_scope(&mut self, expr_idx: usize) -> Scope {
     let cx = self.cx();
     let scope = self.save_scope();
     self.num_combinators_compiled = 0;
     self.mut_ref_free_variables = vec![];
-    let cardinality = self.grammar[expr_idx].type_cardinality();
+    let cardinality = self.expr_cardinality(expr_idx);
     let free_vars = self.name_factory.fresh_vars(cx, cardinality);
     self.free_variables = free_vars;
     scope

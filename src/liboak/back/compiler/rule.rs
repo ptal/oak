@@ -56,7 +56,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     }
     else {
       let scope = context.open_scope(self.expr());
-      let span = self.grammar[self.expr()].span;
+      let span = context.expr_span(self.expr());
       let vars = tuple_value(self.cx(), span, context.free_variables());
 
       let success = quote_expr!(self.cx(), state.success($vars));

@@ -14,7 +14,7 @@
 
 use back::compiler::*;
 
-pub type MatchPatternFn = for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat;
+type MatchPatternFn = for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat;
 
 fn ignore_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
   quote_pat!(context.cx(), _)

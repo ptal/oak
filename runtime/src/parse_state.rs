@@ -223,6 +223,20 @@ impl<S, T> ParseState<S, T> where
       }
     }
   }
+
+  pub fn extract_data(self) -> (ParseState<S, ()>, T) {
+    assert!(self.is_successful() && self.data.is_some(),
+      "Data extraction is only possible if the state is successful and contains data.");
+    let data = self.data.unwrap();
+    let state = ParseState {
+      farthest_read: self.farthest_read,
+      expected: self.expected,
+      failed: self.failed,
+      current: self.current,
+      data: None
+    };
+    (state, data)
+  }
 }
 
 impl<S, T, I> Iterator for ParseState<S, T> where

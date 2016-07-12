@@ -50,11 +50,11 @@ fn test_data_directory()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  // test_engine.register("ntcc", false, Box::new(|content|
+  // test_engine.register("ntcc", Box::new(|content|
   //   ntcc::recognize_ntcc(content.into_state())));
-  // test_engine.register("type_name", false, Box::new(|content|
+  // test_engine.register("type_name", Box::new(|content|
   //   type_name::recognize_type_names(content.into_state())));
-  // test_engine.register("calc", false, Box::new(|content|
+  // test_engine.register("calc", Box::new(|content|
   //   calc::recognize_program(content.into_state())));
   test_engine.register("combinators", Some(format!("str_literal")), Box::new(
     |s| combinators::recognize_str_literal(s)));
@@ -72,6 +72,8 @@ fn test_data_directory()
     |s| combinators::recognize_optional(s)));
   test_engine.register("combinators", Some(format!("char_class")), Box::new(
     |s| combinators::recognize_char_class(s)));
+  test_engine.register("combinators", Some(format!("non_terminal")), Box::new(
+    |s| combinators::recognize_non_terminal(s)));
   test_engine.run();
 }
 

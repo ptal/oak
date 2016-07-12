@@ -34,4 +34,8 @@ grammar! combinators {
   optional = "a"? "b" ("c" . / "d" .)? "z"
 
   char_class = ["a-zA-Z12_"]+ ["\t "]? ["-"]
+
+  non_terminal = "a" non_terminal_bis+ .
+
+  non_terminal_bis = ("b" . / "c" .) (!"d" .)+
 }

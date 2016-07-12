@@ -17,9 +17,9 @@
 use middle::typing::ast::*;
 use rust::AstBuilder;
 
-pub fn tuple_value<'a, 'b>(cx: &ExtCtxt, span: Span, values_names: Vec<Ident>) -> RExpr
+pub fn tuple_value(cx: &ExtCtxt, span: Span, vars_names: Vec<Ident>) -> RExpr
 {
-  let values: Vec<_> = values_names.into_iter()
+  let values: Vec<_> = vars_names.into_iter()
     .map(|name| quote_expr!(cx, $name))
     .collect();
   if values.len() == 0 {
@@ -30,5 +30,21 @@ pub fn tuple_value<'a, 'b>(cx: &ExtCtxt, span: Span, values_names: Vec<Ident>) -
   }
   else {
     cx.expr_tuple(span, values)
+  }
+}
+
+pub fn tuple_pattern(cx: &ExtCtxt, span: Span, vars_names: Vec<Ident>) -> RPat
+{
+  let values: Vec<_> = vars_names.into_iter()
+    .map(|name| quote_pat!(cx, $name))
+    .collect();
+  if values.len() == 0 {
+    quote_pat!(cx, ())
+  }
+  else if values.len() == 1 {
+    values[0].clone()
+  }
+  else {
+    cx.pat_tuple(span, values)
   }
 }
