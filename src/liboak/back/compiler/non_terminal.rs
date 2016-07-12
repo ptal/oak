@@ -50,6 +50,7 @@ impl CompileExpr for NonTerminalRecognizerCompiler
         {
           state = $recognizer_fn(state);
           if state.is_successful() {
+            state.discard_data();
             $success
           }
           else {

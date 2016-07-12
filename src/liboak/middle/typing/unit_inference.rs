@@ -97,8 +97,8 @@ impl<'a, 'b> Visitor<()> for UnitInference<'a, 'b>
     self.propagate(parent, child);
   }
 
-  fn visit_non_terminal_symbol(&mut self, parent: usize, _id: Ident) {
-    let rule_expr = self.grammar[parent].expr_of_projection();
+  fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
+    let rule_expr = self.grammar.expr_index_of_rule(id);
     self.propagate_invisibility(rule_expr, parent);
   }
 
@@ -106,7 +106,7 @@ impl<'a, 'b> Visitor<()> for UnitInference<'a, 'b>
     self.propagate_all(parent, children.clone());
     let indexes = self.grammar[parent].tuple_indexes()
       .expect("A sequence can only be typed as a tuple.");
-    if self.are_invisible(&indexes) {
+    if self.all_invisible(&indexes) {
       self.invisible(parent);
     }
     else {
@@ -119,10 +119,10 @@ impl<'a, 'b> Visitor<()> for UnitInference<'a, 'b>
 
   fn visit_choice(&mut self, parent: usize, children: Vec<usize>) {
     self.propagate_all(parent, children.clone());
-    if self.are_invisible(&children) {
+    if self.all_invisible(&children) {
       self.invisible(parent);
     }
-    else if self.are_unit(&children) {
+    else if self.all_unit(&children) {
       self.unit(parent);
     }
   }
@@ -179,11 +179,16 @@ impl<'a, 'b> UnitInference<'a, 'b>
     walk_exprs(self, children);
   }
 
-  fn are_invisible(&self, exprs_indexes: &Vec<usize>) -> bool {
-    exprs_indexes.iter().all(|&idx| self.grammar[idx].is_invisible())
+  fn all_invisible(&self, exprs_indexes: &Vec<usize>) -> bool {
+    if exprs_indexes.len() == 0 {
+      false
+    }
+    else {
+      exprs_indexes.iter().all(|&idx| self.grammar[idx].is_invisible())
+    }
   }
 
-  fn are_unit(&self, exprs_indexes: &Vec<usize>) -> bool {
+  fn all_unit(&self, exprs_indexes: &Vec<usize>) -> bool {
     exprs_indexes.iter().all(|&idx| self.grammar[idx].ty.is_unit())
   }
 }

@@ -50,30 +50,30 @@ fn test_data_directory()
   test_path.push(data_path);
   test_path.push(Path::new("test"));
   let mut test_engine = TestEngine::new(test_path);
-  // test_engine.register("ntcc", Box::new(|content|
-  //   ntcc::recognize_ntcc(content.into_state())));
-  // test_engine.register("type_name", Box::new(|content|
-  //   type_name::recognize_type_names(content.into_state())));
-  // test_engine.register("calc", Box::new(|content|
-  //   calc::recognize_program(content.into_state())));
-  test_engine.register("combinators", Some(format!("str_literal")), Box::new(
-    |s| combinators::recognize_str_literal(s)));
-  test_engine.register("combinators", Some(format!("sequence")), Box::new(
-    |s| combinators::recognize_sequence(s)));
-  test_engine.register("combinators", Some(format!("any_single_char")), Box::new(
-    |s| combinators::recognize_any_single_char(s)));
-  test_engine.register("combinators", Some(format!("choice")), Box::new(
-    |s| combinators::recognize_choice(s)));
-  test_engine.register("combinators", Some(format!("repeat")), Box::new(
-    |s| combinators::recognize_repeat(s)));
-  test_engine.register("combinators", Some(format!("syntactic_predicate")), Box::new(
-    |s| combinators::recognize_predicate(s)));
-  test_engine.register("combinators", Some(format!("optional")), Box::new(
-    |s| combinators::recognize_optional(s)));
-  test_engine.register("combinators", Some(format!("char_class")), Box::new(
-    |s| combinators::recognize_char_class(s)));
-  test_engine.register("combinators", Some(format!("non_terminal")), Box::new(
-    |s| combinators::recognize_non_terminal(s)));
+  // test_engine.register("ntcc", None, Box::new(
+  //   |s| ntcc::recognize_ntcc(s)));
+  // test_engine.register("type_name", None, Box::new(
+  //   |s| type_name::recognize_type_names(s)));
+  // test_engine.register("calc", None, Box::new(
+  //   |s| calc::recognize_program(s)));
+  // test_engine.register("combinators", Some(format!("str_literal")), Box::new(
+  //   |s| combinators::recognize_str_literal(s)));
+  // test_engine.register("combinators", Some(format!("sequence")), Box::new(
+  //   |s| combinators::recognize_sequence(s)));
+  // test_engine.register("combinators", Some(format!("any_single_char")), Box::new(
+  //   |s| combinators::recognize_any_single_char(s)));
+  // test_engine.register("combinators", Some(format!("choice")), Box::new(
+  //   |s| combinators::recognize_choice(s)));
+  // test_engine.register("combinators", Some(format!("repeat")), Box::new(
+  //   |s| combinators::recognize_repeat(s)));
+  // test_engine.register("combinators", Some(format!("syntactic_predicate")), Box::new(
+  //   |s| combinators::recognize_predicate(s)));
+  // test_engine.register("combinators", Some(format!("optional")), Box::new(
+  //   |s| combinators::recognize_optional(s)));
+  // test_engine.register("combinators", Some(format!("char_class")), Box::new(
+  //   |s| combinators::recognize_char_class(s)));
+  // test_engine.register("combinators", Some(format!("non_terminal")), Box::new(
+  //   |s| combinators::recognize_non_terminal(s)));
   test_engine.run();
 }
 

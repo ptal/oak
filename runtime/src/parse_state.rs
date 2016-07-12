@@ -239,6 +239,14 @@ impl<S, T> ParseState<S, T> where
   }
 }
 
+impl<S> ParseState<S, ()>
+{
+  // This is specific to recognizer where unit data does not need to be extracted. We also want to preserve the "no-data" precondition of `restore`.
+  pub fn discard_data(&mut self) {
+    self.data = None;
+  }
+}
+
 impl<S, T, I> Iterator for ParseState<S, T> where
  S: Iterator<Item=I>
 {

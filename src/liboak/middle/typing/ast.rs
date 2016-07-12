@@ -168,10 +168,6 @@ impl ExpressionInfo
     }
   }
 
-  pub fn expr_of_projection(&self) -> usize {
-    self.tuple_indexes().expect("Expected a projection type `Tuple(vec![i])`.")[0]
-  }
-
   pub fn type_cardinality(&self) -> usize {
     self.ty.cardinality()
   }

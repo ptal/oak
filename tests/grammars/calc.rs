@@ -15,6 +15,7 @@
 pub use self::calc::*;
 
 grammar! calc {
+  #![debug_api]
   // #![show_api]
 
   program = spacing expression
@@ -114,8 +115,8 @@ grammar! calc {
       |accu, (expr, op)| Box::new(BinaryExpr(op, expr, accu)))
   }
 
-  fn let_in_expr(let_binding: (String, PExpr), expr: PExpr) -> PExpr {
-    Box::new(LetIn(let_binding.0, let_binding.1, expr))
+  fn let_in_expr(var: String, value: PExpr, expr: PExpr) -> PExpr {
+    Box::new(LetIn(var, value, expr))
   }
 
   fn add_bin_op() -> BinOp { Add }
