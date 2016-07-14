@@ -70,7 +70,7 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
   }
 
   fn parser_equals_recognizer(&self) -> bool {
-    self.grammar[self.expr()].ty.is_unit()
+    self.grammar[self.expr()].ty == Type::Unit
   }
 
   fn cx(&self) -> &'a ExtCtxt<'b> {

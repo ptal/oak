@@ -170,7 +170,7 @@ pub enum Expression
   Choice(Vec<usize>), // try_this / or_try_this_one
   ZeroOrMore(usize), // space*
   OneOrMore(usize), // space+
-  Optional(usize), // space?
+  ZeroOrOne(usize), // space?
   NotPredicate(usize), // !space
   AndPredicate(usize), // &space
   SemanticAction(usize, Ident) // rule > function

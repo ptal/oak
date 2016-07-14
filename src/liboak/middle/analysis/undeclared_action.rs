@@ -52,7 +52,7 @@ impl<'a, 'b, 'c> ExprByIndex for UndeclaredAction<'a, 'b, 'c>
 impl<'a, 'b, 'c> Visitor<()> for UndeclaredAction<'a, 'b, 'c>
 {
   unit_visitor_impl!(str_literal);
-  unit_visitor_impl!(character);
+  unit_visitor_impl!(atom);
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
   unit_visitor_impl!(non_terminal);

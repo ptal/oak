@@ -230,7 +230,7 @@ impl<'a> Parser<'a>
       },
       rtok::Question => {
         self.bump();
-        self.alloc_expr(lo, hi, Optional(expr))
+        self.alloc_expr(lo, hi, ZeroOrOne(expr))
       },
       _ => expr
     };

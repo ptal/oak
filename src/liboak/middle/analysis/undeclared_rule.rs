@@ -54,7 +54,7 @@ impl<'a, 'b, 'c> ExprByIndex for UndeclaredRule<'a, 'b, 'c>
 impl<'a, 'b, 'c> Visitor<()> for UndeclaredRule<'a, 'b, 'c>
 {
   unit_visitor_impl!(str_literal);
-  unit_visitor_impl!(character);
+  unit_visitor_impl!(atom);
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 

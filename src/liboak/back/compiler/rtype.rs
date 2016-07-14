@@ -17,7 +17,7 @@
 use rust;
 use rust::{FunctionRetTy, AstBuilder};
 use middle::typing::ast::*;
-use middle::typing::ast::ExprTy::*;
+use middle::typing::ast::Type::*;
 
 pub struct TypeCompiler<'a: 'c, 'b: 'a, 'c>
 {
@@ -39,11 +39,12 @@ impl<'a, 'b, 'c> TypeCompiler<'a, 'b, 'c>
 
   fn compile_type(&self, expr_idx: usize) -> RTy {
     match self.grammar[expr_idx].ty.clone() {
+      Unit => self.unit_type(),
+      Atom => self.atom_type(),
+      List(expr_idx) => self.list_type(expr_idx),
+      Optional(expr_idx) => self.optional_type(expr_idx),
       Action(rust_ty) => self.action_type(rust_ty),
-      Tuple(ref indexes) if indexes.len() == 0 => self.unit_type(),
-      Tuple(ref indexes) if indexes.len() == 1 => self.compile_type(indexes[0]),
       Tuple(indexes) => self.tuple_type(expr_idx, indexes),
-      Identity => self.identity_type(expr_idx)
     }
   }
 
@@ -66,27 +67,16 @@ impl<'a, 'b, 'c> TypeCompiler<'a, 'b, 'c>
     self.grammar.cx.ty(span, rust::TyKind::Tup(tys))
   }
 
-  fn identity_type(&self, expr_idx: usize) -> RTy {
-    match self.grammar.expr_by_index(expr_idx).clone() {
-      AnySingleChar
-    | CharacterClass(_) => self.char_type(),
-      ZeroOrMore(expr_idx)
-    | OneOrMore(expr_idx) => self.vector_type(expr_idx),
-      Optional(expr_idx) => self.option_type(expr_idx),
-      expr => panic!(format!("Expression `{:?}` of type `Identity` not recognized.", expr))
-    }
-  }
-
-  fn char_type(&self) -> RTy {
+  fn atom_type(&self) -> RTy {
     quote_ty!(self.grammar.cx, char)
   }
 
-  fn vector_type(&self, expr_idx: usize) -> RTy {
+  fn list_type(&self, expr_idx: usize) -> RTy {
     let ty = self.compile_type(expr_idx);
     quote_ty!(self.grammar.cx, Vec<$ty>)
   }
 
-  fn option_type(&self, expr_idx: usize) -> RTy {
+  fn optional_type(&self, expr_idx: usize) -> RTy {
     let ty = self.compile_type(expr_idx);
     quote_ty!(self.grammar.cx, Option<$ty>)
   }

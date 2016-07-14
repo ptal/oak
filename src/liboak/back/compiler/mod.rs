@@ -54,7 +54,7 @@ pub trait CompileExpr
 pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;
 
 pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
-  if grammar[idx].ty.is_unit() {
+  if grammar[idx].ty == Type::Unit {
     recognizer_compiler(grammar, idx)
   }
   else {
@@ -64,7 +64,7 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       AnySingleChar => Box::new(AnySingleCharCompiler::parser()),
       Sequence(seq) => Box::new(SequenceCompiler::parser(seq)),
       Choice(choices) => Box::new(ChoiceCompiler::parser(choices)),
-      Optional(expr_idx) => Box::new(OptionalCompiler::parser(expr_idx)),
+      ZeroOrOne(expr_idx) => Box::new(OptionalCompiler::parser(expr_idx)),
       ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 0)),
       OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
       NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::parser(id, idx)),
@@ -83,7 +83,7 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     AnySingleChar => Box::new(AnySingleCharCompiler::recognizer()),
     Sequence(seq) => Box::new(SequenceCompiler::recognizer(seq)),
     Choice(choices) => Box::new(ChoiceCompiler::recognizer(choices)),
-    Optional(expr_idx) => Box::new(OptionalCompiler::recognizer(expr_idx)),
+    ZeroOrOne(expr_idx) => Box::new(OptionalCompiler::recognizer(expr_idx)),
     ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 0)),
     OneOrMore(expr_idx) => Box::new(RepeatCompiler::recognizer(expr_idx, 1)),
     NotPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::Not)),

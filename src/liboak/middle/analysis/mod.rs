@@ -26,7 +26,7 @@ mod attribute;
 pub mod ast;
 
 pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGrammar<'a, 'b>> {
-  let grammar = Grammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
+  let grammar = AGrammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
   let frules = fgrammar.rules.clone();
   let frust_items = fgrammar.rust_items;
   let fattributes = fgrammar.attributes;

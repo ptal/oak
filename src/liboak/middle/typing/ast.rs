@@ -20,20 +20,21 @@ pub use visitor::*;
 pub use ast::Expression::*;
 
 pub use std::collections::HashMap;
-pub use std::cell::RefCell;
 
 use rust;
-use middle::typing::ast::ExprTy::*;
+use middle::typing::ast::Type::*;
+use middle::typing::ast::IType::*;
 use front::ast::TypeAnnotation;
 use middle::analysis::ast::AGrammar;
 
-pub type TGrammar<'a, 'b> = Grammar<'a, 'b, ExpressionInfo>;
+pub type IGrammar<'a, 'b> = Grammar<'a, 'b, ExprIType>;
+pub type TGrammar<'a, 'b> = Grammar<'a, 'b, ExprType>;
 
-impl<'a, 'b> TGrammar<'a, 'b>
+impl<'a, 'b> IGrammar<'a, 'b>
 {
-  pub fn typed_grammar(agrammar: AGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
+  pub fn from(agrammar: AGrammar<'a, 'b>) -> IGrammar<'a, 'b> {
     let exprs_info = agrammar.exprs_info;
-    let mut grammar = TGrammar {
+    let mut grammar = IGrammar {
       cx: agrammar.cx,
       name: agrammar.name,
       rules: agrammar.rules,
@@ -43,189 +44,149 @@ impl<'a, 'b> TGrammar<'a, 'b>
       rust_items: agrammar.rust_items,
       attributes: agrammar.attributes
     };
-    for (expr_idx, expr_info) in exprs_info.into_iter().enumerate() {
-      grammar.push_expr_info(expr_idx, expr_info.span, expr_info.ty);
-    };
+    grammar.exprs_info = exprs_info.into_iter()
+      .map(|e| grammar.expr_itype(e.span, e.ty))
+      .collect();
     grammar
   }
 
-  fn push_expr_info(&mut self, expr_idx: usize, span: Span,
-    ty: Option<TypeAnnotation>)
+  fn expr_itype(&mut self, span: Span,
+    ty: Option<TypeAnnotation>) -> ExprIType
   {
-    let expr_info =
-      match ty {
-        Some(TypeAnnotation::Invisible) => {
-          ExpressionInfo::invisible(span)
-        }
-        Some(TypeAnnotation::Unit) => {
-          ExpressionInfo::unit(span)
-        }
-        None => {
-          self.infer_type(expr_idx, span)
-        }
-      };
-    self.exprs_info.push(expr_info);
-  }
-
-  fn infer_type(&self, expr_idx: usize, span: Span) -> ExpressionInfo {
-    match self.expr_by_index(expr_idx) {
-      StrLiteral(_)
-    | NotPredicate(_)
-    | AndPredicate(_) => ExpressionInfo::invisible(span),
-      AnySingleChar
-    | CharacterClass(_)
-    | ZeroOrMore(_)
-    | OneOrMore(_)
-    | Optional(_) => ExpressionInfo::new(span, Identity),
-      Choice(indexes) => ExpressionInfo::new(span, Tuple(vec![indexes[0]])),
-      Sequence(indexes) => ExpressionInfo::new(span, Tuple(indexes)),
-      NonTerminalSymbol(ident) => {
-        let expr_idx = self.expr_index_of_rule(ident);
-        ExpressionInfo::new(span, Tuple(vec![expr_idx]))
+    match ty {
+      Some(TypeAnnotation::Invisible) => {
+        ExprIType::invisible(span)
       }
-      SemanticAction(_, ident) => {
-        match self.rust_functions[&ident].node {
-          rust::ItemKind::Fn(ref decl,..) => {
-            ExpressionInfo::new(span, Action(decl.output.clone()))
-          },
-          _ => {
-            self.span_err(span, format!(
-              "Only function items are currently allowed in semantic actions."));
-            ExpressionInfo::unit(span)
-          }
-        }
+      Some(TypeAnnotation::Unit) => {
+        ExprIType::unit(span)
+      }
+      None => {
+        ExprIType::infer(span)
       }
     }
   }
 
-  pub fn print_debug_typing(&self, stage_desc: &str) {
-
+  pub fn action_type(&self, expr_idx: usize, action: Ident) -> IType
+  {
+    match self.rust_functions[&action].node {
+      rust::ItemKind::Fn(ref decl,..) => {
+        Regular(Action(decl.output.clone()))
+      },
+      _ => {
+        self.span_err(self[expr_idx].span, format!(
+          "Only function items are currently allowed in semantic actions."));
+        Regular(Unit)
+      }
+    }
   }
 
-  pub fn print_typing(&self) {
+  pub fn type_of(&self, expr_idx: usize) -> IType {
+    self[expr_idx].ty()
+  }
 
+  pub fn type_of_rule(&self, rule: Ident) -> IType {
+    let expr_idx = self.expr_index_of_rule(rule);
+    self.type_of(expr_idx)
+  }
+
+  pub fn map_exprs_info(self, exprs_info: Vec<ExprType>) -> TGrammar<'a, 'b> {
+    TGrammar {
+      cx: self.cx,
+      name: self.name,
+      rules: self.rules,
+      exprs: self.exprs,
+      exprs_info: exprs_info,
+      rust_functions: self.rust_functions,
+      rust_items: self.rust_items,
+      attributes: self.attributes
+    }
   }
 }
+
+pub type ExprIType = ExpressionInfo<IType>;
+pub type ExprType = ExpressionInfo<Type>;
 
 // Explicitly typed expression.
-pub struct ExpressionInfo
+#[derive(Clone)]
+pub struct ExpressionInfo<Ty>
 {
   pub span: Span,
-  pub invisible: bool,
-  pub ty: ExprTy
+  pub ty: Ty
 }
 
-impl ItemSpan for ExpressionInfo {
+impl<Ty> ItemSpan for ExpressionInfo<Ty> {
   fn span(&self) -> Span {
     self.span
   }
 }
 
-impl ExpressionInfo
+impl<Ty> ExpressionInfo<Ty> where
+ Ty: Clone
 {
-  pub fn new(sp: Span, ty: ExprTy) -> ExpressionInfo {
+  pub fn new(sp: Span, ty: Ty) -> Self {
     ExpressionInfo {
       span: sp,
-      invisible: false,
       ty: ty
     }
   }
 
-  pub fn unit(sp: Span) -> ExpressionInfo {
-    ExpressionInfo::new(sp, ExprTy::unit())
+  pub fn ty(&self) -> Ty {
+    self.ty.clone()
   }
+}
 
-  pub fn invisible(sp: Span) -> ExpressionInfo {
-    let mut expr_info = ExpressionInfo::new(sp, ExprTy::unit());
-    expr_info.invisible = true;
-    expr_info
-  }
-
-  pub fn is_invisible(&self) -> bool {
-    self.invisible
-  }
-
-  pub fn to_unit_type(&mut self) {
-    self.ty = ExprTy::unit();
-  }
-
-  pub fn to_invisible_type(&mut self) {
-    self.invisible = true;
-    self.to_unit_type();
-  }
-
-  pub fn to_tuple_type(&mut self, indexes: Vec<usize>) {
-    self.ty = Tuple(indexes);
-  }
-
-  pub fn tuple_indexes(&self) -> Option<Vec<usize>> {
-    if let Tuple(ref indexes) = self.ty {
-      Some(indexes.clone())
-    }
-    else {
-      None
-    }
-  }
-
-  pub fn eq_tuple_indexes(&self, indexes: &Vec<usize>) -> bool {
-    if let Tuple(ref self_indexes) = self.ty {
-      self_indexes == indexes
-    }
-    else {
-      false
-    }
-  }
-
+impl ExprType {
   pub fn type_cardinality(&self) -> usize {
     self.ty.cardinality()
   }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ExprTy
+impl ExprIType
 {
-  /// The expression indicates that a value must be built. For example `e?`, with `e:T`, implies the type `Option<T>` so a new value must be built.
-  Identity,
-  /// `Tuple(vec![])` is the unit type.
-  /// `Tuple(vec![i])` is a projection of the type of a sub-expression.
+  pub fn infer(sp: Span) -> Self {
+    ExprIType::new(sp, Infer)
+  }
+
+  pub fn invisible(sp: Span) -> Self {
+    ExprIType::new(sp, Invisible)
+  }
+
+  pub fn unit(sp: Span) -> Self {
+    ExprIType::new(sp, Regular(Unit))
+  }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum IType
+{
+  Infer,
+  Rec(Vec<Ident>),
+  Invisible,
+  Regular(Type)
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Type
+{
+  Unit,
+  Atom,
+  Optional(usize),
+  List(usize),
   /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
+  /// Precondition: Tuple size >= 2.
   Tuple(Vec<usize>),
   Action(rust::FunctionRetTy)
 }
 
-impl ExprTy
+impl Type
 {
-  pub fn is_unit(&self) -> bool {
-    match *self {
-      Tuple(ref indexes) => indexes.len() == 0,
-      _ => false
-    }
-  }
-
-  pub fn is_projection(&self) -> bool {
-    match *self {
-      Tuple(ref indexes) => indexes.len() == 1,
-      _ => false
-    }
-  }
-
-  /// True if the type indicates that a value must be built automatically by the generator.
-  pub fn is_value_constructor(&self) -> bool {
-    match *self {
-      Identity => true,
-      Tuple(ref indexes) if indexes.len() > 1 => true,
-      _ => false
-    }
-  }
-
-  pub fn unit() -> ExprTy {
-    Tuple(vec![])
-  }
-
   pub fn cardinality(&self) -> usize {
     match *self {
-      Identity => 1,
-      Action(_) => 1,
+      Unit => 0,
+      Atom
+    | Optional(_)
+    | List(_)
+    | Action(_) => 1,
       Tuple(ref indexes) => indexes.len()
     }
   }
