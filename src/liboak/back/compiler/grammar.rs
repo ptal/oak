@@ -88,8 +88,8 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
   }
 
   fn compile_rules(&self) -> Vec<RItem> {
-    self.grammar.rules.values().cloned()
-      .flat_map(|rule| RuleCompiler::compile(&self.grammar, rule).into_iter())
+    self.grammar.rules.iter()
+      .flat_map(|&rule| RuleCompiler::compile(&self.grammar, rule).into_iter())
       .collect()
   }
 

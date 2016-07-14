@@ -31,10 +31,10 @@ impl<'a, 'b> Surface<'a, 'b>
     }
   }
 
-  pub fn surface(&mut self, rules: Vec<Ident>) {
-    for rule in rules {
-      if self.grammar.type_of_rule(rule) == Infer {
-        self.visit_rule(rule);
+  pub fn surface(&mut self) {
+    for rule in self.grammar.rules.clone() {
+      if self.grammar.type_of(rule.expr_idx) == Infer {
+        self.visit_rule(rule.ident());
       }
     }
   }

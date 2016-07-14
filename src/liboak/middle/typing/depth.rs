@@ -29,12 +29,8 @@ impl<'a, 'b> Depth<'a, 'b>
 {
   pub fn infer(grammar: IGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
     let mut engine = Depth::new(grammar);
-    let rules: Vec<_> = engine.surface.grammar.rules
-      .values()
-      .map(|rule| rule.ident())
-      .collect();
-    engine.surface(rules.clone());
-    engine.depth(rules);
+    engine.surface.surface();
+    engine.depth();
     engine.surface.grammar.map_exprs_info(engine.exprs_info)
   }
 
@@ -46,18 +42,13 @@ impl<'a, 'b> Depth<'a, 'b>
     }
   }
 
-  fn surface(&mut self, rules: Vec<Ident>) {
-    self.surface.surface(rules);
-  }
-
   fn surface_expr(&mut self, expr_idx: usize) {
     self.surface.visit_expr(expr_idx);
   }
 
-  fn depth(&mut self, rules: Vec<Ident>) {
-    for rule in rules {
-      let expr_idx = self.surface.grammar.expr_index_of_rule(rule);
-      self.visit_expr(expr_idx);
+  fn depth(&mut self) {
+    for rule in self.surface.grammar.rules.clone() {
+      self.visit_expr(rule.expr_idx);
     }
   }
 

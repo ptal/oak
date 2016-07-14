@@ -19,8 +19,6 @@ pub use ast::*;
 pub use visitor::*;
 pub use ast::Expression::*;
 
-pub use std::collections::HashMap;
-
 use rust;
 use middle::typing::ast::Type::*;
 use middle::typing::ast::IType::*;
@@ -65,11 +63,6 @@ impl<'a, 'b> IGrammar<'a, 'b>
 
   pub fn type_of(&self, expr_idx: usize) -> IType {
     self[expr_idx].ty()
-  }
-
-  pub fn type_of_rule(&self, rule: Ident) -> IType {
-    let expr_idx = self.expr_index_of_rule(rule);
-    self.type_of(expr_idx)
   }
 
   pub fn map_exprs_info(self, exprs_info: Vec<ExprType>) -> TGrammar<'a, 'b> {

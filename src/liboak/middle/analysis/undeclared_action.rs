@@ -35,7 +35,7 @@ impl<'a, 'b, 'c> UndeclaredAction<'a, 'b, 'c>
       grammar: grammar,
       has_undeclared: false
     };
-    for rule in grammar.rules.values() {
+    for rule in &grammar.rules {
       analyser.visit_expr(rule.expr_idx);
     }
     analyser.has_undeclared
@@ -57,11 +57,11 @@ impl<'a, 'b, 'c> Visitor<()> for UndeclaredAction<'a, 'b, 'c>
   unit_visitor_impl!(choice);
   unit_visitor_impl!(non_terminal);
 
-  fn visit_semantic_action(&mut self, parent: usize, _expr: usize, id: Ident) {
-    if !self.grammar.rust_functions.contains_key(&id) {
+  fn visit_semantic_action(&mut self, this: usize, _child: usize, action: Ident) {
+    if !self.grammar.rust_functions.contains_key(&action) {
       self.grammar.expr_err(
-        parent,
-        format!("Undeclared action `{}`. Function must be declared in the grammar scope.", id)
+        this,
+        format!("Undeclared action `{}`. Function must be declared in the grammar scope.", action)
       );
       self.has_undeclared = true;
     }

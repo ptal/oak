@@ -24,7 +24,7 @@ pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<FRule>) 
 {
   DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
   .map(|rules|
-    rules.into_iter().map(|(id, frule)| (id, Rule::new(frule.name, frule.def))).collect())
+    rules.into_iter().map(|(_,frule)| Rule::new(frule.name, frule.def)).collect())
   .map(move |rules| { grammar.rules = rules; grammar })
 }
 

@@ -37,7 +37,7 @@ impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
       grammar: grammar,
       has_undeclared: false
     };
-    for rule in grammar.rules.values() {
+    for rule in &grammar.rules {
       analyser.visit_expr(rule.expr_idx);
     }
     analyser.has_undeclared
@@ -58,11 +58,13 @@ impl<'a, 'b, 'c> Visitor<()> for UndeclaredRule<'a, 'b, 'c>
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 
-  fn visit_non_terminal_symbol(&mut self, parent: usize, id: Ident) {
-    if !self.grammar.rules.contains_key(&id) {
+  fn visit_non_terminal_symbol(&mut self, this: usize, rule: Ident) {
+    let contains_key = self.grammar.rules.iter()
+      .find(|r| r.ident() == rule).is_some();
+    if !contains_key {
       self.grammar.expr_err(
-        parent,
-        format!("Undeclared rule `{}`.", id)
+        this,
+        format!("Undeclared rule `{}`.", rule)
       );
       self.has_undeclared = true;
     }

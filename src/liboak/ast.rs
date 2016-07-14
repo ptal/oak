@@ -47,7 +47,7 @@ pub struct Grammar<'a, 'b:'a, ExprInfo>
 {
   pub cx: &'a ExtCtxt<'b>,
   pub name: Ident,
-  pub rules: HashMap<Ident, Rule>,
+  pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExprInfo>,
   pub rust_functions: HashMap<Ident, RItem>,
@@ -63,7 +63,7 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     Grammar {
       cx: cx,
       name: name,
-      rules: HashMap::new(),
+      rules: vec![],
       exprs: exprs,
       exprs_info: exprs_info,
       rust_functions: HashMap::new(),
@@ -93,8 +93,8 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
   }
 
   pub fn expr_index_of_rule(&self, id: Ident) -> usize {
-    self.rules
-      .get(&id)
+    self.rules.iter()
+      .find(|r| r.ident() == id)
       .expect("Rule id not registered in the known rules.")
       .expr_idx
   }

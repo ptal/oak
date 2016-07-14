@@ -17,23 +17,23 @@ pub use self::combinators::*;
 grammar! combinators {
   // #![debug_api]
 
-  str_literal = "return"
+  // str_literal = "return"
 
-  sequence = "if" " " "then" " " "else"
+  // sequence = "if" " " "then" " " "else"
 
-  any_single_char = . .
+  // any_single_char = . .
 
-  choice = "if" . "else" .
-         / "let" . .
-         / "if " ("-" . / .) " else " ("-" . / "+" .)
+  // choice = "if" . "else" .
+  //        / "let" . .
+  //        / "if " ("-" . / .) " else " ("-" . / "+" .)
 
-  repeat = (("a" / "b"+ ) .)* "c"*
+  // repeat = (("a" / "b"+ ) .)* "c"*
 
-  predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
+  // predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
 
-  optional = "a"? "b" ("c" . / "d" .)? "z"
+  // optional = "a"? "b" ("c" . / "d" .)? "z"
 
-  char_class = ["a-zA-Z12_"]+ ["\t "]? ["-"]
+  // char_class = ["a-zA-Z12_"]+ ["\t "]? ["-"]
 
   non_terminal = "a" non_terminal_bis+ .
 
