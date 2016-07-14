@@ -43,8 +43,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
     let module = quote_item!(self.cx(),
       pub mod $grammar_name
       {
-        // #![allow(dead_code)]
-        // #![allow(unused_parens, unused_variables, unused_mut, unused_imports)]
+        #![allow(unused_mut)]
         use oak_runtime::stream::*;
 
         $module_content
