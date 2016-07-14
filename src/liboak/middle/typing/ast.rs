@@ -24,7 +24,6 @@ pub use std::collections::HashMap;
 use rust;
 use middle::typing::ast::Type::*;
 use middle::typing::ast::IType::*;
-use front::ast::TypeAnnotation;
 use middle::analysis::ast::AGrammar;
 
 pub type IGrammar<'a, 'b> = Grammar<'a, 'b, ExprIType>;
@@ -45,25 +44,9 @@ impl<'a, 'b> IGrammar<'a, 'b>
       attributes: agrammar.attributes
     };
     grammar.exprs_info = exprs_info.into_iter()
-      .map(|e| grammar.expr_itype(e.span, e.ty))
+      .map(|e| ExprIType::infer(e.span))
       .collect();
     grammar
-  }
-
-  fn expr_itype(&mut self, span: Span,
-    ty: Option<TypeAnnotation>) -> ExprIType
-  {
-    match ty {
-      Some(TypeAnnotation::Invisible) => {
-        ExprIType::invisible(span)
-      }
-      Some(TypeAnnotation::Unit) => {
-        ExprIType::unit(span)
-      }
-      None => {
-        ExprIType::infer(span)
-      }
-    }
   }
 
   pub fn action_type(&self, expr_idx: usize, action: Ident) -> IType
@@ -145,14 +128,6 @@ impl ExprIType
 {
   pub fn infer(sp: Span) -> Self {
     ExprIType::new(sp, Infer)
-  }
-
-  pub fn invisible(sp: Span) -> Self {
-    ExprIType::new(sp, Invisible)
-  }
-
-  pub fn unit(sp: Span) -> Self {
-    ExprIType::new(sp, Regular(Unit))
   }
 }
 

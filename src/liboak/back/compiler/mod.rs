@@ -69,6 +69,7 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
       NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::parser(id, idx)),
       SemanticAction(expr_idx, id) => Box::new(SemanticActionCompiler::parser(expr_idx, id, idx)),
+      TypeAscription(expr_idx, _) => parser_compiler(grammar, expr_idx),
       NotPredicate(_)
     | AndPredicate(_) => unreachable!(
         "BUG: Syntactic predicate can not be compiled to parser (they do not generate data)."),
@@ -89,6 +90,7 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     NotPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::Not)),
     AndPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::And)),
     NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::recognizer(id)),
-    SemanticAction(expr_idx, _) => recognizer_compiler(grammar, expr_idx)
+    SemanticAction(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
+    TypeAscription(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
   }
 }

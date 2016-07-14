@@ -56,10 +56,6 @@ impl FGrammar
   pub fn push_rust_item(&mut self, ritem: RItem) {
     self.rust_items.push(ritem);
   }
-
-  pub fn expr_ty(&mut self, expr: usize, ty: TypeAnnotation) {
-    self.exprs_info[expr].ty = Some(ty);
-  }
 }
 
 #[derive(Clone)]
@@ -95,26 +91,18 @@ impl ItemSpan for FRule
   }
 }
 
-#[derive(Clone, Copy)]
-pub enum TypeAnnotation {
-  Invisible,
-  Unit
-}
-
 // Implicitly typed expression.
 #[derive(Clone)]
 pub struct FExpressionInfo
 {
-  pub span: Span,
-  pub ty: Option<TypeAnnotation>
+  pub span: Span
 }
 
 impl FExpressionInfo
 {
   fn spanned(lo: BytePos, hi: BytePos) -> FExpressionInfo {
     FExpressionInfo {
-      span: mk_sp(lo, hi),
-      ty: None
+      span: mk_sp(lo, hi)
     }
   }
 }

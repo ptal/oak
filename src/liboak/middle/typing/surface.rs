@@ -129,6 +129,10 @@ impl<'a, 'b> Visitor<IType> for Surface<'a, 'b>
     IType::Invisible
   }
 
+  fn visit_type_ascription(&mut self, _this: usize, _child: usize, ty: IType) -> IType {
+    ty
+  }
+
   fn visit_atom(&mut self, _this: usize) -> IType {
     IType::Regular(Type::Atom)
   }

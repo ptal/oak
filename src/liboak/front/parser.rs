@@ -115,22 +115,24 @@ impl<'a> Parser<'a>
 
   fn parse_semantic_action_or_ty(&mut self, expr: usize, rule_name: &str) -> rust::PResult<'a, usize> {
     let token = self.rp.token.clone();
+    let lo = self.rp.span.lo;
     match token {
       rtok::Gt => {
         self.bump();
         let fun_name = try!(self.rp.parse_ident());
-        Ok(self.last_respan(SemanticAction(expr, fun_name)))
+        let hi = self.rp.span.hi;
+        Ok(self.alloc_expr(lo, hi, SemanticAction(expr, fun_name)))
       },
       rtok::RArrow => {
         self.bump();
-        self.parse_type(expr, rule_name)
+        self.parse_type(lo, expr, rule_name)
       }
       _ => Ok(expr)
     }
   }
 
   // `()` or `(^)`
-  fn parse_type(&mut self, expr: usize, rule_name: &str) -> rust::PResult<'a, usize> {
+  fn parse_type(&mut self, lo: BytePos, expr: usize, rule_name: &str) -> rust::PResult<'a, usize> {
     let token = self.rp.token.clone();
     match token {
       rtok::OpenDelim(rust::DelimToken::Paren) => {
@@ -139,13 +141,14 @@ impl<'a> Parser<'a>
         let ty =
           if token == rtok::BinOp(rbtok::Caret) {
             self.bump();
-            TypeAnnotation::Invisible
+            IType::Invisible
           }
           else {
-            TypeAnnotation::Unit
+            IType::Regular(Type::Unit)
           };
-        self.grammar.expr_ty(expr, ty);
         try!(self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)));
+        let hi = self.rp.span.hi;
+        Ok(self.alloc_expr(lo, hi, TypeAscription(expr, ty)))
       }
       _ => {
         let span = self.rp.span;
@@ -154,9 +157,9 @@ impl<'a> Parser<'a>
           format!("In rule {}: Unknown token after `->`. Use the arrow to annotate an expression with the unit type `()` or the invisible type `(^)`.",
             rule_name).as_str()
         );
+        Ok(expr)
       }
     }
-    Ok(expr)
   }
 
   fn parse_rule_seq(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {

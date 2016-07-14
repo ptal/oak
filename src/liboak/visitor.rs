@@ -69,6 +69,10 @@ pub trait Visitor<R> : ExprByIndex
   fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: Ident) -> R {
     self.visit_expr(child)
   }
+
+  fn visit_type_ascription(&mut self, _this: usize, child: usize, _ty: IType) -> R {
+    self.visit_expr(child)
+  }
 }
 
 /// We need this macro for factorizing the code since we can not specialize a trait on specific type parameter (we would need to specialize on `()` here).
@@ -129,6 +133,9 @@ pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, this: usize) -> R where
     }
     SemanticAction(child, action) => {
       visitor.visit_semantic_action(this, child, action)
+    }
+    TypeAscription(child, ty) => {
+      visitor.visit_type_ascription(this, child, ty)
     }
   }
 }

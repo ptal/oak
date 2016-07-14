@@ -117,6 +117,11 @@ impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 
+  fn visit_type_ascription(&mut self, _this: usize, child: usize, _ty: IType) {
+    self.surface_expr(child);
+    self.visit_expr(child);
+  }
+
   fn visit_syntactic_predicate(&mut self, _this: usize, child: usize) {
     self.surface_expr(child);
     self.visit_expr(child);

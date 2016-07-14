@@ -29,6 +29,9 @@ pub type RArg = rust::Arg;
 pub use rust::{ExtCtxt, Attribute, SpannedIdent};
 pub use monad::partial::Partial;
 
+pub use middle::typing::ast::IType;
+pub use middle::typing::ast::Type;
+
 use middle::analysis::ast::GrammarAttributes;
 
 use std::collections::HashMap;
@@ -168,12 +171,13 @@ pub enum Expression
   NonTerminalSymbol(Ident), // a_rule
   Sequence(Vec<usize>), // a_rule next_rule
   Choice(Vec<usize>), // try_this / or_try_this_one
-  ZeroOrMore(usize), // space*
-  OneOrMore(usize), // space+
-  ZeroOrOne(usize), // space?
-  NotPredicate(usize), // !space
-  AndPredicate(usize), // &space
-  SemanticAction(usize, Ident) // rule > function
+  ZeroOrMore(usize), // expr*
+  OneOrMore(usize), // expr+
+  ZeroOrOne(usize), // expr?
+  NotPredicate(usize), // !expr
+  AndPredicate(usize), // &expr
+  SemanticAction(usize, Ident), // expr > function
+  TypeAscription(usize, IType), // expr -> () or expr -> (^)
 }
 
 #[derive(Clone, Debug)]
