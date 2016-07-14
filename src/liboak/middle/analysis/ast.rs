@@ -23,11 +23,11 @@ pub type AGrammar<'a, 'b> = Grammar<'a, 'b, FExpressionInfo>;
 impl<'a, 'b> AGrammar<'a, 'b>
 {
   pub fn merge_print_code(&mut self, level: PrintLevel) {
-    self.attributes.print_code.merge(level);
+    self.attributes.print_code = self.attributes.print_code.merge(level);
   }
 
   pub fn merge_print_typing(&mut self, level: PrintLevel) {
-    self.attributes.print_typing.merge(level);
+    self.attributes.print_typing = self.attributes.print_typing.merge(level);
   }
 }
 

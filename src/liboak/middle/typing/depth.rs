@@ -17,6 +17,7 @@ use middle::typing::type_rewriting::*;
 use middle::typing::ast::Type::*;
 use middle::typing::ast::IType::*;
 use middle::typing::surface::*;
+use middle::typing::typing_printer::*;
 
 pub struct Depth<'a, 'b: 'a>
 {
@@ -31,7 +32,11 @@ impl<'a, 'b> Depth<'a, 'b>
     let mut engine = Depth::new(grammar);
     engine.surface.surface();
     engine.depth();
-    engine.surface.grammar.map_exprs_info(engine.exprs_info)
+    let grammar = engine.surface.grammar;
+    if grammar.attributes.print_typing.debug() {
+      print_debug(&grammar);
+    }
+    grammar.map_exprs_info(engine.exprs_info)
   }
 
   fn new(grammar: IGrammar<'a, 'b>) -> Depth<'a, 'b> {
@@ -50,15 +55,18 @@ impl<'a, 'b> Depth<'a, 'b>
     for rule in self.surface.grammar.rules.clone() {
       self.visit_expr(rule.expr_idx);
     }
+    for expr_info in self.surface.grammar.exprs_info.clone() {
+      match expr_info.ty {
+        Regular(ty) =>
+          self.exprs_info.push(ExprType::new(expr_info.span, ty)),
+        _ => unreachable!(
+          "Only regular type must be associated to expression after the depth inference.")
+      }
+    }
   }
 
   fn type_of(&self, expr_idx: usize) -> IType {
     self.surface.type_of(expr_idx)
-  }
-
-  fn push_expr_info(&mut self, expr_idx: usize, ty: Type) {
-    let current = self.surface.grammar[expr_idx].clone();
-    self.exprs_info.push(ExprType::new(current.span, ty));
   }
 }
 
@@ -94,7 +102,7 @@ impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
         }
         reduced_ty
       };
-    self.push_expr_info(this, final_type);
+    self.surface.type_expr(this, Regular(final_type));
   }
 
   // Depth axioms

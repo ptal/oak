@@ -20,7 +20,7 @@ pub mod ast;
 mod surface;
 mod depth;
 mod type_rewriting;
-// mod typing_printer;
+mod typing_printer;
 
 pub fn type_inference<'a, 'b>(agrammar: AGrammar<'a, 'b>) -> Partial<TGrammar<'a, 'b>> {
   let grammar = IGrammar::from(agrammar);

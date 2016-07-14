@@ -12,22 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! It prints the grammar annotated with type and context.
-
 use middle::typing::ast::*;
 
-pub struct TypingPrinter<'a: 'c, 'b: 'a, 'c>
-{
-  grammar: &'c TGrammar<'a, 'b>,
-  text: String
-}
-
-impl<'a, 'b, 'c> TypingPrinter<'a, 'b, 'c>
-{
-  pub fn new(grammar: &'c TGrammar<'a, 'b>) -> Self {
-    TypingPrinter {
-      grammar: grammar,
-      text: String::new()
-    }
+pub fn print_debug(grammar: &IGrammar) {
+  for i in 0..grammar.exprs.len() {
+    println!("{}: {:?}: {:?}", i, grammar.exprs[i], grammar.exprs_info[i].ty);
   }
 }
