@@ -16,13 +16,17 @@
 
 pub use self::recursive_type::*;
 
-grammar! recursive_type{
+grammar! recursive_type {
+
+  r = "a" r
+    / "b"
+
   factor
     = integer
     / unary_arith_expr
 
   unary_arith_expr
-    = "+" factor
+    = "+" factor > id
     / "-" factor > make_neg_expr
 
   integer
@@ -37,6 +41,8 @@ grammar! recursive_type{
   }
 
   pub type PExpr = Box<Expr>;
+
+  fn id(e: PExpr) -> PExpr { e }
 
   fn make_integer(raw_number: Vec<char>) -> PExpr {
     match u64::from_str(&*to_string(raw_number)).ok() {

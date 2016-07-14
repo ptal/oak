@@ -21,8 +21,7 @@ grammar! ntcc{
 
   ntcc = spacing expression
 
-  expression = expression2 -> (^)
-  expression2
+  expression
     = sum
     / par
     / tell

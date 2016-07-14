@@ -17,7 +17,6 @@ pub use self::calc::*;
 grammar! calc {
   // #![debug_api]
   // #![show_api]
-  #![show_typing]
 
   program = spacing expression
 
