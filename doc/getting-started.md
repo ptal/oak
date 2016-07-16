@@ -1,18 +1,18 @@
 % Getting Started
 
-Before starting playing with Oak, let's install the nightly compiler and create a skeleton project. We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension which is only available in nightly build of Rust. We advise to use the tool [multirust](https://github.com/brson/multirust) for installing, updating and switching between stable, beta and nightly channels of Rust. The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compiler.
+Before starting playing with Oak, let's install the nightly compiler and create a skeleton project. We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension which is only available in nightly build of Rust. We advise to use the tool [rustup](http://www.rustup.rs) for installing, updating and switching between stable, beta and nightly channels of Rust. The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compiler.
 
 ```sh
-$ curl -sf https://raw.githubusercontent.com/brson/multirust/master/blastoff.sh | sh
+$ curl https://sh.rustup.rs -sSf | sh
 # Switch to nightly build of Rust.
-$ multirust default nightly
+$ rustup default nightly
 # Update Rust compiler and Cargo.
-$ multirust update
+$ rustup update
 # Switch to stable.
-$ multirust default stable
+$ rustup default stable
 ```
 
-For avoiding all compatibility troubles between Oak and the Rust compiler, you should use the version of the Rust compiler matching the one used for compiling Oak. This is done by using `multirust override <nightly version>` command available in the [README](https://github.com/ptal/oak/).
+For avoiding all compatibility troubles between Oak and the Rust compiler, you should use the version of the Rust compiler matching the one used for compiling Oak. This is done by using `rustup override add <nightly version>` command available in the [README](https://github.com/ptal/oak/).
 
 Once both are installed, we can set up a project using Oak. Run the command `cargo new oak_skeleton` to create a new project. Modify the `Cargo.toml` file to add Oak dependencies:
 
@@ -66,7 +66,7 @@ grammar! sum{
 }
 
 fn main() {
-  let state = sum::parse_sum("7+2+1".stream());
+  let state = sum::parse_sum("7+2+1".into_state());
   assert_eq!(state.unwrap_data(), 10);
 }
 ```

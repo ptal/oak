@@ -236,6 +236,10 @@ impl<S, T> ParseState<S, T> where
     };
     (state, data)
   }
+
+  pub fn unwrap_data(self) -> T {
+    self.data.expect("data in ParseState (unwrap_data)")
+  }
 }
 
 impl<S> ParseState<S, ()>
