@@ -135,7 +135,7 @@ pub enum RecKind
 pub struct RecPath
 {
   kind: RecKind,
-  path: Vec<Ident>,
+  pub path: Vec<Ident>,
 }
 
 impl RecPath {
@@ -165,7 +165,7 @@ impl RecPath {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RecSet
 {
-  path_set: Vec<RecPath>
+  pub path_set: Vec<RecPath>
 }
 
 impl RecSet
@@ -200,9 +200,17 @@ impl RecSet
   }
 
   pub fn to_value_kind(self) -> Self {
-    RecSet{
+    RecSet {
       path_set: self.path_set.into_iter()
         .map(|path| path.to_value_kind())
+        .collect()
+    }
+  }
+
+  pub fn remove_unit_kind(self) -> Self {
+    RecSet {
+      path_set: self.path_set.into_iter()
+        .filter(|path| path.kind == RecKind::Value)
         .collect()
     }
   }

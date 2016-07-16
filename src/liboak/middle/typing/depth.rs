@@ -31,6 +31,7 @@ impl<'a, 'b> Depth<'a, 'b>
   pub fn infer(grammar: IGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
     let mut engine = Depth::new(grammar);
     engine.surface.surface();
+    engine.warn_recursive_type();
     engine.depth();
     let grammar = engine.surface.grammar;
     if grammar.attributes.print_typing.debug() {
@@ -67,6 +68,26 @@ impl<'a, 'b> Depth<'a, 'b>
 
   fn type_of(&self, expr_idx: usize) -> IType {
     self.surface.type_of(expr_idx)
+  }
+
+  fn warn_recursive_type(&mut self) {
+    let mut rec_set = RecSet::empty();
+    for rule in self.surface.grammar.rules.clone() {
+      if let Rec(r) = self.type_of(rule.expr_idx) {
+        rec_set = rec_set.union(r);
+      }
+    }
+    rec_set = rec_set.remove_unit_kind();
+    if !rec_set.is_empty() {
+      let mut errors = vec![];
+      for rec_path in rec_set.path_set {
+        errors.push((
+          self.surface.grammar.find_rule_by_ident(rec_path.path[0]).span(),
+          format!("Infinite recursive type (type inferred: `(^)`): {}", rec_path.display())
+        ));
+      }
+      self.surface.grammar.multi_locations_warn(errors);
+    }
   }
 }
 

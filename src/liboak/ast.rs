@@ -88,6 +88,13 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     db.emit();
   }
 
+  /// The first element of `errors` will be rendered as an error and the other one as notes.
+  pub fn multi_locations_warn(&self, warnings: Vec<(Span, String)>) {
+    for (span, msg) in warnings {
+      self.cx.span_warn(span, msg.as_str());
+    }
+  }
+
   pub fn span_err(&self, span: Span, msg: String) {
     self.cx.span_err(span, msg.as_str());
   }

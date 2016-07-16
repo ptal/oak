@@ -18,8 +18,9 @@ pub use self::ntcc::*;
 grammar! ntcc{
 
   // #![debug_api]
+  // #![debug_typing]
 
-  ntcc = spacing expression
+  ntcc = spacing expression -> (^)
 
   expression
     = sum
@@ -36,13 +37,13 @@ grammar! ntcc{
     = pick_kw or? when sum_body* end_kw?
 
   sum_body
-    = or when
+    = or when -> (^)
 
   par
     = par_kw oror? expression par_body* end_kw?
 
   par_body
-    = oror expression
+    = oror expression -> (^)
 
   tell
     = store_kw left_arrow constraint
@@ -101,7 +102,6 @@ grammar! ntcc{
   max_bound = max_kw var_ident
 
   integer = ["0-9"]+ spacing -> (^)
-
   var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing -> (^)
 
   pick_kw = "pick" spacing

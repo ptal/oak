@@ -100,27 +100,6 @@ impl<'a, 'b> Surface<'a, 'b>
     }
     self.grammar.multi_locations_err(errors);
   }
-
-  // fn warn_recursive_type(&mut self) {
-  //   let in_cycle = self.current_inline_path.pop().unwrap();
-  //   // Consider the smallest cycle which is garantee since we extract the element that closed the cycle.
-  //   let mut errors = vec![(
-  //     self.grammar.rules[&in_cycle].span(),
-  //     format!("Inlining cycle detected. \
-  //     The type of a rule must be inlined into itself (indirectly or not), which is impossible.")
-  //   )];
-  //   for cycle_node in trimmed_cycle.iter() {
-  //     errors.push((
-  //       self.grammar.rules[cycle_node].span(),
-  //       format!("This rule is part of the recursive type.")));
-  //   }
-  //   errors.push((
-  //     self.grammar.rules[&in_cycle].span(),
-  //     format!("Recursive data types are not handled automatically, \
-  //     you must create it yourself with a semantic action.\nIf you don't care about the value of this rule, \
-  //     annotate it with `rule = e -> ()` or annotate leaf rules that produce values with `rule = e -> (^)`.")));
-  //   self.grammar.multi_locations_err(errors);
-  // }
 }
 
 impl<'a, 'b> ExprByIndex for Surface<'a, 'b>
