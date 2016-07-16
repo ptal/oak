@@ -43,7 +43,7 @@ pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
   }
   DuplicateItem::analyse(&grammar, functions.into_iter(), String::from("rust function"))
     .map(move |functions| {
-      grammar.rust_functions = functions;
+      grammar.rust_functions = functions.into_iter().collect();
       grammar.rust_items = others;
       grammar
     })
@@ -52,7 +52,7 @@ pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
 struct DuplicateItem<'a: 'c, 'b: 'a, 'c, Item>
 {
   grammar: &'c AGrammar<'a, 'b>,
-  items: HashMap<Ident, Item>,
+  items: Vec<(Ident, Item)>,
   has_duplicate: bool,
   what_is_duplicated: String
 }
@@ -61,13 +61,12 @@ impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
  Item: ItemIdent + ItemSpan
 {
   pub fn analyse<ItemIter>(grammar: &'c AGrammar<'a, 'b>, iter: ItemIter, item_kind: String)
-    -> Partial<HashMap<Ident, Item>> where
+    -> Partial<Vec<(Ident, Item)>> where
    ItemIter: Iterator<Item=Item>
   {
-    let (min_size, _) = iter.size_hint();
     DuplicateItem {
       grammar: grammar,
-      items: HashMap::with_capacity(min_size),
+      items: vec![],
       has_duplicate: false,
       what_is_duplicated: item_kind
     }.populate(iter)
@@ -79,11 +78,13 @@ impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
   {
     for item in iter {
       let ident = item.ident();
-      if self.items.contains_key(&ident) {
-        self.duplicate_items(self.items.get(&ident).unwrap(), item);
+      if self.items.iter().any(|&(id,_)| id == ident) {
+        let &(_, ref dup_item) = self.items.iter().find(|&&(id,_)| id == ident).unwrap();
+        self.duplicate_items(dup_item, item);
         self.has_duplicate = true;
-      } else {
-        self.items.insert(ident, item);
+      }
+      else {
+        self.items.push((ident, item));
       }
     }
     self
@@ -98,7 +99,7 @@ impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
     );
   }
 
-  fn make(self) -> Partial<HashMap<Ident, Item>> {
+  fn make(self) -> Partial<Vec<(Ident, Item)>> {
     if self.has_duplicate {
       Fake(self.items)
     } else {
