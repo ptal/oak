@@ -33,7 +33,6 @@ grammar! recursive_type {
     = ["0-9"]+ > make_integer
 
   use std::str::FromStr;
-  use self::Expr::*;
 
   pub enum Expr {
     Number(u64),

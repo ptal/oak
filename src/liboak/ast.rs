@@ -92,11 +92,15 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     self.cx.span_err(span, msg.as_str());
   }
 
-  pub fn expr_index_of_rule(&self, id: Ident) -> usize {
+  pub fn find_rule_by_ident(&self, id: Ident) -> Rule {
     self.rules.iter()
       .find(|r| r.ident() == id)
-      .expect("Rule id not registered in the known rules.")
-      .expr_idx
+      .expect("Rule ident not registered in the known rules.")
+      .clone()
+  }
+
+  pub fn expr_index_of_rule(&self, id: Ident) -> usize {
+    self.find_rule_by_ident(id).expr_idx
   }
 }
 

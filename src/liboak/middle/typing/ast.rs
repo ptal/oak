@@ -125,12 +125,132 @@ impl ExprIType
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum RecKind
+{
+  Unit,
+  Value
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RecPath
+{
+  kind: RecKind,
+  path: Vec<Ident>,
+}
+
+impl RecPath {
+  pub fn new(kind: RecKind, path: Vec<Ident>) -> Self {
+    assert!(!path.is_empty(),
+      "Only non-empty path are recursive.");
+    RecPath {
+      kind: kind,
+      path: path
+    }
+  }
+
+  pub fn to_value_kind(self) -> Self {
+    RecPath::new(RecKind::Value, self.path)
+  }
+
+  pub fn display(&self) -> String {
+    let mut path_desc = String::new();
+    for rule in &self.path {
+      path_desc.extend(format!("{} -> ", rule).chars());
+    }
+    path_desc.extend(format!("{}", self.path[0]).chars());
+    path_desc
+  }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RecSet
+{
+  path_set: Vec<RecPath>
+}
+
+impl RecSet
+{
+  pub fn new(path: RecPath) -> Self {
+     RecSet {
+      path_set: vec![path]
+    }
+  }
+
+  pub fn empty() -> Self {
+    RecSet{ path_set: vec![] }
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.path_set.is_empty()
+  }
+
+  pub fn union(mut self, other: RecSet) -> RecSet {
+    for path in other.path_set {
+      if !self.path_set.contains(&path) {
+        self.path_set.push(path);
+      }
+    }
+    self
+  }
+
+  pub fn entry_point(&self) -> Ident {
+    assert!(!self.is_empty(),
+      "There is no entry point for empty path set.");
+    self.path_set[0].path[0]
+  }
+
+  pub fn to_value_kind(self) -> Self {
+    RecSet{
+      path_set: self.path_set.into_iter()
+        .map(|path| path.to_value_kind())
+        .collect()
+    }
+  }
+
+  pub fn display(&self) -> String {
+    let mut paths = String::new();
+    for path in &self.path_set {
+      paths.extend(path.display().chars());
+      paths.push('\n');
+    }
+    paths.pop();
+    paths
+  }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum IType
 {
   Infer,
-  Rec(Vec<Ident>),
+  Rec(RecSet),
   Invisible,
   Regular(Type)
+}
+
+impl IType
+{
+  pub fn rec(kind: RecKind, rec_path: Vec<Ident>) -> IType {
+    let path = RecPath::new(kind, rec_path);
+    Rec(RecSet::new(path))
+  }
+
+  pub fn syntactic_eq(&self, grammar: &IGrammar, other: &IType) -> bool {
+    match (self.clone(), other.clone()) {
+      (Rec(r1), Rec(r2)) => r1 == r2,
+      (Invisible, Invisible) => true,
+      (Regular(ty1), Regular(ty2)) => ty1.syntactic_eq(grammar, &ty2),
+      _ => false
+    }
+  }
+
+  pub fn display(&self, grammar: &IGrammar) -> String {
+    match self.clone() {
+      Infer => format!("_"),
+      Rec(_) => format!("(^)  *"),
+      Invisible => format!("(^)"),
+      Regular(ty) => ty.display(grammar)
+    }
+  }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -156,6 +276,65 @@ impl Type
     | List(_)
     | Action(_) => 1,
       Tuple(ref indexes) => indexes.len()
+    }
+  }
+
+  pub fn syntactic_eq(&self, grammar: &IGrammar, other: &Type) -> bool {
+    let syntactic_eq_expr = |e1, e2| {
+      let ty1 = grammar.type_of(e1);
+      let ty2 = grammar.type_of(e2);
+      ty1.syntactic_eq(grammar, &ty2)
+    };
+    match (self.clone(), other.clone()) {
+      (Unit, Unit) => true,
+      (Atom, Atom) => true,
+      (Optional(e1), Optional(e2))
+    | (List(e1), List(e2)) => syntactic_eq_expr(e1, e2),
+      (Tuple(exprs1), Tuple(exprs2)) => {
+        if exprs1.len() == exprs2.len() {
+          for (e1, e2) in exprs1.into_iter().zip(exprs2.into_iter()) {
+            if !syntactic_eq_expr(e1, e2) {
+              return false;
+            }
+          }
+          true
+        }
+        else {
+          false
+        }
+      }
+      (Action(_), Action(_)) => true,
+      _ => false
+    }
+  }
+
+  pub fn display(&self, grammar: &IGrammar) -> String {
+    match self.clone() {
+      Unit => format!("()"),
+      Atom => format!("char"),
+      Optional(child) =>
+        format!("Option<{}>", grammar.type_of(child).display(grammar)),
+      List(child) =>
+        format!("Vec<{}>", grammar.type_of(child).display(grammar)),
+      Tuple(children) => {
+        let mut display = format!("(");
+        for child in children {
+          display.extend(grammar.type_of(child).display(grammar).chars());
+          display.push_str(", ");
+        }
+        display.pop();
+        display.pop();
+        display.push(')');
+        display
+      }
+      Action(rty) => {
+        use rust::FunctionRetTy::*;
+        match rty {
+          None(_) => format!("!"),
+          Default(_) => format!("()"),
+          Ty(ty) => rust::ty_to_string(&*ty)
+        }
+      }
     }
   }
 }

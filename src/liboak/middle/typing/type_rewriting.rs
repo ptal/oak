@@ -24,7 +24,7 @@ impl TypeRewriting
 {
   pub fn reduce_rec(rule: Ident, ty: IType) -> IType {
     match ty {
-      Rec(ref r) if r[0] == rule => Invisible,
+      Rec(ref r) if r.entry_point() == rule => Invisible,
       ty => ty
     }
   }
@@ -49,17 +49,17 @@ impl TypeRewriting
   fn reduce_regular(grammar: &IGrammar, ty: Type) -> IType {
     match ty.clone() {
       Optional(child)
-    | List(child) => TypeRewriting::reduce_or(grammar, child, Regular(ty)),
+    | List(child) => TypeRewriting::reduce_unary(grammar, child, Regular(ty)),
       Tuple(indexes) => TypeRewriting::reduce_tuple(grammar, indexes),
       ty => Regular(ty)
     }
   }
 
-  fn reduce_or(grammar: &IGrammar, expr_idx: usize, ty: IType) -> IType {
-    let child_ty = grammar.type_of(expr_idx);
-    match child_ty.clone() {
-      Invisible
-    | Rec(_) => child_ty,
+  fn reduce_unary(grammar: &IGrammar, expr_idx: usize, ty: IType) -> IType {
+    let expr_ty = grammar.type_of(expr_idx);
+    match expr_ty {
+      Invisible => Invisible,
+      Rec(r) => Rec(r.to_value_kind()),
       _ => ty
     }
   }
@@ -68,7 +68,10 @@ impl TypeRewriting
     assert!(indexes.len() > 0,
       "Empty tuple are forbidden: unit type must be represented with `Type::Unit`.");
     indexes = TypeRewriting::tuple_inlining(grammar, indexes);
-    indexes = TypeRewriting::tuple_rec(grammar, indexes);
+    let rec_ty = TypeRewriting::tuple_rec(grammar, &indexes);
+    if let Some(rec_ty) = rec_ty {
+      return rec_ty;
+    }
     indexes = TypeRewriting::tuple_invisible(grammar, indexes);
     if indexes.is_empty() {
       return Invisible;
@@ -96,13 +99,19 @@ impl TypeRewriting
     unpacked_indexes
   }
 
-  fn tuple_rec(grammar: &IGrammar, indexes: Vec<usize>) -> Vec<usize> {
-    for idx in indexes.clone() {
-      if let Rec(_) = grammar.type_of(idx) {
-        return vec![idx]
+  fn tuple_rec(grammar: &IGrammar, indexes: &Vec<usize>) -> Option<IType> {
+    let mut rec_set = RecSet::empty();
+    for idx in indexes {
+      if let Rec(r) = grammar.type_of(*idx) {
+        rec_set = rec_set.union(r);
       }
     }
-    indexes
+    if rec_set.is_empty() {
+      None
+    }
+    else {
+      Some(Rec(rec_set))
+    }
   }
 
   fn tuple_invisible(grammar: &IGrammar, indexes: Vec<usize>) -> Vec<usize> {
@@ -115,5 +124,36 @@ impl TypeRewriting
     indexes.into_iter()
       .filter(|idx| grammar.type_of(*idx) != Regular(Unit))
       .collect()
+  }
+
+  pub fn reduce_sum(grammar: &IGrammar, tys: Vec<IType>) -> Result<IType, RecSet> {
+    assert!(!tys.is_empty(),
+      "Only non-empty sum type can be reduced.");
+    let mut rec_set = RecSet::empty();
+    let mut non_rec_tys = vec![];
+    for ty in tys {
+      match ty {
+        Rec(r) => rec_set = rec_set.union(r),
+        ty => {
+          let contained = non_rec_tys.iter()
+            .any(|ty2| ty.syntactic_eq(grammar, ty2));
+          if !contained {
+            non_rec_tys.push(ty);
+          }
+        }
+      }
+    }
+    if non_rec_tys.len() == 1 && rec_set.is_empty() {
+      Ok(non_rec_tys[0].clone())
+    }
+    else if non_rec_tys.is_empty() ||
+      non_rec_tys.iter().all(|ty|
+        ty == &Invisible || ty == &Regular(Unit))
+    {
+      Ok(Rec(rec_set))
+    }
+    else {
+      Err(rec_set)
+    }
   }
 }

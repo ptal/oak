@@ -33,23 +33,27 @@ impl<'a, 'b> Surface<'a, 'b>
 
   pub fn surface(&mut self) {
     for rule in self.grammar.rules.clone() {
-      if self.grammar.type_of(rule.expr_idx) == Infer {
-        self.visit_rule(rule.ident());
-      }
+      self.visit_rule(rule.ident());
     }
   }
 
   fn visit_rule(&mut self, rule: Ident) -> IType {
     let expr_idx = self.grammar.expr_index_of_rule(rule);
-    if self.is_rec(rule) {
-      self.infer_rec_type(rule)
+    let rule_ty = self.grammar.type_of(expr_idx);
+    if rule_ty == Infer {
+      if self.is_rec(rule) {
+        self.infer_rec_type(rule)
+      }
+      else {
+        self.recursion_path.push(rule);
+        let ty = self.visit_expr(expr_idx);
+        self.recursion_path.pop();
+        let reduced_ty = TypeRewriting::reduce_rec(rule, ty);
+        self.type_expr(expr_idx, reduced_ty)
+      }
     }
     else {
-      self.recursion_path.push(rule);
-      let ty = self.visit_expr(expr_idx);
-      self.recursion_path.pop();
-      let reduced_ty = TypeRewriting::reduce_rec(rule, ty);
-      self.type_expr(expr_idx, reduced_ty)
+      rule_ty
     }
   }
 
@@ -68,12 +72,33 @@ impl<'a, 'b> Surface<'a, 'b>
 
   fn infer_rec_type(&mut self, entry_rule: Ident) -> IType {
     let rec_path = self.recursion_path.clone();
-    let mut rec_rules = vec![entry_rule];
-    rec_rules.extend(
+    let mut rec_shorter_path = vec![entry_rule];
+    rec_shorter_path.extend(
       rec_path.into_iter()
         .rev()
         .take_while(|r| *r != entry_rule));
-    Rec(rec_rules)
+    IType::rec(RecKind::Unit, rec_shorter_path)
+  }
+
+  fn type_mismatch_branches(&self, rec_set: RecSet, sum_expr: usize, branches: Vec<usize>, tys: Vec<IType>) {
+    let mut errors = vec![(
+      self.grammar[sum_expr].span(),
+      format!("Type mismatch between branches of the choice operator.")
+    )];
+    for i in 0..branches.len() {
+      errors.push((
+        self.grammar[branches[i]].span(),
+        format!("{}", tys[i].display(&self.grammar))));
+    }
+    if !rec_set.is_empty() {
+      let entry_point = self.grammar.find_rule_by_ident(rec_set.entry_point());
+      errors.push((
+        entry_point.span(),
+        format!("Types annotated with `*` have been reduced to (^) because they are involved \
+          in one of the following rule cycle (generating recursive types):\n{}",
+          rec_set.display())));
+    }
+    self.grammar.multi_locations_err(errors);
   }
 
   // fn warn_recursive_type(&mut self) {
@@ -162,7 +187,14 @@ impl<'a, 'b> Visitor<IType> for Surface<'a, 'b>
     IType::Regular(Type::Tuple(children))
   }
 
-  fn visit_choice(&mut self, _this: usize, children: Vec<usize>) -> IType {
-    walk_exprs(self, children)[0].clone()
+  fn visit_choice(&mut self, this: usize, children: Vec<usize>) -> IType {
+    let tys = walk_exprs(self, children.clone());
+    match TypeRewriting::reduce_sum(&self.grammar, tys.clone()) {
+      Ok(principal_type) => principal_type,
+      Err(rec_set) => {
+        self.type_mismatch_branches(rec_set, this, children, tys);
+        IType::Invisible
+      }
+    }
   }
 }
