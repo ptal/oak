@@ -47,7 +47,7 @@ grammar! calc {
 
   digit = ["0-9"]
   number = digit+ spacing > to_number
-  spacing = [" \n\r\t"]* -> ()
+  spacing = [" \n\r\t"]* -> (^)
 
   kw_tail = !ident_char spacing
 
@@ -109,8 +109,8 @@ grammar! calc {
       |accu, (expr, op)| Box::new(BinaryExpr(op, expr, accu)))
   }
 
-  fn let_in_expr(let_binding: (String, PExpr), expr: PExpr) -> PExpr {
-    Box::new(LetIn(let_binding.0, let_binding.1, expr))
+  fn let_in_expr(var: String, value: PExpr, expr: PExpr) -> PExpr {
+    Box::new(LetIn(var, value, expr))
   }
 
   fn add_bin_op() -> BinOp { Add }
@@ -120,33 +120,31 @@ grammar! calc {
   fn exp_bin_op() -> BinOp { Exp }
 }
 
+
 fn analyse_state(state: ParseState<StrStream, calc::PExpr>) {
+  use oak_runtime::parse_state::ParseResult::*;
   match state.into_result() {
-    Ok((success, error)) => {
-      if success.partial_read() {
-        println!("Partial match: {:?} because: {}", success.data, error);
-      }
-      else {
-        println!("Full match: {:?}", success.data);
-      }
+    Success(data) => println!("Full match: {:?}", data),
+    Partial(data, expectation) => {
+      println!("Partial match: {:?} because: {:?}", data, expectation);
     }
-    Err(error) => {
-      println!("Error: {}", error);
+    Failure(expectation) => {
+      println!("Failure: {:?}", expectation);
     }
   }
 }
 
 fn main() {
-  analyse_state(calc::parse_program("2 * a".stream())); // Complete
-  analyse_state(calc::parse_program("2 *  ".stream())); // Partial
-  analyse_state(calc::parse_program("  * a".stream())); // Erroneous
+  analyse_state(calc::parse_program("2 * a".into_state())); // Complete
+  analyse_state(calc::parse_program("2 *  ".into_state())); // Partial
+  analyse_state(calc::parse_program("  * a".into_state())); // Erroneous
 
   let program1 =
     "let a = 5 in \
      let b = 2 in \
      a^2 + b^2 + (a - b)^2 \
     ";
-  analyse_state(calc::parse_program(program1.stream()));
+  analyse_state(calc::parse_program(program1.into_state()));
 
   let program2 =
     "let a = \
@@ -154,6 +152,6 @@ fn main() {
      in \
      a^2 - (let x = a in x * 2) \
     ";
-  println!("{:?}", calc::parse_program(program2.stream()));
+  println!("{:?}", calc::parse_program(program2.into_state()).into_result());
 }
 ```
