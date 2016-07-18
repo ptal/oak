@@ -301,8 +301,14 @@ impl<'a> Parser<'a>
     let token = self.rp.token.clone();
     match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
+        let span = self.rp.span;
         self.bump();
         let cooked_lit = cook_lit(name);
+        if cooked_lit.is_empty() {
+          self.rp.span_err(span,
+            "Empty character classes is forbidden. For empty expression \
+            you can use the empty string literal `\"\"`.");
+        }
         Ok(self.parse_set_of_char_range(&cooked_lit, rule_name))
       },
       _ => {
