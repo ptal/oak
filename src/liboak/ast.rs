@@ -214,9 +214,9 @@ impl CharacterClassExpr
 impl Display for CharacterClassExpr
 {
   fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
-    try!(formatter.write_str("[\""));
+    formatter.write_str("[\"")?;
     for interval in &self.intervals {
-      try!(interval.fmt(formatter));
+      interval.fmt(formatter)?;
     }
     formatter.write_str("\"]")
   }

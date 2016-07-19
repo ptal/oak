@@ -46,7 +46,7 @@ impl<'a> Parser<'a>
   }
 
   pub fn parse_grammar(mut self) -> rust::PResult<'a, FGrammar> {
-    try!(self.parse_blocks());
+    self.parse_blocks()?;
     Ok(self.grammar)
   }
 
@@ -57,9 +57,9 @@ impl<'a> Parser<'a>
   fn parse_blocks(&mut self) -> rust::PResult<'a, ()> {
     while self.rp.token != rtok::Eof
     {
-      try!(self.parse_inner_attributes());
-      match try!(self.rp.parse_item()) {
-        None => try!(self.parse_rule()),
+      self.parse_inner_attributes()?;
+      match self.rp.parse_item()? {
+        None => self.parse_rule()?,
         Some(item) => self.grammar.push_rust_item(item),
       }
     }
@@ -67,16 +67,16 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule(&mut self) -> rust::PResult<'a, ()> {
-    let outer_attrs = try!(self.rp.parse_outer_attributes());
-    let name = try!(self.parse_rule_decl());
-    try!(self.rp.expect(&rtok::Eq));
-    let body = try!(self.parse_rule_rhs(ident_to_string(name.node).as_str()));
+    let outer_attrs = self.rp.parse_outer_attributes()?;
+    let name = self.parse_rule_decl()?;
+    self.rp.expect(&rtok::Eq)?;
+    let body = self.parse_rule_rhs(ident_to_string(name.node).as_str())?;
     self.grammar.push_rule(name, outer_attrs, body);
     Ok(())
   }
 
   fn parse_inner_attributes(&mut self) -> rust::PResult<'a, ()> {
-    let inners = try!(self.rp.parse_inner_attributes());
+    let inners = self.rp.parse_inner_attributes()?;
     for attr in inners {
       self.grammar.push_attr(attr);
     }
@@ -85,7 +85,7 @@ impl<'a> Parser<'a>
 
   fn parse_rule_decl(&mut self) -> rust::PResult<'a, rust::SpannedIdent> {
     let sp = self.rp.span;
-    Ok(respan(sp, try!(self.rp.parse_ident())))
+    Ok(respan(sp, self.rp.parse_ident()?))
   }
 
   fn parse_rule_rhs(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
@@ -96,8 +96,8 @@ impl<'a> Parser<'a>
     let lo = self.rp.span.lo;
     let mut choices = Vec::new();
     loop{
-      let seq = try!(self.parse_rule_seq(rule_name));
-      choices.push(try!(self.parse_semantic_action_or_ty(seq, rule_name)));
+      let seq = self.parse_rule_seq(rule_name)?;
+      choices.push(self.parse_semantic_action_or_ty(seq, rule_name)?);
       let token = self.rp.token.clone();
       match token {
         rtok::BinOp(rbtok::Slash) => self.bump(),
@@ -119,9 +119,10 @@ impl<'a> Parser<'a>
     match token {
       rtok::Gt => {
         self.bump();
-        let fun_name = try!(self.rp.parse_ident());
+        let fun_path = self.rp.parse_path(rust::PathStyle::Expr)?;
         let hi = self.rp.span.hi;
-        Ok(self.alloc_expr(lo, hi, SemanticAction(expr, fun_name)))
+        let ident = self.last_segment(fun_path);
+        Ok(self.alloc_expr(lo, hi, SemanticAction(expr, ident)))
       },
       rtok::RArrow => {
         self.bump();
@@ -146,7 +147,7 @@ impl<'a> Parser<'a>
           else {
             IType::Regular(Type::Unit)
           };
-        try!(self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)));
+        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
         let hi = self.rp.span.hi;
         Ok(self.alloc_expr(lo, hi, TypeAscription(expr, ty)))
       }
@@ -165,7 +166,7 @@ impl<'a> Parser<'a>
   fn parse_rule_seq(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
     let lo = self.rp.span.lo;
     let mut seq = Vec::new();
-    while let Some(expr) = try!(self.parse_rule_prefixed(rule_name)) {
+    while let Some(expr) = self.parse_rule_prefixed(rule_name)? {
       seq.push(expr);
     }
     let hi = self.rp.last_span.hi;
@@ -199,7 +200,7 @@ impl<'a> Parser<'a>
   {
     let lo = self.rp.span.lo;
     self.bump();
-    match try!(self.parse_rule_suffixed(rule_name)) {
+    match self.parse_rule_suffixed(rule_name)? {
       Some(expr) => {
         let hi = self.rp.span.hi;
         Ok(self.alloc_expr(lo, hi, make_prefix(expr)))
@@ -216,7 +217,7 @@ impl<'a> Parser<'a>
 
   fn parse_rule_suffixed(&mut self, rule_name: &str) -> rust::PResult<'a, Option<usize>> {
     let lo = self.rp.span.lo;
-    let expr = match try!(self.parse_rule_atom(rule_name)) {
+    let expr = match self.parse_rule_atom(rule_name)? {
       Some(expr) => expr,
       None => return Ok(None),
     };
@@ -250,8 +251,13 @@ impl<'a> Parser<'a>
     self.rp.span_fatal(span, err_msg)
   }
 
+  fn last_segment(&self, path: rust::Path) -> Ident {
+    path.segments[path.segments.len() - 1].identifier
+  }
+
   fn parse_rule_atom(&mut self, rule_name: &str) -> rust::PResult<'a, Option<usize>> {
     let token = self.rp.token.clone();
+
     let res = match token {
       rtok::Literal(rust::token::Lit::Str_(name),_) => {
         self.bump();
@@ -264,20 +270,22 @@ impl<'a> Parser<'a>
       },
       rtok::OpenDelim(rust::DelimToken::Paren) => {
         self.bump();
-        let res = try!(self.parse_rule_rhs(rule_name));
-        try!(self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren)));
+        let res = self.parse_rule_rhs(rule_name)?;
+        self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
         Some(res)
       },
-      rtok::Ident(id) if !token.is_any_keyword() => {
+      rtok::ModSep
+    | rtok::Ident(_) if !token.is_any_keyword() => {
         if self.is_rule_lhs() { None }
         else {
-          self.bump();
-          Some(self.last_respan(NonTerminalSymbol(id)))
+          let path = self.rp.parse_path(rust::PathStyle::Expr)?;
+          let ident = self.last_segment(path);
+          Some(self.last_respan(NonTerminalSymbol(ident)))
         }
       },
       rtok::OpenDelim(rust::DelimToken::Bracket) => {
         self.bump();
-        let res = try!(self.parse_char_class(rule_name));
+        let res = self.parse_char_class(rule_name)?;
         match self.rp.token {
           rtok::CloseDelim(rust::DelimToken::Bracket) => {
             self.bump();
