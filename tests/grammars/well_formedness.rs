@@ -65,7 +65,7 @@ grammar! well_formedness {
   s = &["a-z"] "a" / "A"+     // OK
   s2 = s*
 
-  t = ["a-z"]* / "A"+       // ERROR: unreachable branch
+  // t = ["a-z"]* / "A"+       // ERROR: unreachable branch
 
   // u = "a" .+ / .* / "Z" .+  // ERROR: unreachable branch
 
