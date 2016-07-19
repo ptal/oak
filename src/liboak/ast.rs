@@ -99,6 +99,11 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     self.cx.span_err(span, msg.as_str());
   }
 
+  pub fn span_note(&self, span: Span, msg: String) {
+    self.cx.parse_sess.span_diagnostic
+      .span_note_without_error(span, msg.as_str());
+  }
+
   pub fn find_rule_by_ident(&self, id: Ident) -> Rule {
     self.rules.iter()
       .find(|r| r.ident() == id)
@@ -252,4 +257,13 @@ impl Display for CharacterInterval
       formatter.write_fmt(format_args!("{}-{}", self.escape_lo(), self.escape_hi()))
     }
   }
+}
+
+pub fn display_path_cycle(path: &Vec<Ident>) -> String {
+  let mut path_desc = String::new();
+  for rule in path {
+    path_desc.extend(format!("{} -> ", rule).chars());
+  }
+  path_desc.extend(format!("{}", path[0]).chars());
+  path_desc
 }

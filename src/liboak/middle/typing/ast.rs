@@ -153,12 +153,7 @@ impl RecPath {
   }
 
   pub fn display(&self) -> String {
-    let mut path_desc = String::new();
-    for rule in &self.path {
-      path_desc.extend(format!("{} -> ", rule).chars());
-    }
-    path_desc.extend(format!("{}", self.path[0]).chars());
-    path_desc
+    display_path_cycle(&self.path)
   }
 }
 

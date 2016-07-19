@@ -32,7 +32,7 @@ impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
     }
   }
 
-  fn has_undeclared(grammar: &'a AGrammar<'a, 'b>) -> bool {
+  fn has_undeclared(grammar: &'c AGrammar<'a, 'b>) -> bool {
     let mut analyser = UndeclaredRule {
       grammar: grammar,
       has_undeclared: false
