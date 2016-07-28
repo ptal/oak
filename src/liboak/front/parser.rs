@@ -119,9 +119,8 @@ impl<'a> Parser<'a>
     match token {
       rtok::Gt => {
         self.bump();
-        let fun_path = self.rp.parse_path(rust::PathStyle::Expr)?;
+        let ident = self.rp.parse_ident()?;
         let hi = self.rp.span.hi;
-        let ident = self.last_segment(fun_path);
         Ok(self.alloc_expr(lo, hi, SemanticAction(expr, ident)))
       },
       rtok::RArrow => {
@@ -251,10 +250,6 @@ impl<'a> Parser<'a>
     self.rp.span_fatal(span, err_msg)
   }
 
-  fn last_segment(&self, path: rust::Path) -> Ident {
-    path.segments[path.segments.len() - 1].identifier
-  }
-
   fn parse_rule_atom(&mut self, rule_name: &str) -> rust::PResult<'a, Option<usize>> {
     let token = self.rp.token.clone();
 
@@ -274,12 +269,10 @@ impl<'a> Parser<'a>
         self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
         Some(res)
       },
-      rtok::ModSep
-    | rtok::Ident(_) if !token.is_any_keyword() => {
+      rtok::Ident(ident) if !token.is_any_keyword() => {
         if self.is_rule_lhs() { None }
         else {
-          let path = self.rp.parse_path(rust::PathStyle::Expr)?;
-          let ident = self.last_segment(path);
+          self.bump();
           Some(self.last_respan(NonTerminalSymbol(ident)))
         }
       },
