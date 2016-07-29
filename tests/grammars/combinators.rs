@@ -16,6 +16,7 @@ pub use self::combinators::*;
 
 grammar! combinators {
   // #![debug_api]
+  #![show_api]
 
   str_literal = "return"
 
