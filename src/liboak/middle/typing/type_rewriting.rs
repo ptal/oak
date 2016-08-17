@@ -22,10 +22,26 @@ pub struct TypeRewriting;
 
 impl TypeRewriting
 {
-  pub fn reduce_rec(rule: Ident, ty: IType) -> IType {
+  pub fn reduce_rec_entry_point(rule: Ident, ty: IType) -> IType {
     match ty {
       Rec(ref r) if r.entry_point() == rule => Invisible,
       ty => ty
+    }
+  }
+
+  pub fn reduce_rec(ty: IType) -> IType {
+    match ty {
+      Rec(_) => Invisible,
+      ty => ty
+    }
+  }
+
+  pub fn reduce_final(ty: IType) -> Type {
+    match ty {
+      Invisible => Type::Unit,
+      Infer => unreachable!("Type must be inferred before reducing to a final type."),
+      Rec(_) => unreachable!("Rec types must be removed after the first surface algorithm."),
+      Regular(ty) => ty
     }
   }
 
@@ -35,14 +51,6 @@ impl TypeRewriting
     match ty {
       Regular(ty) => TypeRewriting::reduce_regular(grammar, ty),
       ty => ty
-    }
-  }
-
-  pub fn final_reduce(ty: IType) -> Type {
-    match ty {
-      Rec(_) | Invisible => Type::Unit,
-      Infer => unreachable!("Type must be inferred before reducing to a final type."),
-      Regular(ty) => ty
     }
   }
 

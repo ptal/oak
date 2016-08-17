@@ -20,3 +20,4 @@ pub mod calc;
 pub mod recursive_type;
 pub mod combinators;
 pub mod well_formedness;
+pub mod issue94;

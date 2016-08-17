@@ -14,32 +14,36 @@
 
 // WARNING: This is not a current valid Oak grammar. This is design experimentation on the grammar's evolution.
 
-pub use self::oak::*;
+pub use self~oak::*;
 
 grammar! oak {
   type Stream = RustTokens;
   type Context = FGrammar;
-  type ErrorContext = SyntaxErrorContext;
+  type Error = SyntaxError;
 
-  extern .alloc_expr -> usize;
-  extern .warning -> ();
+  extern context .alloc_expr -> usize;
+  extern context .push_attributes -> ();
+  extern context .push_rust_item -> ();
+  extern context .push_rule -> ();
+  extern action respan -> SpannedIdent;
+  // extern parser ident -> Ident;
 
   grammar = block*
 
   block = rs_inner_attrs item
 
-  rs_inner_attrs -> ()
-    = ::inner_attributes > .push_attributes
+  rs_inner_attrs
+    = ~inner_attributes > .push_attributes
 
-  item -> ()
-    = ::parse_item > .push_rust_item
+  item
+    = ~rs_item > .push_rust_item
     / rule
 
-  rule -> ()
-    = .. ::outer_attributes rule_decl "=" rule_rhs > .push_rule
+  rule
+    = .. ~outer_attributes rule_decl "=" rule_rhs > .push_rule
 
-  rule_decl -> SpannedIdent
-    = .. ::ident > respan !> .current_rule
+  rule_decl
+    = .. ~rs_ident > respan
 
   rule_rhs = .. choice > .alloc_expr
 
@@ -48,54 +52,55 @@ grammar! oak {
 
   branch
     = sequence !">" !"->"
-    / .. sequence ">" ::ident > SemanticAction > .alloc_expr
-    / .. sequence "->" ty > TypeAscription > .alloc_expr
+    / .. (sequence ">" ~rs_ident > SemanticAction) > .alloc_expr
+    / .. (sequence "->" ty > TypeAscription) > .alloc_expr
 
   ty
     = "()" > IType::unit
     / "(^)" > IType::Invisible
-    \ "" !> UnknownTypeAscription
+    \ "" > UnknownTypeAscription
 
   sequence
     = syntactic_predicate !syntactic_predicate
     / .. (syntactic_predicate+ > Sequence) > .alloc_expr
-    \ .. !syntactic_predicate !> EmptyRuleBodyError
+    \ .. !syntactic_predicate > EmptyRuleBodyError
 
   syntactic_predicate
-    = .. "!" repeat > NotPredicate > .alloc_expr
-    / .. "&" repeat > AndPredicate > .alloc_expr
-    \ .. ("!" / "&") !repeat !> SyntacticPredicateExpectExpr
+    = .. ("!" repeat > NotPredicate) > .alloc_expr
+    / .. ("&" repeat > AndPredicate) > .alloc_expr
+    \ .. ("!" / "&") !repeat > SyntacticPredicateExpectExpr
     / repeat
 
   repeat
-    = .. atom "*" > ZeroOrMore > .alloc_expr
-    / .. atom "+" > OneOrMore > .alloc_expr
-    / .. atom "?" > ZeroOrOne > .alloc_expr
+    = .. (atom "*" > ZeroOrMore) > .alloc_expr
+    / .. (atom "+" > OneOrMore) > .alloc_expr
+    / .. (atom "?" > ZeroOrOne) > .alloc_expr
     / atom
 
   atom
-    = .. (::cooked_literal > StrLiteral) > .alloc_expr
+    = .. (~cooked_literal > StrLiteral) > .alloc_expr
     / .. ("." > AnySingleChar) > .alloc_expr
     / "(" rule_rhs ")"
-    / .. (!::parse_item !rule_lhs ::ident > NonTerminalSymbol) > .alloc_expr
+    / .. (!~parse_item !rule_lhs ~rs_ident > NonTerminalSymbol) > .alloc_expr
     / "[" char_class "]"
 
   char_class =
-    \ .. !"]" !> MissingStringLiteral
-    / .. ::cooked_literal ~> ::char_range_set > .alloc_expr
+    \ .. !"]" > MissingStringLiteral
+    / .. (~cooked_literal ~> ~char_class::char_range_set > CharacterClass) > .alloc_expr
 }
 
 grammar! char_class {
-  type ErrorContext = SyntaxErrorContext;
+  type Context = FGrammar;
+  type Error = SyntaxError;
 
-  char_range_set -> CharacterClassExpr
-    = .. warning_both_sep "-"? char_range* "-"? > CharacterClassExpr::full_range
+  char_range_set
+    = .. warning_both_sep? "-"? char_range* "-"? > CharacterClassExpr::full_range
 
-  char_range -> CharacterInterval =
-    \ "-" &. !> BadCharClassSeparator
+  char_range =
+    \ .. "-" &. > BadCharClassSeparator
     / . "-" . > CharacterInterval::new
     / !"-" . > CharacterInterval::single
 
-  warning_both_sep -> ()
-    = &("-" char_range* "-") !> WarningCharClassDoubleSep !> .warning
+  warning_both_sep -> (^)
+    = &("-" char_range* "-") > WarningCharClassDoubleSep > .push_warning
 }

@@ -246,6 +246,10 @@ impl IType
     }
   }
 
+  pub fn is_unit_kind(&self) -> bool {
+    self == &Invisible || self == &Regular(Unit)
+  }
+
   pub fn display(&self, grammar: &IGrammar) -> String {
     match self.clone() {
       Infer => format!("_"),

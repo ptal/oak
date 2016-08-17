@@ -15,6 +15,7 @@
 use middle::typing::ast::*;
 use middle::typing::ast::IType::*;
 use middle::typing::type_rewriting::*;
+use middle::typing::typing_printer::*;
 
 pub struct Surface<'a, 'b: 'a>
 {
@@ -35,6 +36,11 @@ impl<'a, 'b> Surface<'a, 'b>
     for rule in self.grammar.rules.clone() {
       self.visit_rule(rule.ident());
     }
+    if self.grammar.attributes.print_typing.debug() {
+      println!("After applying Surface\n.");
+      print_debug(&self.grammar);
+      println!("");
+    }
   }
 
   fn visit_rule(&mut self, rule: Ident) -> IType {
@@ -48,7 +54,7 @@ impl<'a, 'b> Surface<'a, 'b>
         self.recursion_path.push(rule);
         let ty = self.visit_expr(expr_idx);
         self.recursion_path.pop();
-        let reduced_ty = TypeRewriting::reduce_rec(rule, ty);
+        let reduced_ty = TypeRewriting::reduce_rec_entry_point(rule, ty);
         self.type_expr(expr_idx, reduced_ty)
       }
     }

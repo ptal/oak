@@ -32,9 +32,12 @@ impl<'a, 'b> Depth<'a, 'b>
     let mut engine = Depth::new(grammar);
     engine.surface.surface();
     engine.warn_recursive_type();
+    engine.reduce_all_rec();
     engine.depth();
+    engine.reduce_all_invisible();
     let grammar = engine.surface.grammar;
     if grammar.attributes.print_typing.debug() {
+      println!("After applying Depth.");
       print_debug(&grammar);
     }
     grammar.map_exprs_info(engine.exprs_info)
@@ -50,19 +53,29 @@ impl<'a, 'b> Depth<'a, 'b>
 
   fn surface_expr(&mut self, expr_idx: usize) {
     self.surface.visit_expr(expr_idx);
+    if self.surface.grammar.attributes.print_typing.debug() {
+      println!("Applying Surface in Depth on expr {}.", expr_idx);
+      print_debug(&self.surface.grammar);
+      println!("");
+    }
+  }
+
+  fn reduce_all_rec(&mut self) {
+    for expr_info in &mut self.surface.grammar.exprs_info {
+      expr_info.ty = TypeRewriting::reduce_rec(expr_info.ty.clone());
+    }
+  }
+
+  fn reduce_all_invisible(&mut self) {
+    for expr_info in self.surface.grammar.exprs_info.clone() {
+      let ty = TypeRewriting::reduce_final(expr_info.ty);
+      self.exprs_info.push(ExprType::new(expr_info.span, ty))
+    }
   }
 
   fn depth(&mut self) {
     for rule in self.surface.grammar.rules.clone() {
       self.visit_expr(rule.expr_idx);
-    }
-    for expr_info in self.surface.grammar.exprs_info.clone() {
-      match expr_info.ty {
-        Regular(ty) =>
-          self.exprs_info.push(ExprType::new(expr_info.span, ty)),
-        _ => unreachable!(
-          "Only regular type must be associated to expression after the depth inference.")
-      }
     }
   }
 
@@ -103,27 +116,22 @@ impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
   fn visit_expr(&mut self, this: usize) {
     let this_ty = self.type_of(this);
     assert!(this_ty != Infer,
-      format!("Every expression must be typed during the surface inference: {:?}", self.expr_by_index(this)));
+      format!("Every expression must be typed during the surface inference: {}: {:?}",
+        this, self.expr_by_index(this)));
 
-    let final_type =
-      if self.under_unit {
-        walk_expr(self, this);
-        Unit
-      }
-      else {
-        let reduced_ty = TypeRewriting::final_reduce(this_ty);
-        if reduced_ty == Unit {
-          let old = self.under_unit;
-          self.under_unit = true;
-          walk_expr(self, this);
-          self.under_unit = old;
-        }
-        else {
-          walk_expr(self, this);
-        }
-        reduced_ty
-      };
-    self.surface.type_expr(this, Regular(final_type));
+    if self.under_unit {
+      self.surface.type_expr(this, Regular(Unit));
+      walk_expr(self, this);
+    }
+    else if this_ty.is_unit_kind() {
+      let old = self.under_unit;
+      self.under_unit = true;
+      walk_expr(self, this);
+      self.under_unit = old;
+    }
+    else {
+      walk_expr(self, this);
+    }
   }
 
   // Depth axioms
