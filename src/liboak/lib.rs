@@ -34,7 +34,6 @@ mod middle;
 mod back;
 mod rust;
 mod identifier;
-// mod monad;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {

@@ -337,7 +337,6 @@ impl Type
       Action(rty) => {
         use rust::FunctionRetTy::*;
         match rty {
-          None(_) => format!("!"),
           Default(_) => format!("()"),
           Ty(ty) => rust::ty_to_string(&*ty)
         }

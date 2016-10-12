@@ -50,7 +50,7 @@ impl<'a, 'b, 'c> TypeCompiler<'a, 'b, 'c>
 
   fn action_type(&self, return_ty: FunctionRetTy) -> RTy {
     match return_ty {
-      FunctionRetTy::None(_) | FunctionRetTy::Default(_) => self.unit_type(),
+      FunctionRetTy::Default(_) => self.unit_type(),
       FunctionRetTy::Ty(ty) => ty
     }
   }
