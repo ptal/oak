@@ -20,6 +20,7 @@
 extern crate rustc;
 extern crate rustc_plugin;
 extern crate syntax;
+extern crate partial;
 
 use rustc_plugin::Registry;
 
@@ -33,7 +34,7 @@ mod middle;
 mod back;
 mod rust;
 mod identifier;
-mod monad;
+// mod monad;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {

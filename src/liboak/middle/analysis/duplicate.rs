@@ -16,7 +16,7 @@ pub use std::collections::HashMap;
 use front::ast::FRule;
 
 use middle::analysis::ast::*;
-use monad::partial::Partial::*;
+use partial::Partial::*;
 
 use rust;
 

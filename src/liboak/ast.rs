@@ -27,7 +27,7 @@ pub type RPat = rust::P<rust::Pat>;
 pub type RArg = rust::Arg;
 
 pub use rust::{ExtCtxt, Attribute, SpannedIdent};
-pub use monad::partial::Partial;
+pub use partial::Partial;
 
 pub use middle::typing::ast::IType;
 pub use middle::typing::ast::Type;

@@ -14,7 +14,7 @@
 
 
 use middle::analysis::ast::*;
-use monad::partial::Partial::*;
+use partial::Partial::*;
 
 pub struct UndeclaredRule<'a: 'c, 'b: 'a, 'c>
 {
