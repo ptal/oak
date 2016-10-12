@@ -13,19 +13,19 @@
 // limitations under the License.
 
 pub use std::collections::HashMap;
-use front::ast::FRule;
 
 use middle::analysis::ast::*;
 use partial::Partial::*;
 
 use rust;
 
-pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<FRule>) -> Partial<AGrammar<'a, 'b>>
+pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<Rule>) -> Partial<AGrammar<'a, 'b>>
 {
   DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
-  .map(|rules|
-    rules.into_iter().map(|(_,frule)| Rule::new(frule.name, frule.def)).collect())
-  .map(move |rules| { grammar.rules = rules; grammar })
+  .map(move |rules| {
+    grammar.rules = rules.into_iter().map(|x| x.1).collect();
+    grammar
+  })
 }
 
 pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,

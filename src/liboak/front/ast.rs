@@ -18,7 +18,7 @@ pub use ast::*;
 pub struct FGrammar
 {
   pub name: Ident,
-  pub rules: Vec<FRule>,
+  pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<FExpressionInfo>,
   pub rust_items: Vec<RItem>,
@@ -45,8 +45,8 @@ impl FGrammar
     expr_idx
   }
 
-  pub fn push_rule(&mut self, name: SpannedIdent, attributes: Vec<Attribute>, def: usize) {
-    self.rules.push(FRule::new(name, attributes, def));
+  pub fn push_rule(&mut self, name: SpannedIdent, def: usize) {
+    self.rules.push(Rule::new(name, def));
   }
 
   pub fn push_attr(&mut self, attr: Attribute) {
@@ -55,39 +55,6 @@ impl FGrammar
 
   pub fn push_rust_item(&mut self, ritem: RItem) {
     self.rust_items.push(ritem);
-  }
-}
-
-#[derive(Clone)]
-pub struct FRule
-{
-  pub name: SpannedIdent,
-  pub attributes: Vec<Attribute>,
-  pub def: usize
-}
-
-impl FRule
-{
-  pub fn new(name: SpannedIdent, attributes: Vec<Attribute>, def: usize) -> FRule {
-    FRule {
-      name: name,
-      attributes: attributes,
-      def: def
-    }
-  }
-}
-
-impl ItemIdent for FRule
-{
-  fn ident(&self) -> Ident {
-    self.name.node
-  }
-}
-
-impl ItemSpan for FRule
-{
-  fn span(&self) -> Span {
-    self.name.span
   }
 }
 

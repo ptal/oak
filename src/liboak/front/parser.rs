@@ -58,20 +58,24 @@ impl<'a> Parser<'a>
     while self.rp.token != rtok::Eof
     {
       self.parse_inner_attributes()?;
-      match self.rp.parse_item()? {
-        None => self.parse_rule()?,
-        Some(item) => self.grammar.push_rust_item(item),
+      if self.is_rule_lhs() {
+        self.parse_rule()?;
+      }
+      else {
+        match self.rp.parse_item()? {
+          None => self.parse_rule()?,
+          Some(item) => self.grammar.push_rust_item(item),
+        }
       }
     }
     Ok(())
   }
 
   fn parse_rule(&mut self) -> rust::PResult<'a, ()> {
-    let outer_attrs = self.rp.parse_outer_attributes()?;
     let name = self.parse_rule_decl()?;
     self.rp.expect(&rtok::Eq)?;
     let body = self.parse_rule_rhs(ident_to_string(name.node).as_str())?;
-    self.grammar.push_rule(name, outer_attrs, body);
+    self.grammar.push_rule(name, body);
     Ok(())
   }
 
@@ -385,6 +389,13 @@ impl<'a> Parser<'a>
   }
 
   fn is_rule_lhs(&mut self) -> bool {
-    self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
+    let token = self.rp.token.clone();
+    if let rtok::Ident(_) = token {
+      !token.is_any_keyword() &&
+      self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
+    }
+    else {
+      false
+    }
   }
 }

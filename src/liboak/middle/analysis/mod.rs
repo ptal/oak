@@ -29,7 +29,6 @@ pub mod ast;
 
 pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGrammar<'a, 'b>> {
   let grammar = AGrammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
-  let frules = fgrammar.rules.clone();
   let frust_items = fgrammar.rust_items;
   let fattributes = fgrammar.attributes;
   rule_duplicate(grammar, fgrammar.rules)
@@ -37,5 +36,5 @@ pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGram
   .and_then(|grammar| UndeclaredRule::analyse(grammar))
   .and_then(|grammar| UndeclaredAction::analyse(grammar))
   .and_then(|grammar| WellFormedness::analyse(grammar))
-  .and_then(|grammar| decorate_with_attributes(grammar, fattributes, frules))
+  .and_then(|grammar| decorate_with_attributes(grammar, fattributes))
 }

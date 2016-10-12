@@ -13,14 +13,12 @@
 // limitations under the License.
 
 use middle::analysis::ast::*;
-use front::ast::FRule;
 
 use rust::{P, MetaItemKind, MetaItem};
 
 pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
-  attributes: Vec<Attribute>, frules: Vec<FRule>) -> Partial<AGrammar<'a, 'b>>
+  attributes: Vec<Attribute>) -> Partial<AGrammar<'a, 'b>>
 {
-  check_rules_attributes(&grammar, frules);
   merge_grammar_attributes(&mut grammar, attributes);
   Partial::Value(grammar)
 }
@@ -53,26 +51,5 @@ fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: P<MetaI
         "Unknown attribute `{}`: it will be ignored.",
         name));
     }
-  }
-}
-
-fn check_rules_attributes<'a, 'b>(grammar: &AGrammar<'a, 'b>, rules: Vec<FRule>) {
-  for rule in rules {
-    for attr in rule.attributes {
-      let meta_item = attr.node.value;
-      check_rule_attr(grammar, rule.name.node, meta_item);
-    }
-  }
-}
-
-fn check_rule_attr<'a, 'b>(grammar: &AGrammar<'a, 'b>, rule_name: Ident, meta_item: P<MetaItem>) {
-  match &meta_item.node {
-      &MetaItemKind::Word(ref name)
-    | &MetaItemKind::List(ref name, _)
-    | &MetaItemKind::NameValue(ref name, _) => {
-      grammar.warn(format!(
-        "Unknown attribute `{}` attached to the rule `{}`: it will be ignored.",
-        name, rule_name));
-      }
   }
 }

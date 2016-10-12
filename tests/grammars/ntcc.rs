@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 pub use self::ntcc::*;
 
-grammar! ntcc{
+grammar! ntcc {
 
   // #![debug_api]
   // #![debug_typing]
