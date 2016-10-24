@@ -13,4 +13,3 @@ license = "Apache-2.0"
 
 name = "oak_runtime"
 path = "src/lib.rs"
-crate_type = ["dylib"]

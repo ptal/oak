@@ -15,7 +15,6 @@
 //! This is the developer documentation of Oak, if you do not intend to contribute, please read the [user manual](http://hyc.io/oak) instead. This library proposes a syntax extension for a parser generator based on [Parsing Expression Grammar (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). It aims at simplifying the construction of the AST by typing the parsing rules. This is an experimental library.
 
 #![feature(rustc_private, plugin_registrar, quote, box_syntax, dotdot_in_tuple_patterns, question_mark)]
-#![crate_name = "oak"]
 
 extern crate rustc;
 extern crate rustc_plugin;
