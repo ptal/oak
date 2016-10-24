@@ -15,7 +15,6 @@ license = "Apache-2.0"
 
 name = "oak"
 path = "src/liboak/lib.rs"
-crate_type = ["dylib"]
 plugin = true
 
 [dev-dependencies.oak_runtime]

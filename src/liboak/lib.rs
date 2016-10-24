@@ -14,8 +14,7 @@
 
 //! This is the developer documentation of Oak, if you do not intend to contribute, please read the [user manual](http://hyc.io/oak) instead. This library proposes a syntax extension for a parser generator based on [Parsing Expression Grammar (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). It aims at simplifying the construction of the AST by typing the parsing rules. This is an experimental library.
 
-#![feature(rustc_private, plugin_registrar, quote, box_syntax, dotdot_in_tuple_patterns, question_mark)]
-#![crate_name = "oak"]
+#![feature(rustc_private, plugin_registrar, quote, box_syntax, dotdot_in_tuple_patterns)]
 
 extern crate rustc;
 extern crate rustc_plugin;
@@ -69,7 +68,7 @@ fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -
 fn parse<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, grammar_name: rust::Ident,
   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'a>
 {
-  let parser = parser::Parser::new(cx.parse_sess(), cx.cfg(), tts, grammar_name);
+  let parser = parser::Parser::new(cx.parse_sess(), cx.cfg().clone(), tts, grammar_name);
   let ast = parser.parse_grammar();
   let ast = unwrap_parser_ast(cx, ast);
   let cx: &'a rust::ExtCtxt = cx;

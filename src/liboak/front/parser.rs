@@ -108,7 +108,7 @@ impl<'a> Parser<'a>
         _ => break
       }
     }
-    let hi = self.rp.last_span.hi;
+    let hi = self.rp.prev_span.hi;
     let res = if choices.len() == 1 {
       choices.pop().unwrap()
     } else {
@@ -172,7 +172,7 @@ impl<'a> Parser<'a>
     while let Some(expr) = self.parse_rule_prefixed(rule_name)? {
       seq.push(expr);
     }
-    let hi = self.rp.last_span.hi;
+    let hi = self.rp.prev_span.hi;
     if seq.len() == 0 {
       self.rp.span_err(
         mk_sp(lo, hi),
@@ -245,7 +245,7 @@ impl<'a> Parser<'a>
   }
 
   fn last_respan(&mut self, expr: Expression) -> usize {
-    let sp = self.rp.last_span;
+    let sp = self.rp.prev_span;
     self.alloc_expr(sp.lo, sp.hi, expr)
   }
 
