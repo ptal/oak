@@ -50,7 +50,7 @@ pub struct Grammar<'a, 'b:'a, ExprInfo>
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExprInfo>,
-  pub stream_type: RItem,
+  pub stream_alias: RItem,
   pub rust_functions: HashMap<Ident, RItem>,
   pub rust_items: Vec<RItem>,
   pub attributes: GrammarAttributes
@@ -67,7 +67,7 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
       rules: vec![],
       exprs: exprs,
       exprs_info: exprs_info,
-      stream_type: quote_item!(cx, pub type Stream<'a> = StrStream<'a>;).unwrap(),
+      stream_alias: quote_item!(cx, pub type Stream<'a> = StrStream<'a>;).unwrap(),
       rust_functions: HashMap::new(),
       rust_items: vec![],
       attributes: GrammarAttributes::default()
@@ -115,6 +115,39 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
 
   pub fn expr_index_of_rule(&self, id: Ident) -> usize {
     self.find_rule_by_ident(id).expr_idx
+  }
+
+  pub fn stream_generics(&self) -> rust::Generics {
+    match &self.stream_alias.node {
+      &rust::ItemKind::Ty(_, ref generics) => generics.clone(),
+      _ => unreachable!()
+    }
+  }
+
+  pub fn stream_type(&self) -> RTy {
+    use rust::*;
+    let generics = self.stream_generics();
+    let generics_params = PathParameters::AngleBracketed(
+      AngleBracketedParameterData {
+        lifetimes: generics.lifetimes.into_iter().map(|l| l.lifetime).collect(),
+        types: P::from_vec(generics.ty_params.into_iter()
+          .map(|ty| ty.ident)
+          .map(|ty| quote_ty!(self.cx, $ty))
+          .collect()),
+        bindings: P::new(),
+      });
+
+    let stream_ty = quote_ty!(self.cx, Stream);
+    if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
+      path.segments.last_mut().unwrap().parameters = generics_params;
+      let ty_path = TyKind::Path(qself, path);
+      let ty = Ty {
+        id: stream_ty.id,
+        node: ty_path,
+        span: stream_ty.span
+      };
+      quote_ty!(self.cx, $ty)
+    } else { unreachable!() }
   }
 }
 

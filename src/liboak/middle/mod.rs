@@ -49,7 +49,7 @@ fn extract_stream_type<'a, 'b>(mut grammar: AGrammar<'a, 'b>)
 {
   let mut stream_redefined = false;
   {
-    let stream_ty =
+    let stream_alias =
       grammar.rust_items.iter().find(|item| {
         match &item.node {
           &rust::ItemKind::Ty(_,_) => {
@@ -59,13 +59,13 @@ fn extract_stream_type<'a, 'b>(mut grammar: AGrammar<'a, 'b>)
         }
       });
 
-    if let Some(ty) = stream_ty {
-      grammar.stream_type = ty.clone();
+    if let Some(ty) = stream_alias {
+      grammar.stream_alias = ty.clone();
       stream_redefined = true;
     }
   }
   if !stream_redefined {
-    grammar.rust_items.push(grammar.stream_type.clone());
+    grammar.rust_items.push(grammar.stream_alias.clone());
   }
   Partial::Value(grammar)
 }

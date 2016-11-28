@@ -19,6 +19,7 @@ use back::compiler::ExprCompilerFn;
 use back::compiler::rtype::*;
 use back::compiler::{recognizer_compiler, parser_compiler};
 use back::compiler::value::*;
+use rust;
 use rust::AstBuilder;
 
 pub struct Context<'a: 'c, 'b: 'a, 'c>
@@ -69,16 +70,31 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
   fn function(self, name: Ident, state_mut: bool, body: RExpr, ty: RTy) -> RItem {
     let cx = self.cx();
     let state_param = self.state_param(state_mut);
+    let stream_ty = self.grammar.stream_type();
     let closures = self.closures;
-    quote_item!(cx,
+    let fun = quote_item!(cx,
       #[inline]
-      pub fn $name<S>($state_param) -> oak_runtime::ParseState<S, $ty> where
-       S: oak_runtime::CharStream
+      pub fn $name($state_param) -> oak_runtime::ParseState<$stream_ty, $ty>
       {
         $closures
         $body
       }
-    ).expect("Quotation of a generated function.")
+    ).expect("Quotation of a generated function.");
+    if let rust::ItemKind::Fn(a,b,c,d,mut generics,f) = fun.node.clone() {
+      let stream_gen = self.grammar.stream_generics();
+      generics.lifetimes = stream_gen.lifetimes;
+      generics.ty_params = stream_gen.ty_params;
+      generics.where_clause = stream_gen.where_clause;
+      let item = rust::Item {
+        ident: fun.ident,
+        attrs: fun.attrs.clone(),
+        id: fun.id,
+        node: rust::ItemKind::Fn(a,b,c,d,generics,f),
+        vis: fun.vis.clone(),
+        span: fun.span
+      };
+      fun.map(|_| item)
+    } else { unreachable!() }
   }
 
   #[allow(unused_imports)] // `quote_tokens` generates a warning.
@@ -88,7 +104,8 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     } else {
       None
     };
-    quote_arg!(self.cx(), $mut_kw state: oak_runtime::ParseState<S, ()>)
+    let stream_ty = self.grammar.stream_type();
+    quote_arg!(self.cx(), $mut_kw state: oak_runtime::ParseState<$stream_ty, ()>)
   }
 
   pub fn compile(&mut self, compiler: ExprCompilerFn, idx: usize,
