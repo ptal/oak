@@ -45,6 +45,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
       {
         #![allow(unused_mut)]
         use oak_runtime::stream::*;
+        use oak_runtime::str_stream::StrStream;
 
         $module_content
       }

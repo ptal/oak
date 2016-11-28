@@ -50,6 +50,7 @@ pub struct Grammar<'a, 'b:'a, ExprInfo>
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExprInfo>,
+  pub stream_type: RItem,
   pub rust_functions: HashMap<Ident, RItem>,
   pub rust_items: Vec<RItem>,
   pub attributes: GrammarAttributes
@@ -66,6 +67,7 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
       rules: vec![],
       exprs: exprs,
       exprs_info: exprs_info,
+      stream_type: quote_item!(cx, pub type Stream<'a> = StrStream<'a>;).unwrap(),
       rust_functions: HashMap::new(),
       rust_items: vec![],
       attributes: GrammarAttributes::default()
@@ -194,6 +196,7 @@ pub enum Expression
   AndPredicate(usize), // &expr
   SemanticAction(usize, Ident), // expr > function
   TypeAscription(usize, IType), // expr -> () or expr -> (^)
+
 }
 
 #[derive(Clone, Debug)]

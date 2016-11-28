@@ -37,6 +37,7 @@ impl<'a, 'b> IGrammar<'a, 'b>
       rules: agrammar.rules,
       exprs: agrammar.exprs,
       exprs_info: vec![],
+      stream_type: agrammar.stream_type,
       rust_functions: agrammar.rust_functions,
       rust_items: agrammar.rust_items,
       attributes: agrammar.attributes
@@ -72,6 +73,7 @@ impl<'a, 'b> IGrammar<'a, 'b>
       rules: self.rules,
       exprs: self.exprs,
       exprs_info: exprs_info,
+      stream_type: self.stream_type,
       rust_functions: self.rust_functions,
       rust_items: self.rust_items,
       attributes: self.attributes
