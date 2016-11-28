@@ -31,12 +31,11 @@ pub struct Parser<'a>
 impl<'a> Parser<'a>
 {
   pub fn new(sess: &'a rust::ParseSess,
-         cfg: rust::CrateConfig,
          tts: Vec<rust::TokenTree>,
          grammar_name: rust::Ident) -> Parser<'a>
   {
     Parser{
-      rp: rust::new_parser_from_tts(sess, cfg, tts),
+      rp: rust::new_parser_from_tts(sess, tts),
       grammar: FGrammar::new(grammar_name)
     }
   }

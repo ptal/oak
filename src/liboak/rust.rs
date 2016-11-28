@@ -30,14 +30,14 @@ pub use syntax::parse::parser::Parser;
 pub use syntax::parse::ParseSess;
 pub use syntax::parse::PResult;
 pub use syntax::parse::new_parser_from_tts;
-pub use syntax::parse::token::str_to_ident;
 pub use syntax::parse::token::Token;
 pub use syntax::parse::lexer;
 pub use syntax::parse::lexer::TokenAndSpan;
 pub use syntax::tokenstream::*;
 pub use syntax::parse::token;
-pub use syntax::parse::token::keywords::Keyword;
 pub use syntax::parse::token::DelimToken;
 pub use syntax::parse::token::BinOpToken;
-pub use syntax::parse::token::gensym_ident;
 pub use syntax::parse::parser::PathStyle;
+
+pub use syntax::symbol::Symbol;
+pub use syntax::symbol::keywords::Keyword;

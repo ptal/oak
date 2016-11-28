@@ -151,7 +151,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
       continuation.map_success(|success, _| {
         let lambda = cx.lambda_fn_decl(cx.call_site(),
           cx.fn_decl(params, cx.ty_infer(cx.call_site())),
-          quote_block!(cx, { $success }),
+          quote_expr!(cx, $success),
           cx.call_site());
         self.closures.push(quote_stmt!(cx,
           let $closure_name = $lambda;

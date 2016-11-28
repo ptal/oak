@@ -14,7 +14,7 @@
 
 use middle::analysis::ast::*;
 
-use rust::{P, MetaItemKind, MetaItem};
+use rust::{MetaItemKind, MetaItem};
 
 pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
   attributes: Vec<Attribute>) -> Partial<AGrammar<'a, 'b>>
@@ -25,31 +25,31 @@ pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
 
 fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<Attribute>) {
   for attr in attrs {
-    let meta_item = attr.node.value;
+    let meta_item = attr.value;
     merge_grammar_attr(grammar, meta_item);
   }
 }
 
-fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: P<MetaItem>) {
+fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaItem) {
   match &meta_item.node {
-    &MetaItemKind::Word(ref name) if *name == "debug_api" => {
+    &MetaItemKind::Word if meta_item.name == "debug_api" => {
       grammar.merge_print_code(PrintLevel::Debug);
     },
-    &MetaItemKind::Word(ref name) if *name == "show_api" => {
+    &MetaItemKind::Word if meta_item.name == "show_api" => {
       grammar.merge_print_code(PrintLevel::Show);
     },
-    &MetaItemKind::Word(ref name) if *name == "debug_typing" => {
+    &MetaItemKind::Word if meta_item.name == "debug_typing" => {
       grammar.merge_print_typing(PrintLevel::Debug);
     },
-    &MetaItemKind::Word(ref name) if *name == "show_typing" => {
+    &MetaItemKind::Word if meta_item.name == "show_typing" => {
       grammar.merge_print_typing(PrintLevel::Show);
     },
-      &MetaItemKind::Word(ref name)
-    | &MetaItemKind::List(ref name, _)
-    | &MetaItemKind::NameValue(ref name, _) => {
+      &MetaItemKind::Word
+    | &MetaItemKind::List(_)
+    | &MetaItemKind::NameValue(_) => {
       grammar.warn(format!(
         "Unknown attribute `{}`: it will be ignored.",
-        name));
+        meta_item.name));
     }
   }
 }
