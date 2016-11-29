@@ -16,6 +16,9 @@
 
 use stream::*;
 use std::cmp::{Ordering, min};
+use std::ops::Range;
+use syntax::ext::quote::rt::Span;
+use syntax::codemap::{BytePos, ExpnId};
 
 impl<'a> Stream for &'a str
 {
@@ -158,6 +161,17 @@ impl<'a> HasNext for StrStream<'a>
   }
 }
 
+impl<'a> StreamSpan for Range<StrStream<'a>>
+{
+  type Output = Span;
+  fn stream_span(&self) -> Self::Output {
+    Span {
+      lo: BytePos(self.start.bytes_offset as u32),
+      hi: BytePos(self.end.bytes_offset as u32),
+      expn_id: ExpnId(0)
+    }
+  }
+}
 
 #[cfg(test)]
 mod test {

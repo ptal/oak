@@ -59,3 +59,9 @@ pub trait HasNext
 {
   fn has_next(&self) -> bool;
 }
+
+pub trait StreamSpan
+{
+  type Output;
+  fn stream_span(&self) -> Self::Output;
+}
