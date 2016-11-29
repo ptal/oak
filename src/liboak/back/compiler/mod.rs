@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// We compile in a bottom-up manner. For example, in `"let" . / "fn" id`, the expression `id` is compiled first, then `"fn"` and then the first branch. We use the trait `CompileExpr` for implementing the compiler of a new combinator. Its method `compile_expr` takes two parameters, the first one is the `context` and the second is the continuation `cont`. The advantage of the bottom-up compilation is that, when compiling a combinator, this combinator can control the future with `cont`. The continuation `cont` contains two attributes: `success` and `failure` representing what has to be done in case of success or failure of the current compiled combinator.
+
 pub mod rtype;
 pub mod value;
 mod grammar;
@@ -26,6 +28,7 @@ mod syntactic_predicate;
 mod character_class;
 mod non_terminal;
 mod semantic_action;
+mod spanned_expr;
 
 pub use back::compiler::grammar::*;
 pub use back::context::*;
@@ -39,6 +42,7 @@ use back::compiler::syntactic_predicate::*;
 use back::compiler::character_class::*;
 use back::compiler::non_terminal::*;
 use back::compiler::semantic_action::*;
+use back::compiler::spanned_expr::*;
 
 pub enum CompilerKind
 {
@@ -70,6 +74,7 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::parser(id, idx)),
       SemanticAction(expr_idx, id) => Box::new(SemanticActionCompiler::parser(expr_idx, id, idx)),
       TypeAscription(expr_idx, _) => parser_compiler(grammar, expr_idx),
+      SpannedExpr(expr_idx) => Box::new(SpannedExprCompiler::parser(expr_idx)),
       NotPredicate(_)
     | AndPredicate(_) => unreachable!(
         "BUG: Syntactic predicate can not be compiled to parser (they do not generate data)."),
@@ -92,5 +97,6 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::recognizer(id)),
     SemanticAction(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
     TypeAscription(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
+    SpannedExpr(expr_idx) => recognizer_compiler(grammar, expr_idx),
   }
 }

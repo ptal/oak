@@ -99,8 +99,8 @@ impl<'a> Parser<'a>
     let lo = self.rp.span.lo;
     let mut choices = Vec::new();
     loop{
-      let seq = self.parse_rule_seq(rule_name)?;
-      choices.push(self.parse_semantic_action_or_ty(seq, rule_name)?);
+      let spanned_expr = self.parse_spanned_expr(rule_name)?;
+      choices.push(self.parse_semantic_action_or_ty(spanned_expr, rule_name)?);
       let token = self.rp.token.clone();
       match token {
         rtok::BinOp(rbtok::Slash) => self.bump(),
@@ -161,6 +161,21 @@ impl<'a> Parser<'a>
             rule_name).as_str()
         );
         Ok(expr)
+      }
+    }
+  }
+
+  fn parse_spanned_expr(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
+    let token = self.rp.token.clone();
+    match token {
+      rtok::DotDot => {
+        let sp = self.rp.span;
+        self.bump();
+        let seq = self.parse_rule_seq(rule_name)?;
+        Ok(self.alloc_expr(sp.lo, sp.hi, SpannedExpr(seq)))
+      }
+      _ => {
+        self.parse_rule_seq(rule_name)
       }
     }
   }
@@ -296,6 +311,13 @@ impl<'a> Parser<'a>
           }
         }
       },
+      rtok::DotDot => {
+        return Err(self.fatal_error(
+          format!("In rule {}: A span expression `.. e1 e2` must always start a sequence. \
+            You can force this by grouping the spanned expression with parenthesis: `e1 (.. e2)`.",
+            rule_name).as_str()
+        ));
+      }
       _ => { None }
     };
     Ok(res)

@@ -201,7 +201,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
         .map(|(var, _)| quote_expr!(self.cx(), &mut $var)))
       .chain(self.free_variables
         .iter()
-        .map(|var| quote_expr!(self.cx(), $var))) // TODO: compute the type of var.
+        .map(|var| quote_expr!(self.cx(), $var)))
       .collect()
   }
 
@@ -222,6 +222,12 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 
   pub fn next_free_var(&mut self) -> Ident {
     self.free_variables.pop().expect("Free variables are all bound.")
+  }
+
+  pub fn next_free_var_skip(&mut self, expr_idx: usize) -> Ident {
+    let card = self.expr_cardinality(expr_idx);
+    let len_fv = self.free_variables.len();
+    self.free_variables.remove(len_fv-1-card)
   }
 
   pub fn free_variables(&self) -> Vec<Ident> {

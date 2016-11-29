@@ -45,6 +45,7 @@ impl<'a, 'b> IGrammar<'a, 'b>
     grammar.exprs_info = exprs_info.into_iter()
       .map(|e| ExprIType::infer(e.span))
       .collect();
+    grammar.alloc_stream_ty_expr();
     grammar
   }
 
@@ -78,6 +79,21 @@ impl<'a, 'b> IGrammar<'a, 'b>
       rust_items: self.rust_items,
       attributes: self.attributes
     }
+  }
+
+  /// We allocate a fake spanned expr so we can retrieve its type from `grammar.stream_type()`.
+  /// This is because the type of `SpannedExpr(e)` is `(stream_type, e)` but `stream_type` needs an expression index to fit in the type AST.
+  fn alloc_stream_ty_expr(&mut self) {
+    self.exprs.push(Expression::SpannedExpr(0)); // fake, just to keep exprs and exprs_info consistent.
+    let stream_ty = self.stream_type();
+    self.exprs_info.push(
+      ExpressionInfo::new(stream_ty.span.clone(),
+        IType::Regular(Type::Action(
+          rust::FunctionRetTy::Ty(stream_ty)))));
+  }
+
+  pub fn stream_ty_idx(&self) -> usize {
+    self.exprs_info.len() - 1
   }
 }
 
@@ -269,6 +285,7 @@ pub enum Type
   Atom,
   Optional(usize),
   List(usize),
+  // Spanned(usize),
   /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
   /// Precondition: Tuple size >= 2.
   Tuple(Vec<usize>),
@@ -284,6 +301,7 @@ impl Type
     | Optional(_)
     | List(_)
     | Action(_) => 1,
+    // | Spanned(_) => 1,
       Tuple(ref indexes) => indexes.len()
     }
   }
@@ -299,6 +317,7 @@ impl Type
       (Atom, Atom) => true,
       (Optional(e1), Optional(e2))
     | (List(e1), List(e2)) => syntactic_eq_expr(e1, e2),
+    // | (Spanned(e1), Spanned(e2)) => syntactic_eq_expr(e1, e2),
       (Tuple(exprs1), Tuple(exprs2)) => {
         if exprs1.len() == exprs2.len() {
           for (e1, e2) in exprs1.into_iter().zip(exprs2.into_iter()) {
@@ -325,6 +344,8 @@ impl Type
         format!("Option<{}>", grammar.type_of(child).display(grammar)),
       List(child) =>
         format!("Vec<{}>", grammar.type_of(child).display(grammar)),
+      // Spanned(child) =>
+      //   format!("<todo>"), //(<Range<Stream> as StreamSpan>::Output, {})", grammar.type_of(child).display(grammar))
       Tuple(children) => {
         let mut display = format!("(");
         for child in children {

@@ -16,8 +16,8 @@
 
 use stream::*;
 use std::cmp::{Ordering, min};
-use std::ops::Range;
-use syntax::ext::quote::rt::Span;
+pub use std::ops::Range;
+pub use syntax::ext::quote::rt::Span;
 use syntax::codemap::{BytePos, ExpnId};
 
 impl<'a> Stream for &'a str

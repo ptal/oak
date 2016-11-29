@@ -35,6 +35,10 @@ pub trait Visitor<R> : ExprByIndex
     self.visit_atom(this)
   }
 
+  fn visit_spanned_expr(&mut self, _this: usize, child: usize) -> R {
+    self.visit_expr(child)
+  }
+
   fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> R;
   fn visit_choice(&mut self, _this: usize, children: Vec<usize>) -> R;
 
@@ -136,6 +140,9 @@ pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, this: usize) -> R where
     }
     TypeAscription(child, ty) => {
       visitor.visit_type_ascription(this, child, ty)
+    }
+    SpannedExpr(child) => {
+      visitor.visit_spanned_expr(this, child)
     }
   }
 }

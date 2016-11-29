@@ -229,7 +229,7 @@ pub enum Expression
   AndPredicate(usize), // &expr
   SemanticAction(usize, Ident), // expr > function
   TypeAscription(usize, IType), // expr -> () or expr -> (^)
-
+  SpannedExpr(usize), // .. expr
 }
 
 #[derive(Clone, Debug)]
