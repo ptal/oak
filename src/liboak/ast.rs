@@ -139,7 +139,7 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
 
     let stream_ty = quote_ty!(self.cx, Stream);
     if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
-      path.segments.last_mut().unwrap().parameters = generics_params;
+      path.segments.last_mut().unwrap().parameters = Some(P(generics_params));
       let ty_path = TyKind::Path(qself, path);
       let ty = Ty {
         id: stream_ty.id,
