@@ -44,7 +44,6 @@ grammar! stream_span {
 
 #[test]
 fn test_stream_span() {
-  use syntax::codemap::{BytePos, ExpnId};
   use oak_runtime::*;
 
   let state = stream_span::parse_expr("abcb".into_state());
@@ -52,14 +51,12 @@ fn test_stream_span() {
   assert_eq!(data.c2, 'b');
   assert_eq!(data.c3, 'c');
   assert_eq!(data.full_sp, Span {
-      lo: BytePos(0),
-      hi: BytePos(4),
-      expn_id: ExpnId(0)
+      lo: 0,
+      hi: 4,
     });
 
   assert_eq!(data.c3_sp, Span {
-      lo: BytePos(2),
-      hi: BytePos(3),
-      expn_id: ExpnId(0)
+      lo: 2,
+      hi: 3,
     });
 }

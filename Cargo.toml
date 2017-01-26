@@ -1,7 +1,7 @@
 [package]
 
 name = "oak"
-version = "0.4.7"
+version = "0.4.8"
 authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
 description = "A typed parser generator syntax extension for Parsing Expression Grammar (PEG)."
@@ -19,7 +19,7 @@ plugin = true
 
 [dev-dependencies.oak_runtime]
 path = "runtime"
-version = "0.4.2"
+version = "0.4.3"
 
 [dependencies]
 partial = "^0.1.0"

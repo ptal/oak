@@ -22,7 +22,6 @@
 
 extern crate oak_runtime;
 extern crate term;
-extern crate syntax;
 
 use oak_runtime::*;
 use oak_runtime::ParseResult::*;
