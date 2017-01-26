@@ -130,11 +130,11 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     let generics_params = PathParameters::AngleBracketed(
       AngleBracketedParameterData {
         lifetimes: generics.lifetimes.into_iter().map(|l| l.lifetime).collect(),
-        types: P::from_vec(generics.ty_params.into_iter()
+        types: generics.ty_params.into_iter()
           .map(|ty| ty.ident)
           .map(|ty| quote_ty!(self.cx, $ty))
-          .collect()),
-        bindings: P::new(),
+          .collect(),
+        bindings: vec![],
       });
 
     let stream_ty = quote_ty!(self.cx, Stream);
