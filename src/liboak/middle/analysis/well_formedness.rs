@@ -14,7 +14,7 @@
 
 use middle::analysis::ast::*;
 use std::mem::swap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Well-formedness attributes, it represents the possible behavior of an expression.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -51,7 +51,8 @@ pub struct WellFormedness<'a: 'c, 'b: 'a, 'c>
   consumed_input: bool,
   rules_wfa: HashMap<Ident, WFA>,
   reached_fixpoint: bool,
-  well_formed: bool
+  well_formed: bool,
+  errors: HashSet<usize> // Whether we already spot an error on this rule (to avoid multi-reporting).
 }
 
 // Start with an empty set of the expression attributes.
@@ -81,7 +82,8 @@ impl<'a, 'b, 'c> WellFormedness<'a, 'b, 'c>
         .map(|rule| (rule.ident(), WFA::all_true()))
         .collect(),
       reached_fixpoint: false,
-      well_formed: true
+      well_formed: true,
+      errors: HashSet::new()
     }
   }
 
@@ -162,48 +164,60 @@ impl<'a, 'b, 'c> WellFormedness<'a, 'b, 'c>
   fn error_left_recursion(&mut self, rule_id: Ident) {
     self.well_formed = false;
     let rule = self.grammar.find_rule_by_ident(rule_id);
-    let mut rec_path: Vec<_> = vec![rule_id];
-    rec_path.extend(self.rec_path_from(rule_id).into_iter()
-      .map(|(r,_)| r)
-      .rev());
-    self.grammar.span_err(rule.span(), format!(
-      "Left-recursion is not supported in Oak; the following rule cycle \
-      do not consume any input and would therefore loop forever\n\
-      Detected cycle: {}\n\
-      Solution: Rewrite one of the incriminated rules such that it \
-      consumes at least one atom in the input before calling \
-      the next one. Usually, left-recursion is rewritten with a \
-      repeat operator (`e*` or `e+`).",
-      display_path_cycle(&rec_path)));
+    if self.register_error(rule.expr_idx) {
+      let mut rec_path: Vec<_> = vec![rule_id];
+      rec_path.extend(self.rec_path_from(rule_id).into_iter()
+        .map(|(r,_)| r)
+        .rev());
+      self.grammar.span_err(rule.span(), format!(
+        "Left-recursion is not supported in Oak; the following rule cycle \
+        do not consume any input and would therefore loop forever\n\
+        Detected cycle: {}\n\
+        Solution: Rewrite one of the incriminated rules such that it \
+        consumes at least one atom in the input before calling \
+        the next one. Usually, left-recursion is rewritten with a \
+        repeat operator (`e*` or `e+`).",
+        display_path_cycle(&rec_path)));
+    }
   }
 
   fn error_never_succeed(&mut self, expr_idx: usize) {
-    self.well_formed = false;
-    self.grammar.span_err(self.grammar[expr_idx].span(), format!(
-      "Expression will never succeed.\n\
-      Solution: Remove this expression."));
+    if self.register_error(expr_idx) {
+      self.well_formed = false;
+      self.grammar.span_err(self.grammar[expr_idx].span(), format!(
+        "Expression will never succeed.\n\
+        Solution: Remove this expression."));
+    }
   }
 
   fn error_loop_repeat(&mut self, expr_idx: usize) {
-    self.well_formed = false;
-    self.grammar.span_err(self.grammar[expr_idx].span(), format!(
-      "Infinite loop detected. A repeat operator (`e*` or `e+`) will \
-      never stop because the sub-expression does not consume input.\n\
-      Solution: Rewrite the expression such that it consumes at least \
-      one atom in the input or get rid of the repeat operator."));
+    if self.register_error(expr_idx) {
+      self.well_formed = false;
+      self.grammar.span_err(self.grammar[expr_idx].span(), format!(
+        "Infinite loop detected. A repeat operator (`e*` or `e+`) will \
+        never stop because the sub-expression does not consume input.\n\
+        Solution: Rewrite the expression such that it consumes at least \
+        one atom in the input or get rid of the repeat operator."));
+    }
   }
 
   fn error_unreachable_branches(&mut self, choice: usize, always_succeed_branch: usize)
   {
-    self.well_formed = false;
-    self.grammar.span_err(self.grammar[choice].span(), format!(
-      "Unreachable branch in a choice expression. We detected that \
-      some branches cannot be reached in this expression.\n\
-      Solution: Either remove (or rewrite) this branch or move it \
-      in the end of the choice expression."));
-    self.grammar.span_note(self.grammar[always_succeed_branch].span(), format!(
-      "Branch always succeeding"
-    ));
+    if self.register_error(always_succeed_branch) {
+      self.well_formed = false;
+      self.grammar.span_err(self.grammar[choice].span(), format!(
+        "Unreachable branch in a choice expression. We detected that \
+        some branches cannot be reached in this expression.\n\
+        Solution: Either remove (or rewrite) this branch or move it \
+        in the end of the choice expression."));
+      self.grammar.span_note(self.grammar[always_succeed_branch].span(), format!(
+        "Branch always succeeding"
+      ));
+    }
+  }
+
+  fn register_error(&mut self, expr_idx: usize) -> bool {
+    self.errors.insert(expr_idx)
   }
 }
 
