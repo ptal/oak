@@ -19,7 +19,7 @@ plugin = true
 
 [dev-dependencies.oak_runtime]
 path = "runtime"
-version = "0.5.0"
+version = "0.5.1"
 
 [dependencies]
 partial = "^0.1.3"

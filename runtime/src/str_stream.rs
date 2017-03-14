@@ -73,6 +73,10 @@ impl<'a> StrStream<'a>
     }
     (line_no, remaining + 1)
   }
+
+  pub fn bytes_offset(&self) -> usize {
+    self.bytes_offset
+  }
 }
 
 impl<'a> Iterator for StrStream<'a>

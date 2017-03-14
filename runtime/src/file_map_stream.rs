@@ -18,7 +18,7 @@ use std::rc::*;
 use std::cmp::Ordering;
 pub use std::ops::Range;
 pub use syntex_pos::{Span, FileMap};
-// pub use compiler_toolbox::FileMap;
+use syntex_pos::{BytePos, mk_sp};
 
 impl<'a> Stream for &'a Rc<FileMap>
 {
@@ -43,13 +43,29 @@ impl<'a> FileMapStream<'a>
       str_stream: (*filemap.src.as_ref().unwrap()).stream()
     }
   }
+
+  fn abs_pos(&self) -> BytePos {
+    BytePos(self.str_stream.bytes_offset() as u32) + self.filemap.start_pos
+  }
 }
 
 impl<'a> Iterator for FileMapStream<'a>
 {
   type Item = char;
+  /// Mostly from Rust compiler (libsyntax/parse/lexer/mod.rs::bump()).
   fn next(&mut self) -> Option<Self::Item> {
-    self.str_stream.next()
+    let last_pos = self.abs_pos();
+    self.str_stream.next().map(|c| {
+      let pos = self.abs_pos();
+      if c == '\n' {
+        self.filemap.next_line(last_pos);
+      }
+      let byte_offset_diff = (pos.0 - last_pos.0) as usize;
+      if byte_offset_diff > 1 {
+        self.filemap.record_multibyte_char(last_pos, byte_offset_diff);
+      }
+      c
+    })
   }
 }
 
@@ -108,12 +124,9 @@ impl<'a> StreamSpan for Range<FileMapStream<'a>>
 {
   type Output = Span;
   fn stream_span(&self) -> Self::Output {
-    let mut span = Range {
-      start: self.start.str_stream.clone(),
-      end: self.end.str_stream.clone()
-    }.stream_span();
-    span.lo = span.lo + self.start.filemap.start_pos;
-    span.hi = span.hi + self.end.filemap.end_pos;
-    span
+    mk_sp(
+      self.start.abs_pos(),
+      self.end.abs_pos()
+    )
   }
 }
