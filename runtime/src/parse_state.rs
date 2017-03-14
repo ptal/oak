@@ -259,7 +259,6 @@ impl<S, T, I> Iterator for ParseState<S, T> where
   }
 }
 
-
 impl<S, T, P> ConsumePrefix<P> for ParseState<S, T> where
   S: ConsumePrefix<P>
 {

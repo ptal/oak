@@ -16,14 +16,9 @@
 
 use stream::*;
 use std::cmp::{Ordering, min};
+use super::*;
 pub use std::ops::Range;
-
-/// We cannot use the Span of the rust compiler (see issue #97).
-#[derive(Clone, Copy, Hash, PartialEq, Eq, Ord, PartialOrd, Debug)]
-pub struct Span {
-  pub lo: usize,
-  pub hi: usize
-}
+pub use syntex_pos::Span;
 
 impl<'a> Stream for &'a str
 {
@@ -170,10 +165,9 @@ impl<'a> StreamSpan for Range<StrStream<'a>>
 {
   type Output = Span;
   fn stream_span(&self) -> Self::Output {
-    Span {
-      lo: self.start.bytes_offset,
-      hi: self.end.bytes_offset,
-    }
+    make_span(
+      self.start.bytes_offset,
+      self.end.bytes_offset)
   }
 }
 

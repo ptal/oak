@@ -50,13 +50,6 @@ fn test_stream_span() {
   let data = state.unwrap_data();
   assert_eq!(data.c2, 'b');
   assert_eq!(data.c3, 'c');
-  assert_eq!(data.full_sp, Span {
-      lo: 0,
-      hi: 4,
-    });
-
-  assert_eq!(data.c3_sp, Span {
-      lo: 2,
-      hi: 3,
-    });
+  assert_eq!(data.full_sp, make_span(0, 4));
+  assert_eq!(data.c3_sp, make_span(2, 3));
 }
