@@ -38,35 +38,37 @@ pub struct FileMapStream<'a>
 impl<'a> FileMapStream<'a>
 {
   fn new(filemap: &'a Rc<FileMap>) -> Self {
+    let src = filemap.src.as_ref().unwrap();
+    FileMapStream::register_lines(filemap, src);
     FileMapStream {
       filemap: filemap.clone(),
-      str_stream: (*filemap.src.as_ref().unwrap()).stream()
+      str_stream: (*src).stream()
+    }
+  }
+
+  fn register_lines(filemap: &Rc<FileMap>, src: &String) {
+    // Mostly from Rust compiler (codemap.rs).
+    if filemap.count_lines() == 0 {
+      let mut byte_pos: u32 = filemap.start_pos.0;
+      for line in src.lines() {
+        // register the start of this line
+        filemap.next_line(BytePos(byte_pos));
+        // update byte_pos to include this line and the \n at the end
+        byte_pos += line.len() as u32 + 1;
+      }
     }
   }
 
   fn abs_pos(&self) -> BytePos {
-    BytePos(self.str_stream.bytes_offset() as u32) + self.filemap.start_pos
+    self.filemap.start_pos + BytePos(self.str_stream.bytes_offset() as u32)
   }
 }
 
 impl<'a> Iterator for FileMapStream<'a>
 {
   type Item = char;
-  /// Mostly from Rust compiler (libsyntax/parse/lexer/mod.rs::bump()).
   fn next(&mut self) -> Option<Self::Item> {
-    let old_pos = self.abs_pos();
-    let old_ch = self.str_stream.current_char();
-    self.str_stream.next().map(|c| {
-      let pos = self.abs_pos();
-      if old_ch.unwrap() == '\n' {
-        self.filemap.next_line(pos);
-      }
-      let byte_offset_diff = (pos.0 - old_pos.0) as usize;
-      if byte_offset_diff > 1 {
-        self.filemap.record_multibyte_char(old_pos, byte_offset_diff);
-      }
-      c
-    })
+    self.str_stream.next()
   }
 }
 
@@ -142,11 +144,18 @@ mod test {
   #[test]
   fn test_filemap() {
     let codemap = CodeMap::new();
-    let filemap = codemap.new_filemap(format!("fake"), None, format!("\nT\n"));
+    let filemap = codemap.new_filemap(format!("fake"), None, format!("A\n\nT\n"));
     let mut stream = filemap.stream();
+    assert_eq!(filemap.count_lines(), 3);
+    assert!(stream.next() == Some('A'));
+    assert!(stream.next() == Some('\n'));
     assert!(stream.next() == Some('\n'));
     assert!(stream.next() == Some('T'));
+    // Simulating backtracking
+    let mut stream2 = stream.clone();
     assert!(stream.next() == Some('\n'));
+    assert!(stream2.next() == Some('\n'));
     assert!(stream.next() == None);
+    assert!(stream2.next() == None);
   }
 }
