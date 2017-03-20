@@ -54,15 +54,16 @@ impl<'a> Iterator for FileMapStream<'a>
   type Item = char;
   /// Mostly from Rust compiler (libsyntax/parse/lexer/mod.rs::bump()).
   fn next(&mut self) -> Option<Self::Item> {
-    let last_pos = self.abs_pos();
+    let old_pos = self.abs_pos();
+    let old_ch = self.str_stream.current_char();
     self.str_stream.next().map(|c| {
       let pos = self.abs_pos();
-      if c == '\n' {
-        self.filemap.next_line(last_pos);
+      if old_ch.unwrap() == '\n' {
+        self.filemap.next_line(pos);
       }
-      let byte_offset_diff = (pos.0 - last_pos.0) as usize;
+      let byte_offset_diff = (pos.0 - old_pos.0) as usize;
       if byte_offset_diff > 1 {
-        self.filemap.record_multibyte_char(last_pos, byte_offset_diff);
+        self.filemap.record_multibyte_char(old_pos, byte_offset_diff);
       }
       c
     })
@@ -128,5 +129,24 @@ impl<'a> StreamSpan for Range<FileMapStream<'a>>
       self.start.abs_pos(),
       self.end.abs_pos()
     )
+  }
+}
+
+
+#[cfg(test)]
+mod test {
+  extern crate syntex_syntax;
+  use self::syntex_syntax::codemap::CodeMap;
+  use super::*;
+
+  #[test]
+  fn test_filemap() {
+    let codemap = CodeMap::new();
+    let filemap = codemap.new_filemap(format!("fake"), None, format!("\nT\n"));
+    let mut stream = filemap.stream();
+    assert!(stream.next() == Some('\n'));
+    assert!(stream.next() == Some('T'));
+    assert!(stream.next() == Some('\n'));
+    assert!(stream.next() == None);
   }
 }

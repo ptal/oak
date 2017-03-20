@@ -77,6 +77,10 @@ impl<'a> StrStream<'a>
   pub fn bytes_offset(&self) -> usize {
     self.bytes_offset
   }
+
+  pub fn current_char(&self) -> Option<char> {
+    self.raw_data[self.bytes_offset..].chars().next()
+  }
 }
 
 impl<'a> Iterator for StrStream<'a>
@@ -84,7 +88,7 @@ impl<'a> Iterator for StrStream<'a>
   type Item = char;
   fn next(&mut self) -> Option<Self::Item> {
     if self.bytes_offset < self.raw_data.len() {
-      let current = self.raw_data[self.bytes_offset..].chars().next().unwrap();
+      let current = self.current_char().unwrap();
       self.bytes_offset += current.len_utf8();
       Some(current)
     } else {
