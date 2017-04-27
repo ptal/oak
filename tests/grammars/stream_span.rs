@@ -21,20 +21,24 @@ grammar! stream_span {
   // Optional stream declaration.
   type Stream<'a> = StrStream<'a>;
 
-  expr = .. "a" . (.. .) "b" > make_expr
+  expr = .. span_a . (.. .) "b" > make_expr
+
+  span_a = .. "a"
 
   use oak_runtime::str_stream::*;
 
   pub struct Expr {
     pub full_sp: Span,
+    pub span_a: Span,
     pub c2: char,
     pub c3_sp: Span,
     pub c3: char
   }
 
-  fn make_expr(full_sp: Span, c2: char, c3_sp: Span, c3: char) -> Expr {
+  fn make_expr(full_sp: Span, span_a: Span, c2: char, c3_sp: Span, c3: char) -> Expr {
     Expr {
       full_sp: full_sp,
+      span_a: span_a,
       c2: c2,
       c3_sp: c3_sp,
       c3: c3
@@ -51,5 +55,6 @@ fn test_stream_span() {
   assert_eq!(data.c2, 'b');
   assert_eq!(data.c3, 'c');
   assert_eq!(data.full_sp, make_span(0, 4));
+  assert_eq!(data.span_a, make_span(0, 1));
   assert_eq!(data.c3_sp, make_span(2, 3));
 }

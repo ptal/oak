@@ -45,7 +45,7 @@ impl<'a, 'b> IGrammar<'a, 'b>
     grammar.exprs_info = exprs_info.into_iter()
       .map(|e| ExprIType::infer(e.span))
       .collect();
-    grammar.alloc_stream_ty_expr();
+    grammar.alloc_span_ty_expr();
     grammar
   }
 
@@ -83,16 +83,16 @@ impl<'a, 'b> IGrammar<'a, 'b>
 
   /// We allocate a fake spanned expr so we can retrieve its type from `grammar.stream_type()`.
   /// This is because the type of `SpannedExpr(e)` is `(stream_type, e)` but `stream_type` needs an expression index to fit in the type AST.
-  fn alloc_stream_ty_expr(&mut self) {
+  fn alloc_span_ty_expr(&mut self) {
     self.exprs.push(Expression::SpannedExpr(0)); // fake, just to keep exprs and exprs_info consistent.
-    let stream_ty = self.stream_type();
+    let span_ty = self.span_type();
     self.exprs_info.push(
-      ExpressionInfo::new(stream_ty.span.clone(),
+      ExpressionInfo::new(span_ty.span.clone(),
         IType::Regular(Type::Action(
-          rust::FunctionRetTy::Ty(stream_ty)))));
+          rust::FunctionRetTy::Ty(span_ty)))));
   }
 
-  pub fn stream_ty_idx(&self) -> usize {
+  pub fn span_ty_idx(&self) -> usize {
     self.exprs_info.len() - 1
   }
 }

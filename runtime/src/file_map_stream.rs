@@ -134,7 +134,6 @@ impl<'a> StreamSpan for Range<FileMapStream<'a>>
   }
 }
 
-
 #[cfg(test)]
 mod test {
   extern crate syntex_syntax;

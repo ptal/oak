@@ -149,6 +149,11 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
       quote_ty!(self.cx, $ty)
     } else { unreachable!() }
   }
+
+  pub fn span_type(&self) -> RTy {
+    let stream_ty = self.stream_type();
+    quote_ty!(self.cx, <Range<$stream_ty> as StreamSpan>::Output)
+  }
 }
 
 impl<'a, 'b, ExprInfo> Index<usize> for Grammar<'a, 'b, ExprInfo>
