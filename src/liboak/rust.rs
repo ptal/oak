@@ -18,7 +18,7 @@ pub use syntax::ast::*;
 pub use syntax::print::pprust::*;
 pub use syntax::print::pp;
 pub use syntax::util::small_vector::SmallVector;
-pub use syntax::codemap::{DUMMY_SP, Span, MultiSpan, Spanned, spanned, mk_sp, respan, BytePos};
+pub use syntax::codemap::{DUMMY_SP, Span, MultiSpan, Spanned, respan, BytePos, NO_EXPANSION};
 pub use syntax::errors::*;
 pub use syntax::ext::base::{ExtCtxt,MacResult,MacEager,DummyResult};
 pub use syntax::ext::quote::rt::ToTokens;
