@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{Spanned, BytePos, mk_sp};
+pub use rust::{Spanned, BytePos, Span, NO_EXPANSION};
 pub use ast::*;
 
 pub struct FGrammar
@@ -69,7 +69,11 @@ impl FExpressionInfo
 {
   fn spanned(lo: BytePos, hi: BytePos) -> FExpressionInfo {
     FExpressionInfo {
-      span: mk_sp(lo, hi)
+      span: Span{
+          lo: lo,
+          hi: hi,
+          ctxt: NO_EXPANSION
+      }
     }
   }
 }
