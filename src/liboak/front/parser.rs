@@ -189,7 +189,11 @@ impl<'a> Parser<'a>
     let hi = self.rp.prev_span.hi;
     if seq.len() == 0 {
       self.rp.span_err(
-        mk_sp(lo, hi),
+        Span {
+          lo: lo,
+          hi: hi,
+          ctxt: NO_EXPANSION,
+        },
         format!("In rule {}: must define at least one expression.",
           rule_name).as_str())
     }
