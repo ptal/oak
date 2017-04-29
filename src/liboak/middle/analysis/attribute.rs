@@ -25,8 +25,9 @@ pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
 
 fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<Attribute>) {
   for attr in attrs {
-    let meta_item = attr.value;
-    merge_grammar_attr(grammar, meta_item);
+    attr.meta().map(|meta_item| {
+        merge_grammar_attr(grammar, meta_item);
+    });
   }
 }
 
