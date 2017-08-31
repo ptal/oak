@@ -76,7 +76,8 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
             items: items
           }),
           vis: rust::Visibility::Public,
-          span: rust::DUMMY_SP
+          span: rust::DUMMY_SP,
+          tokens: None
         })
       },
       _ => unreachable!()

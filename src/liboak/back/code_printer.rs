@@ -56,7 +56,7 @@ fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
       s.head("")?;
       s.print_fn(decl, unsafety, constness.node, abi, Some(item.ident), generics, &item.vis)?;
       s.end()?; // end head-ibox
-      rust::pp::word(&mut s.s, ";")?;
+      s.writer().word(";")?;
       s.end()?; // end the outer fn box
     }
   }

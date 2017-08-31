@@ -91,7 +91,8 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
         id: fun.id,
         node: rust::ItemKind::Fn(a,b,c,d,generics,f),
         vis: fun.vis.clone(),
-        span: fun.span
+        span: fun.span,
+        tokens: None
       };
       fun.map(|_| item)
     } else { unreachable!() }

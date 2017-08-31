@@ -5,7 +5,7 @@
 [travis-image]: https://travis-ci.org/ptal/oak.png
 [travis]: https://travis-ci.org/ptal/oak
 
-Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels. You can download and set up the exact same version of the compiler used with `rustup override add nightly-2017-04-27`.
+Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels. You can download and set up the exact same version of the compiler used with `rustup override add nightly-2017-08-30`.
 
 Please consult the [Oak manual](http://hyc.io/oak).
 
@@ -29,7 +29,7 @@ cd rustbook
 cargo build
 ```
 
-Once built, go inside `oak/doc` and execute `rustbook build`. The manual is generated inside a local folder named `_book`.
+Once built, go inside `oak/doc` and execute `rustup run nigthly <path-to-rustbook>/target/debug/rustbook build`. The manual is generated inside a local folder named `_book`.
 
 #### Build the code documentation
 

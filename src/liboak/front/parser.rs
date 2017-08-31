@@ -96,7 +96,7 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule_choice(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
-    let lo = self.rp.span.lo;
+    let lo = self.rp.span.lo();
     let mut choices = Vec::new();
     loop{
       let spanned_expr = self.parse_spanned_expr(rule_name)?;
@@ -107,7 +107,7 @@ impl<'a> Parser<'a>
         _ => break
       }
     }
-    let hi = self.rp.prev_span.hi;
+    let hi = self.rp.prev_span.hi();
     let res = if choices.len() == 1 {
       choices.pop().unwrap()
     } else {
@@ -118,12 +118,12 @@ impl<'a> Parser<'a>
 
   fn parse_semantic_action_or_ty(&mut self, expr: usize, rule_name: &str) -> rust::PResult<'a, usize> {
     let token = self.rp.token.clone();
-    let lo = self.rp.span.lo;
+    let lo = self.rp.span.lo();
     match token {
       rtok::Gt => {
         self.bump();
         let ident = self.rp.parse_ident()?;
-        let hi = self.rp.span.hi;
+        let hi = self.rp.span.hi();
         Ok(self.alloc_expr(lo, hi, SemanticAction(expr, ident)))
       },
       rtok::RArrow => {
@@ -150,7 +150,7 @@ impl<'a> Parser<'a>
             IType::Regular(Type::Unit)
           };
         self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
-        let hi = self.rp.span.hi;
+        let hi = self.rp.span.hi();
         Ok(self.alloc_expr(lo, hi, TypeAscription(expr, ty)))
       }
       _ => {
@@ -172,7 +172,7 @@ impl<'a> Parser<'a>
         let sp = self.rp.span;
         self.bump();
         let seq = self.parse_rule_seq(rule_name)?;
-        Ok(self.alloc_expr(sp.lo, sp.hi, SpannedExpr(seq)))
+        Ok(self.alloc_expr(sp.lo(), sp.hi(), SpannedExpr(seq)))
       }
       _ => {
         self.parse_rule_seq(rule_name)
@@ -181,15 +181,15 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule_seq(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
-    let lo = self.rp.span.lo;
+    let lo = self.rp.span.lo();
     let mut seq = Vec::new();
     while let Some(expr) = self.parse_rule_prefixed(rule_name)? {
       seq.push(expr);
     }
-    let hi = self.rp.prev_span.hi;
+    let hi = self.rp.prev_span.hi();
     if seq.len() == 0 {
       self.rp.span_err(
-        Span { lo: lo, hi: hi, ctxt: NO_EXPANSION },
+        Span::new(lo, hi, NO_EXPANSION),
         format!("In rule {}: must define at least one expression.",
           rule_name).as_str())
     }
@@ -215,11 +215,11 @@ impl<'a> Parser<'a>
   fn parse_prefix<F>(&mut self, rule_name: &str, make_prefix: F, pred_name: &str) -> rust::PResult<'a, usize>
    where F: Fn(usize) -> Expression
   {
-    let lo = self.rp.span.lo;
+    let lo = self.rp.span.lo();
     self.bump();
     match self.parse_rule_suffixed(rule_name)? {
       Some(expr) => {
-        let hi = self.rp.span.hi;
+        let hi = self.rp.span.hi();
         Ok(self.alloc_expr(lo, hi, make_prefix(expr)))
       }
       None => {
@@ -233,12 +233,12 @@ impl<'a> Parser<'a>
   }
 
   fn parse_rule_suffixed(&mut self, rule_name: &str) -> rust::PResult<'a, Option<usize>> {
-    let lo = self.rp.span.lo;
+    let lo = self.rp.span.lo();
     let expr = match self.parse_rule_atom(rule_name)? {
       Some(expr) => expr,
       None => return Ok(None),
     };
-    let hi = self.rp.span.hi;
+    let hi = self.rp.span.hi();
     let token = self.rp.token.clone();
     let res = match token {
       rtok::BinOp(rbtok::Star) => {
@@ -260,7 +260,7 @@ impl<'a> Parser<'a>
 
   fn last_respan(&mut self, expr: Expression) -> usize {
     let sp = self.rp.prev_span;
-    self.alloc_expr(sp.lo, sp.hi, expr)
+    self.alloc_expr(sp.lo(), sp.hi(), expr)
   }
 
   fn fatal_error(&mut self, err_msg: &str) -> rust::DiagnosticBuilder<'a> {
@@ -287,7 +287,7 @@ impl<'a> Parser<'a>
         self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
         Some(res)
       },
-      rtok::Ident(ident) if !token.is_any_keyword() => {
+      rtok::Ident(ident) if !token.is_reserved_ident() => {
         if self.is_rule_lhs() { None }
         else {
           self.bump();
@@ -365,7 +365,7 @@ impl<'a> Parser<'a>
       }
     }
     let sp = self.rp.span;
-    self.alloc_expr(sp.lo, sp.hi, CharacterClass(CharacterClassExpr::new(intervals)))
+    self.alloc_expr(sp.lo(), sp.hi(), CharacterClass(CharacterClassExpr::new(intervals)))
   }
 
   fn parse_char_range<'b>(&mut self, ranges: &mut Peekable<Chars<'b>>, rule_name: &str) -> Vec<CharacterInterval> {
@@ -412,7 +412,7 @@ impl<'a> Parser<'a>
   fn is_rule_lhs(&mut self) -> bool {
     let token = self.rp.token.clone();
     if let rtok::Ident(_) = token {
-      !token.is_any_keyword() &&
+      !token.is_reserved_ident() &&
       self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
     }
     else {

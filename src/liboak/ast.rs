@@ -129,6 +129,7 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     let generics = self.stream_generics();
     let generics_params = PathParameters::AngleBracketed(
       AngleBracketedParameterData {
+        span: rust::DUMMY_SP,
         lifetimes: generics.lifetimes.into_iter().map(|l| l.lifetime).collect(),
         types: generics.ty_params.into_iter()
           .map(|ty| ty.ident)

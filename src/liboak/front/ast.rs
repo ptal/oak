@@ -69,7 +69,7 @@ impl FExpressionInfo
 {
   fn spanned(lo: BytePos, hi: BytePos) -> FExpressionInfo {
     FExpressionInfo {
-      span: Span { lo: lo, hi: hi, ctxt: NO_EXPANSION}
+      span: Span::new(lo,hi,NO_EXPANSION)
     }
   }
 }
