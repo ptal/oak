@@ -26,7 +26,7 @@ pub fn string_to_ident(cx: &rust::ExtCtxt, name: String) -> Ident {
 }
 
 pub fn cook_lit(name: Name) -> String {
-  str_lit(name.to_string().as_str())
+  str_lit(name.to_string().as_str(), None)
 }
 
 pub trait ItemIdent
