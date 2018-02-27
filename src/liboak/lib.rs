@@ -18,6 +18,7 @@
 
 extern crate rustc;
 extern crate rustc_plugin;
+extern crate rustc_errors;
 extern crate syntax;
 extern crate partial;
 
@@ -25,6 +26,8 @@ use rustc_plugin::Registry;
 
 use front::parser;
 use front::ast::FGrammar;
+
+use std::error::Error;
 
 mod ast;
 mod visitor;
@@ -60,7 +63,8 @@ fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -
     Err(mut err_diagnostic) => {
       err_diagnostic.emit();
       abort_if_errors(cx);
-      panic!(rust::FatalError);
+      let err = rust::FatalError.description();
+      panic!(err);
     }
   }
 }

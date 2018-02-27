@@ -75,7 +75,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
             inner: rust::DUMMY_SP,
             items: items
           }),
-          vis: rust::Visibility::Public,
+          vis: rust::Spanned { node: rust::VisibilityKind::Public, span: rust::DUMMY_SP },
           span: rust::DUMMY_SP,
           tokens: None
         })

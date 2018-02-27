@@ -119,22 +119,34 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
 
   pub fn stream_generics(&self) -> rust::Generics {
     match &self.stream_alias.node {
+      // The first arg is the type on the right of the type alias declaration.
+      // `generics` is actually the alias together with all its lifetimes, types and where clause.
       &rust::ItemKind::Ty(_, ref generics) => generics.clone(),
       _ => unreachable!()
     }
   }
 
+  // This function creates the `stream` type from the associated generics in the grammar.
+  // We must do all of this because `Generics` and `Ty` are not the same entity in the AST.
   pub fn stream_type(&self) -> RTy {
     use rust::*;
     let generics = self.stream_generics();
+    let mut lifetimes = vec![];
+    let mut types = vec![];
+    for param in generics.params.into_iter() {
+      match param {
+        rust::GenericParam::Lifetime(l) => lifetimes.push(l.lifetime),
+        rust::GenericParam::Type(ty) => {
+          let ty = ty.ident;
+          types.push(quote_ty!(self.cx, $ty));
+        }
+      }
+    }
     let generics_params = PathParameters::AngleBracketed(
       AngleBracketedParameterData {
         span: rust::DUMMY_SP,
-        lifetimes: generics.lifetimes.into_iter().map(|l| l.lifetime).collect(),
-        types: generics.ty_params.into_iter()
-          .map(|ty| ty.ident)
-          .map(|ty| quote_ty!(self.cx, $ty))
-          .collect(),
+        lifetimes: lifetimes,
+        types: types,
         bindings: vec![],
       });
 
