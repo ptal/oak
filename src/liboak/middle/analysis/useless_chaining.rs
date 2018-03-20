@@ -23,7 +23,7 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
 {
   pub fn analyse(grammar: AGrammar<'a, 'b>) -> Partial<AGrammar<'a, 'b>> {
     UselessChaining::check_chaining(&grammar);
-    Partial::Nothing
+    Partial::Value(grammar)
   }
 
   fn check_chaining(grammar: &'c AGrammar<'a, 'b>){
@@ -34,7 +34,7 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
       non_terminal : false
   };
     for rule in &grammar.rules {
-      println!("\nRegle");
+      // println!("\nRegle");
       analyser.visit_expr(rule.expr_idx);
       analyser.non_terminal = false;
     }
@@ -59,7 +59,7 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
                               "Detected useless chaining: multiple & \n Help: &(&e) -> &e"
                           );
                       }
-                      _ => println!("Error: found in vec_pred other predicate than And"),
+                      _ => unreachable!("Error: found in vec_pred other predicate than And"),
                   }
               }
               Predicate::Oom(foom,_) =>{
@@ -72,10 +72,10 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
                               "Detected useless chaining: multiple + \n Help: (e+)+ -> e+"
                           );
                       }
-                      _ => println!("Error: found in vec_pred other predicate than OneOrMore"),
+                      _ => unreachable!("Error: found in vec_pred other predicate than OneOrMore"),
                   }
               }
-              _ => println!("Error: found in vec_pred other predicate than And and OneOrMore"),
+              _ => unreachable!("Error: found in vec_pred other predicate than And and OneOrMore"),
           }
 
       }
@@ -115,7 +115,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
           self.visit_and_predicate(this, child)
         }
         _ => {
-            println!("literral");
+            // println!("literral");
             self.pred=Predicate::Nothing;
             self.verify_multiple();
         }
@@ -123,13 +123,13 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   }
 
   fn visit_non_terminal_symbol(&mut self, _this: usize, rule: Ident){
-    println!("non_terminal");
+    // println!("non_terminal");
     self.non_terminal = true;
     self.visit_expr(self.grammar.find_rule_by_ident(rule).expr_idx)
   }
 
   fn visit_one_or_more(&mut self, this: usize, child: usize){
-    println!("one_or_more");
+    // println!("one_or_more");
     match self.pred {
         Predicate::Zom(t,_) => {
             self.grammar.cx.span_warn(
@@ -161,14 +161,14 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   }
 
   fn visit_zero_or_more(&mut self, this: usize, child: usize){
-    println!("zero_or_more");
+    // println!("zero_or_more");
     self.pred = Predicate::Zom(this,child);
     self.verify_multiple();
     self.visit_expr(child)
   }
 
   fn visit_not_predicate(&mut self, this: usize, child: usize){
-    println!("not_predicate");
+    // println!("not_predicate");
     match self.pred {
         Predicate::Not(t,c) => {
             let mut lo = self.grammar[t].span().lo();
@@ -210,7 +210,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   }
 
   fn visit_and_predicate(&mut self, this: usize, child: usize){
-    println!("and_predicate");
+    // println!("and_predicate");
     match self.pred {
         Predicate::Not(t,c) => {
             let mut lo = self.grammar[t].span().lo();
@@ -232,6 +232,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
     }
     self.pred=Predicate::And(this,child);
 
+    // verify multiple si le dernier n'est pas un and, sinon ajout and(this,child)
     if self.vec_pred.last().is_none() {
         self.vec_pred.push(Predicate::And(this,child));
     }
@@ -242,6 +243,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
             }
             _ => {
                 self.verify_multiple();
+                // push and
             }
         }
     }

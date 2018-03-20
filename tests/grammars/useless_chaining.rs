@@ -1,10 +1,21 @@
-#![feature(plugin)]
-#![plugin(oak)]
+// Copyright 2018 Chao LIN - William SERGEANT (IRCAM)
 
-extern crate oak_runtime;
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+pub use self::useless_chaining::*;
 
 grammar! useless_chaining {
-  #![show_api]
+
   test1 = !(!"a") // &"a"
   test2 = &(&"a") // &"a"
   test3 = !(&"a") // !"a"
@@ -34,8 +45,19 @@ grammar! useless_chaining {
 
   test20 = ((("a")+)+)+
   test21 = &(&(&("a")))
-}
 
-fn main() {
-  println!("test");
+  test22 = &"a" / !"b"
+  test23 = &test22
+
+  test24 = &"a" "b"
+  test25 = &test24
+
+  test26 = &"a" / &"b"
+  test27 = &test26
+
+  test28 = &"a" / "b"
+  test29 = &test28
+
+  test30 = &"a" !"b"
+  test31 = &test30
 }
