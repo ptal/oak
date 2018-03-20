@@ -50,7 +50,7 @@ fn print_module(s: &mut State, module: &Mod, ident: Ident, vis: Visibility, span
 }
 
 fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
-  if item.vis == rust::Visibility::Public {
+  if item.vis.node == rust::VisibilityKind::Public {
     if let &rust::ItemKind::Fn(ref decl, unsafety, constness, abi, ref generics, _) = &item.node {
       s.hardbreak_if_not_bol()?;
       s.head("")?;

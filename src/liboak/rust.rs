@@ -19,7 +19,6 @@ pub use syntax::print::pprust::*;
 pub use syntax::print::pp;
 pub use syntax::util::small_vector::SmallVector;
 pub use syntax::codemap::{DUMMY_SP, NO_EXPANSION, Span, MultiSpan, Spanned, respan, BytePos};
-pub use syntax::errors::*;
 pub use syntax::ext::base::{ExtCtxt,MacResult,MacEager,DummyResult};
 pub use syntax::ext::quote::rt::ToTokens;
 pub use syntax::ext::build::AstBuilder;
@@ -41,3 +40,5 @@ pub use syntax::parse::parser::PathStyle;
 
 pub use syntax::symbol::Symbol;
 pub use syntax::symbol::keywords::Keyword;
+
+pub use rustc_errors::*;
