@@ -20,5 +20,6 @@ pub mod calc;
 pub mod recursive_type;
 pub mod combinators;
 pub mod well_formedness;
+pub mod useless_chaining;
 pub mod issue94;
 mod stream_span;
