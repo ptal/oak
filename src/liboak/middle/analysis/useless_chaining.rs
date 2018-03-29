@@ -1,13 +1,21 @@
 #![macro_use]
 use middle::analysis::ast::*;
 use ast::Expression::*;
+use std::cmp;
+use syntax::codemap::BytePos;
 pub use rust::NO_EXPANSION;
 
 enum Predicate {
-    And(usize,usize),
-    Not(usize,usize),
-    Oom(usize,usize),
-    Zom(usize,usize),
+    And(usize),
+    Not(usize),
+    Oom(usize),
+    Zom(usize),
+    Nothing
+}
+
+enum VecType {
+    And,
+    OneOrMore,
     Nothing
 }
 
@@ -16,7 +24,7 @@ pub struct UselessChaining<'a: 'c, 'b: 'a, 'c>
   grammar: &'c AGrammar<'a, 'b>,
   pred: Predicate,
   vec_pred : Vec<Predicate>,
-  non_terminal : bool
+  vec_type : VecType
 }
 
 impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
@@ -31,57 +39,91 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
       grammar: grammar,
       pred: Predicate::Nothing,
       vec_pred: vec![],
-      non_terminal : false
-  };
+      vec_type: VecType::Nothing
+    };
     for rule in &grammar.rules {
       // println!("\nRegle");
       analyser.visit_expr(rule.expr_idx);
-      analyser.non_terminal = false;
     }
+  }
+
+  fn span_end_point(&self, sp: Span) -> Span{
+      let lo = cmp::max(sp.hi().0 - 1, sp.lo().0);
+      sp.with_lo(BytePos(lo))
+  }
+
+  fn get_th(&self, n: usize) -> &'static str {
+      match n {
+          1 => "st",
+          2 => "nd",
+          3 => "rd",
+          _ => "th"
+      }
+  }
+
+  fn warn_useless_chaining(&self, pred: (&'static str, &'static str, &'static str, &'static str), span1: Span, span2: Span){
+      let (detected,help,first,second) = pred;
+      self.grammar.span_warn(
+          span1,
+          format!(
+              "Detected useless chaining: {}
+              \nHelp: {}
+              \nFirst predicate {}"
+          ,detected,help,first)
+      );
+      self.grammar.span_note(
+          span2,
+          format!("Second predicate {}", second)
+      )
+  }
+
+  fn warn_vec_useless_chaining(&self, pred: (&'static str, &'static str, &'static str), i: usize, span: Span){
+      let (warn,note,span_note) = pred;
+      if i==0 {
+          self.grammar.span_warn(
+              span,
+              format!(
+                  "Detected useless chaining: multiple {}
+                  \nHelp: {}
+                  \nFirst occurence of {}"
+              ,warn,note,warn)
+          )
+      }
+      else{
+          self.grammar.span_note(
+              span,
+              format!("{}{} occurence of {}",i+1,self.get_th(i+1),span_note)
+          )
+      }
+
+  }
+
+  fn warn_verify_multiple(&self) {
+      for (i, x) in self.vec_pred.iter().enumerate() {
+          match x {
+              &Predicate::And(this) => {
+                  let lo = self.grammar[this].span().lo();
+                  let span = Span::new(lo,lo,NO_EXPANSION);
+                  self.warn_vec_useless_chaining(("&","&(&e) -> &e","and"),i,span);
+              }
+              &Predicate::Oom(this) => {
+                  let sp = self.grammar[this].span();
+                  let span = self.span_end_point(sp);
+                  self.warn_vec_useless_chaining(("+","(e+)+ -> e+","one or more"),i,span);
+              }
+              _ => unreachable!()
+          }
+      }
   }
 
   fn verify_multiple(&mut self){
       if self.vec_pred.len()>=2 {
-          match self.vec_pred.remove(0) {
-              Predicate::And(first_and,first_and_child) =>{
-                  let mut lo=self.grammar[first_and].span().lo();
-                  if self.non_terminal {
-                      lo = self.grammar[first_and_child].span().lo();
-                  }
-                  match self.vec_pred.pop().expect("Error: The vector of predicate is empty.") {
-                      Predicate::And(last_and,last_and_child) => {
-                          let mut hi = self.grammar[last_and_child].span().lo();
-                          if self.non_terminal {
-                              hi = self.grammar[last_and].span().lo();
-                          }
-                          self.grammar.cx.span_warn(
-                              Span::new(lo,hi,NO_EXPANSION),
-                              "Detected useless chaining: multiple & \n Help: &(&e) -> &e"
-                          );
-                      }
-                      _ => unreachable!("Error: found in vec_pred other predicate than And"),
-                  }
-              }
-              Predicate::Oom(foom,_) =>{
-                  let lo=self.grammar[foom].span().hi();
-                  match self.vec_pred.pop().expect("Error: The vector of predicate is empty.") {
-                      Predicate::Oom(_,loom) =>{
-                          let hi = self.grammar[loom].span().hi();
-                          self.grammar.cx.span_warn(
-                              Span::new(lo,hi,NO_EXPANSION),
-                              "Detected useless chaining: multiple + \n Help: (e+)+ -> e+"
-                          );
-                      }
-                      _ => unreachable!("Error: found in vec_pred other predicate than OneOrMore"),
-                  }
-              }
-              _ => unreachable!("Error: found in vec_pred other predicate than And and OneOrMore"),
-          }
-
+          self.warn_verify_multiple()
       }
-      self.vec_pred.clear()
+      self.vec_pred.clear();
+      self.vec_type=VecType::Nothing;
   }
-}
+ }
 
 impl<'a, 'b, 'c> ExprByIndex for UselessChaining<'a, 'b, 'c>
 {
@@ -100,22 +142,32 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   fn visit_expr(&mut self, this: usize) {
       match self.expr_by_index(this) {
         NonTerminalSymbol(rule) => {
+          // println!("NonTerminalSymbol");
           self.visit_non_terminal_symbol(this, rule)
         }
         ZeroOrMore(child) => {
+          // println!("ZeroOrMore");
           self.visit_zero_or_more(this, child)
         }
         OneOrMore(child) => {
+          // println!("OneOrMore");
           self.visit_one_or_more(this, child)
         }
         NotPredicate(child) => {
+          // println!("NotPredicate");
           self.visit_not_predicate(this, child)
         }
         AndPredicate(child) => {
+          // println!("AndPredicate");
           self.visit_and_predicate(this, child)
         }
+        // Choice(child) => {
+        //     // println!("choice")
+        // }
+        // StrLiteral(strl) => {
+        //     // println!("StrLiteral: {}",strl)
+        // }
         _ => {
-            // println!("literral");
             self.pred=Predicate::Nothing;
             self.verify_multiple();
         }
@@ -124,45 +176,39 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
 
   fn visit_non_terminal_symbol(&mut self, _this: usize, rule: Ident){
     // println!("non_terminal");
-    self.non_terminal = true;
     self.visit_expr(self.grammar.find_rule_by_ident(rule).expr_idx)
   }
 
   fn visit_one_or_more(&mut self, this: usize, child: usize){
     // println!("one_or_more");
     match self.pred {
-        Predicate::Zom(t,_) => {
-            self.grammar.cx.span_warn(
-                Span::new(
-                    self.grammar[child].span().hi(),
-                    self.grammar[t].span().hi(),
-                    NO_EXPANSION
-                ),
-                "Detected useless chaining: (e+)* \nHelp: (e+)* -> e+"
+        Predicate::Zom(t) => {
+            let first_span = self.grammar[this].span();
+            let second_span = self.grammar[t].span();
+            self.warn_useless_chaining(
+                ("(e+)*","(e+)* -> e+","One or more","Zero or more"),
+                self.span_end_point(first_span),
+                self.span_end_point(second_span)
             );
         }
-        _ => {}
+        _ => ()
     }
-    self.pred=Predicate::Oom(this,child);
-    if self.vec_pred.last().is_none() {
-        self.vec_pred.push(Predicate::Oom(this,child));
-    }
-    else{
-        match self.vec_pred.last().expect("Error: The vector of predicate is empty.") {
-            &Predicate::Oom(_,_) => {
-                self.vec_pred.push(Predicate::Oom(this,child));
-            }
-            _ => {
-                self.verify_multiple();
-            }
+    match self.vec_type {
+        VecType::And => {
+            self.verify_multiple()
         }
+        VecType::Nothing => {
+            self.vec_type=VecType::OneOrMore
+        }
+        _ => ()
     }
+    self.vec_pred.push(Predicate::Oom(this));
     self.visit_expr(child)
   }
 
   fn visit_zero_or_more(&mut self, this: usize, child: usize){
     // println!("zero_or_more");
-    self.pred = Predicate::Zom(this,child);
+    self.pred = Predicate::Zom(this);
     self.verify_multiple();
     self.visit_expr(child)
   }
@@ -170,41 +216,31 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   fn visit_not_predicate(&mut self, this: usize, child: usize){
     // println!("not_predicate");
     match self.pred {
-        Predicate::Not(t,c) => {
-            let mut lo = self.grammar[t].span().lo();
-            let mut hi = self.grammar[child].span().lo();
-            if self.non_terminal {
-                lo = self.grammar[c].span().lo();
-                hi = self.grammar[this].span().lo();
-            }
-            self.grammar.cx.span_warn(
-                Span::new(
-                    lo,
-                    hi,
-                    NO_EXPANSION
-                ),
-                "Detected useless chaining: !(!e) \nHelp: !(!e) -> &e"
+        Predicate::Not(t) => {
+            let f_lo = self.grammar[this].span().lo();
+            let s_lo = self.grammar[t].span().lo();
+            let first_span = Span::new(f_lo, f_lo, NO_EXPANSION);
+            let second_span = Span::new(s_lo, s_lo, NO_EXPANSION);
+            self.warn_useless_chaining(
+                ("!(!e)","!(!e) -> &e","not","not"),
+                first_span,
+                second_span
             );
         }
-        Predicate::And(t,c) => {
-            let mut lo = self.grammar[t].span().lo();
-            let mut hi = self.grammar[child].span().lo();
-            if self.non_terminal {
-                lo = self.grammar[c].span().lo();
-                hi = self.grammar[this].span().lo();
-            }
-            self.grammar.cx.span_warn(
-                Span::new(
-                    lo,
-                    hi,
-                    NO_EXPANSION
-                ),
-                "Detected useless chaining: &(!e) \nHelp: &(!e) -> !e"
+        Predicate::And(t) => {
+            let f_lo = self.grammar[this].span().lo();
+            let s_lo = self.grammar[t].span().lo();
+            let first_span = Span::new(f_lo, f_lo, NO_EXPANSION);
+            let second_span = Span::new(s_lo, s_lo, NO_EXPANSION);
+            self.warn_useless_chaining(
+                ("&(!e)","&(!e) -> !e","not","and"),
+                first_span,
+                second_span
             );
         }
         _ => {}
     }
-    self.pred=Predicate::Not(this,child);
+    self.pred=Predicate::Not(this);
     self.verify_multiple();
     self.visit_expr(child)
   }
@@ -212,41 +248,32 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
   fn visit_and_predicate(&mut self, this: usize, child: usize){
     // println!("and_predicate");
     match self.pred {
-        Predicate::Not(t,c) => {
-            let mut lo = self.grammar[t].span().lo();
-            let mut hi = self.grammar[child].span().lo();
-            if self.non_terminal {
-                lo = self.grammar[c].span().lo();
-                hi = self.grammar[this].span().lo();
-            }
-            self.grammar.cx.span_warn(
-                Span::new(
-                    lo,
-                    hi,
-                    NO_EXPANSION
-                ),
-                "Detected useless chaining: !(&e) \nHelp: !(&e) -> !e"
+        Predicate::Not(t) => {
+            let f_lo = self.grammar[this].span().lo();
+            let s_lo = self.grammar[t].span().lo();
+            let first_span = Span::new(f_lo, f_lo, NO_EXPANSION);
+            let second_span = Span::new(s_lo, s_lo, NO_EXPANSION);
+            self.warn_useless_chaining(
+                ("!(&e)","!(&e) -> !e","and","not"),
+                first_span,
+                second_span
             );
         }
         _ => {}
     }
-    self.pred=Predicate::And(this,child);
+    self.pred=Predicate::And(this);
 
     // verify multiple si le dernier n'est pas un and, sinon ajout and(this,child)
-    if self.vec_pred.last().is_none() {
-        self.vec_pred.push(Predicate::And(this,child));
-    }
-    else{
-        match self.vec_pred.last().expect("Error: The vector of predicate is empty.") {
-            &Predicate::And(_,_) => {
-                self.vec_pred.push(Predicate::And(this,child));
-            }
-            _ => {
-                self.verify_multiple();
-                // push and
-            }
+    match self.vec_type {
+        VecType::OneOrMore => {
+            self.verify_multiple()
         }
+        VecType::Nothing => {
+            self.vec_type=VecType::And;
+        }
+        _ => ()
     }
+    self.vec_pred.push(Predicate::And(this));
     self.visit_expr(child)
   }
 }

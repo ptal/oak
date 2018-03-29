@@ -24,40 +24,40 @@ grammar! useless_chaining {
   test6 = ("a"+)+ // "a"+
   test7 = ("a"+)* // "a"+
   //test8 = ("a"*)+ // infinite loop -> deja detectee
-
+  //
   test9 = !"a"
   test10 = !test9
-
+  //
   test11 = &"a"
   test12 = &test11
-
+  //
   test13 = !test11
 
   test14 = &test9
-
+  //
   test15 = "a"+
   test16 = test15+
-
+  //
   test17 = test15*
 
   test18 = &test12
   test19 = test16+
-
+  //
   test20 = ((("a")+)+)+
   test21 = &(&(&("a")))
-
-  test22 = &"a" / !"b"
-  test23 = &test22
-
-  test24 = &"a" "b"
-  test25 = &test24
-
-  test26 = &"a" / &"b"
-  test27 = &test26
-
-  test28 = &"a" / "b"
-  test29 = &test28
-
-  test30 = &"a" !"b"
-  test31 = &test30
+  //
+  // test22 = &"a" / !"b"
+  // test23 = &test22
+  //
+  // test24 = &"a" "b"
+  // test25 = &test24
+  //
+  // test26 = &"a" / &"b"
+  // test27 = &test26
+  //
+  // test28 = &"a" / "b"
+  // test29 = &test28
+  //
+  // test30 = &"a" !"b"
+  // test31 = &test30
 }
