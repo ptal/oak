@@ -1,4 +1,4 @@
-// Copyright 2018 Chao LIN - William SERGEANT (IRCAM)
+// Copyright 2018 Chao Lin & William Sergeant (Sorbonne University)
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,20 +24,20 @@ grammar! useless_chaining {
   // test6 = ("a"+)+ // "a"+
   // test7 = ("a"+)* // "a"+
   // //test8 = ("a"*)+ // infinite loop -> deja detectee
-  // //
-  // test9 = !"a"
-  // test10 = !test9
-  // //
-  // test11 = &"a"
+  //
+  test9 = !"a"
+  // test10 = !test9x
+  //
+  test11 = &"a"
   // test12 = &test11
-  // //
+  //
   // test13 = !test11
   //
   // test14 = &test9
-  // //
-  // test15 = "a"+
+  //
+  test15 = "a"+
   // test16 = test15+
-  // //
+  // 
   // test17 = test15*
   //
   // test18 = &test12

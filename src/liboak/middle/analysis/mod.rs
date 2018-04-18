@@ -20,6 +20,7 @@ use middle::analysis::undeclared_action::*;
 use middle::analysis::well_formedness::*;
 use middle::analysis::attribute::*;
 use middle::analysis::useless_chaining::*;
+use middle::analysis::unreachable_rule::*;
 
 mod duplicate;
 mod undeclared_rule;
@@ -27,6 +28,7 @@ mod undeclared_action;
 mod well_formedness;
 mod attribute;
 mod useless_chaining;
+mod unreachable_rule;
 pub mod ast;
 
 pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGrammar<'a, 'b>> {
@@ -39,5 +41,6 @@ pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGram
   .and_then(|grammar| UndeclaredAction::analyse(grammar))
   .and_then(|grammar| WellFormedness::analyse(grammar))
   .and_then(|grammar| UselessChaining::analyse(grammar))
+  .and_then(|grammar| UnreachableRule::analyse(grammar))
   .and_then(|grammar| decorate_with_attributes(grammar, fattributes))
 }
