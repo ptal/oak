@@ -22,5 +22,8 @@ plugin = true
 path = "runtime"
 version = "0.5.5"
 
+[dev-dependencies]
+term = "^0.5.1"
+
 [dependencies]
 partial = "^0.2.3"

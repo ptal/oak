@@ -32,7 +32,6 @@ use std::fs::{File, read_dir};
 use std::io;
 use std::io::Read;
 
-use term::*;
 use ExpectedResult::*;
 
 mod grammars;
@@ -255,7 +254,7 @@ impl<'a> Test<'a>
 
 struct TestDisplay
 {
-  terminal: Box<StdoutTerminal>,
+  terminal: Box<term::StdoutTerminal>,
   num_success: u32,
   num_failure: u32,
   num_system_failure: u32
@@ -265,7 +264,7 @@ impl TestDisplay
 {
   pub fn new() -> TestDisplay {
     TestDisplay{
-      terminal: term::stdout().unwrap(),
+      terminal: term::stdout().expect("Could not obtain standard output stream (stdout)."),
       num_success: 0,
       num_failure: 0,
       num_system_failure: 0
@@ -356,13 +355,13 @@ impl TestDisplay
     self.write_line(term::color::RED, "[ system error ] ", msg);
   }
 
-  fn write_line(&mut self, color: color::Color, header: &str, msg: String) {
+  fn write_line(&mut self, color: term::color::Color, header: &str, msg: String) {
     self.write_header(color, header);
     self.write_msg(msg.as_str());
     self.write_msg("\n");
   }
 
-  fn write_header(&mut self, color: color::Color, header: &str) {
+  fn write_header(&mut self, color: term::color::Color, header: &str) {
     self.terminal.fg(color).unwrap();
     self.write_msg(header);
     self.terminal.reset().unwrap();
