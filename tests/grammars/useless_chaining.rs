@@ -16,36 +16,36 @@ pub use self::useless_chaining::*;
 
 grammar! useless_chaining {
 
-  test1 = !(!"a") // &"a"
-  test2 = &(&"a") // &"a"
-  test3 = !(&"a") // !"a"
-  test4 = &(!"a") // !"a"
-  //test5 = ("a"*)* // infinite loop -> deja detectee
-  test6 = ("a"+)+ // "a"+
-  test7 = ("a"+)* // "a"+
-  //test8 = ("a"*)+ // infinite loop -> deja detectee
+  // test1 = !(!"a") // &"a"
+  // test2 = &(&"a") // &"a"
+  // test3 = !(&"a") // !"a"
+  // test4 = &(!"a") // !"a"
+  // //test5 = ("a"*)* // infinite loop -> deja detectee
+  // test6 = ("a"+)+ // "a"+
+  // test7 = ("a"+)* // "a"+
+  // //test8 = ("a"*)+ // infinite loop -> deja detectee
+  // //
+  // test9 = !"a"
+  // test10 = !test9
+  // //
+  // test11 = &"a"
+  // test12 = &test11
+  // //
+  // test13 = !test11
   //
-  test9 = !"a"
-  test10 = !test9
+  // test14 = &test9
+  // //
+  // test15 = "a"+
+  // test16 = test15+
+  // //
+  // test17 = test15*
   //
-  test11 = &"a"
-  test12 = &test11
-  //
-  test13 = !test11
+  // test18 = &test12
+  // test19 = test16+
+  // //
+  // test20 = ((("a")+)+)+
+  // test21 = &(&(&(&("a"))))
 
-  test14 = &test9
-  //
-  test15 = "a"+
-  test16 = test15+
-  //
-  test17 = test15*
-
-  test18 = &test12
-  test19 = test16+
-  //
-  test20 = ((("a")+)+)+
-  test21 = &(&(&("a")))
-  //
   // test22 = &"a" / !"b"
   // test23 = &test22
   //
@@ -58,6 +58,9 @@ grammar! useless_chaining {
   // test28 = &"a" / "b"
   // test29 = &test28
   //
-  // test30 = &"a" !"b"
+  // test30 = &"a" &(!"b")
   // test31 = &test30
+  //
+  // test32 = &(&"a") / &(&"b")
+  // test33 = &test32
 }

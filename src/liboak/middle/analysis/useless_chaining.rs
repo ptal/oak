@@ -43,7 +43,7 @@ impl <'a, 'b, 'c> UselessChaining<'a, 'b, 'c>
     };
     for rule in &grammar.rules {
       // println!("\nRegle");
-      analyser.visit_expr(rule.expr_idx);
+      analyser.visit_expr(rule.expr_idx)
     }
   }
 
@@ -136,8 +136,6 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
 {
     unit_visitor_impl!(str_literal);
     unit_visitor_impl!(atom);
-    unit_visitor_impl!(sequence);
-    unit_visitor_impl!(choice);
 
   fn visit_expr(&mut self, this: usize) {
       match self.expr_by_index(this) {
@@ -161,15 +159,17 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
           // println!("AndPredicate");
           self.visit_and_predicate(this, child)
         }
-        // Choice(child) => {
-        //     // println!("choice")
-        // }
-        // StrLiteral(strl) => {
-        //     // println!("StrLiteral: {}",strl)
-        // }
+        Choice(choices) => {
+          // println!("choice")
+          self.visit_choice(this, choices)
+        }
+        Sequence(seq) => {
+          // println!("StrLiteral: {}",strl)
+          self.visit_sequence(this, seq)
+        }
         _ => {
-            self.pred=Predicate::Nothing;
-            self.verify_multiple();
+          self.pred=Predicate::Nothing;
+          self.verify_multiple();
         }
       }
   }
@@ -263,7 +263,6 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
     }
     self.pred=Predicate::And(this);
 
-    // verify multiple si le dernier n'est pas un and, sinon ajout and(this,child)
     match self.vec_type {
         VecType::OneOrMore => {
             self.verify_multiple()
@@ -275,5 +274,20 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
     }
     self.vec_pred.push(Predicate::And(this));
     self.visit_expr(child)
+  }
+
+  fn visit_sequence(&mut self, _: usize, children: Vec<usize>){
+    for child in children {
+        self.verify_multiple();
+        self.visit_expr(child);
+    }
+  }
+
+  fn visit_choice(&mut self, _: usize, _: Vec<usize>){
+      // for child in children {
+      //     self.verify_multiple();
+      //     self.visit_expr(child);
+      // }
+      self.verify_multiple();
   }
 }
