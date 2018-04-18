@@ -1,4 +1,4 @@
-% Typing Expression
+# Typing Expression
 
 A key idea behind Oak is to give a type to parsing expression. For example, we expect `e1 e2` to have the type `(T1, T2)` if `e1` has type `T1` and `e2` has type `T2`. Indeed, it exists an obvious mapping between PEG combinators and traditional types found in programming language: choice is a sum type, sequence is a tuple, repetition is an array, etc. Oak was born to explore this mapping and to answer a question: Can we automatically generate an AST from a grammar description?
 

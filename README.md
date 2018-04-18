@@ -21,32 +21,32 @@ You might want to build the manual or code documentation from the repository bec
 
 #### Build the manual
 
-You need the utility `rustbook`:
+You need the utility [mdbook](https://rust-lang-nursery.github.io/mdBook/):
 
 ```
-git clone https://github.com/steveklabnik/rustbook.git
-cd rustbook
-cargo build
+cargo install mdbook
 ```
 
-Once built, go inside `oak/doc` and execute `rustup run nigthly <path-to-rustbook>/target/debug/rustbook build`. The manual is generated inside a local folder named `_book`.
+Once installed, go inside `oak/doc` and execute `mdbook build -o`.
+The manual is generated inside a local folder named `book` and directly opened in your browser.
 
 #### Build the code documentation
 
-You should be interested by the runtime documentation which is the one useful for users.
+As a user of Oak, you will be interested by the runtime documentation.
 
 ```
 cd oak/runtime
 cargo doc
 ```
 
-The documentation is available in `oak/runtime/target/doc`.
+The documentation is then available in `oak/runtime/target/doc`.
 
-If you want the developer documentation of the Oak compiler, go to the root of the project and launch:
+To build the internal documentation of Oak, you can type this command at the root of the project:
 
 ```
 cd oak
-rustdoc --no-defaults --passes "collapse-docs" --passes "unindent-comments" --output=target/dev-doc src/liboak/lib.rs
+rustdoc --document-private-items --output=target/dev-doc src/liboak/lib.rs
 ```
 
 The documentation will be available inside `oak/target/dev-doc`.
+It is useful to work on Oak :-)

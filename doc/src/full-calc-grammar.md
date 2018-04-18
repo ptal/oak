@@ -1,4 +1,4 @@
-% Full Calc Grammar
+# Full Calc Grammar
 
 The following code is the grammar of the `Calc` language which is incrementally built and explained in the [previous chapter](learn-oak.md).
 
@@ -119,7 +119,6 @@ grammar! calc {
   fn div_bin_op() -> BinOp { Div }
   fn exp_bin_op() -> BinOp { Exp }
 }
-
 
 fn analyse_state(state: ParseState<StrStream, calc::PExpr>) {
   use oak_runtime::parse_state::ParseResult::*;

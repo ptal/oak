@@ -1,4 +1,4 @@
-% Related Work
+# Related Work
 
 ### Conventional parser generator
 

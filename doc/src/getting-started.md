@@ -1,8 +1,8 @@
-% Getting Started
+# Getting Started
 
 Before starting playing with Oak, let's install the nightly compiler and create a skeleton project. We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension which is only available in nightly build of Rust. We advise to use the tool [rustup](http://www.rustup.rs) for installing, updating and switching between stable, beta and nightly channels of Rust. The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compiler.
 
-```sh
+```bash
 $ curl https://sh.rustup.rs -sSf | sh
 # Switch to nightly build of Rust.
 $ rustup default nightly
@@ -16,7 +16,7 @@ For avoiding all compatibility troubles between Oak and the Rust compiler, you s
 
 Once both are installed, we can set up a project using Oak. Run the command `cargo new oak_skeleton` to create a new project. Modify the `Cargo.toml` file to add Oak dependencies:
 
-```
+```bash
 [package]
 name = "oak_skeleton"
 version = "0.0.1"
@@ -29,7 +29,7 @@ oak_runtime = "*"
 
 The `[package]` section describe the usual information about your project, here named *oak_skeleton* and the `[dependencies]` section lists the libraries available on [crates.io](http://crates.io/) that you depend on. You can also directly depend on the git repository:
 
-```
+```bash
 [dependencies.oak]
 git = "https://github.com/ptal/oak.git"
 

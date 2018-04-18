@@ -1,4 +1,4 @@
-% Learn Oak
+# Learn Oak
 
 This section is devoted to introduce smoothly the different PEG combinators through a tutorial presenting `Calc`: a small language with arithmetic expressions and variable bindings. If you want to test the code while reading this tutorial, a skeleton project is available in the chapter [Getting Started](getting-started.md). This tutorial is split into several sections:
 
@@ -18,7 +18,7 @@ This section is devoted to introduce smoothly the different PEG combinators thro
 
 Before diving into the details, we present a program written in `Calc`:
 
-```
+```rust
 let a = 10 - 2 in
 let b = a / 2 in
 b^2 + 2 * (1 - a)
@@ -38,7 +38,7 @@ When it comes to elaborate a grammar, we usually start by identifying atoms of t
 
 The keywords `let` and `in`, the binding operator `=`, parenthesis `()` and arithmetic operators `+`, `-`, `*`, `/`, `^` form the *unvalued atoms* of the language. `Calc` has two *valued atoms* which are identifiers and numbers. Unvalued atoms give a shape to the AST but they do not carry any specific data retrieved from the stream of characters. The following grammar parses the atoms of `Calc`:
 
-```
+```rust
 grammar! calc {
   #![show_api]
 
