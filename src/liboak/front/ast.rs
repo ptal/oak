@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{Spanned, BytePos, NO_EXPANSION};
+pub use rust::{Spanned, BytePos, NO_EXPANSION, Ident};
 pub use ast::*;
 
 pub struct FGrammar
@@ -45,7 +45,7 @@ impl FGrammar
     expr_idx
   }
 
-  pub fn push_rule(&mut self, name: SpannedIdent, def: usize) {
+  pub fn push_rule(&mut self, name: Ident, def: usize) {
     self.rules.push(Rule::new(name, def));
   }
 

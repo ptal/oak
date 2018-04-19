@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use rust::respan;
 use rust::Token as rtok;
 use rust::BinOpToken as rbtok;
 use rust;
@@ -73,7 +72,7 @@ impl<'a> Parser<'a>
   fn parse_rule(&mut self) -> rust::PResult<'a, ()> {
     let name = self.parse_rule_decl()?;
     self.rp.expect(&rtok::Eq)?;
-    let body = self.parse_rule_rhs(ident_to_string(name.node).as_str())?;
+    let body = self.parse_rule_rhs(ident_to_string(name).as_str())?;
     self.grammar.push_rule(name, body);
     Ok(())
   }
@@ -86,9 +85,8 @@ impl<'a> Parser<'a>
     Ok(())
   }
 
-  fn parse_rule_decl(&mut self) -> rust::PResult<'a, rust::SpannedIdent> {
-    let sp = self.rp.span;
-    Ok(respan(sp, self.rp.parse_ident()?))
+  fn parse_rule_decl(&mut self) -> rust::PResult<'a, rust::Ident> {
+    self.rp.parse_ident()
   }
 
   fn parse_rule_rhs(&mut self, rule_name: &str) -> rust::PResult<'a, usize> {
@@ -287,7 +285,7 @@ impl<'a> Parser<'a>
         self.rp.expect(&rtok::CloseDelim(rust::DelimToken::Paren))?;
         Some(res)
       },
-      rtok::Ident(ident) if !token.is_reserved_ident() => {
+      rtok::Ident(ident,_) if !token.is_reserved_ident() => {
         if self.is_rule_lhs() { None }
         else {
           self.bump();
@@ -411,7 +409,7 @@ impl<'a> Parser<'a>
 
   fn is_rule_lhs(&mut self) -> bool {
     let token = self.rp.token.clone();
-    if let rtok::Ident(_) = token {
+    if let rtok::Ident(_,_) = token {
       !token.is_reserved_ident() &&
       self.rp.look_ahead(1, |t| match t { &rtok::Eq => true, _ => false})
     }

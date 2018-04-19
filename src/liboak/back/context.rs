@@ -167,7 +167,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
       let params = self.closure_params();
       continuation.map_success(|success, _| {
         let lambda = cx.lambda_fn_decl(cx.call_site(),
-          cx.fn_decl(params, cx.ty_infer(cx.call_site())),
+          cx.fn_decl(params, rust::ast::FunctionRetTy::Ty(cx.ty_infer(cx.call_site()))),
           quote_expr!(cx, $success),
           cx.call_site());
         self.closures.push(quote_stmt!(cx,

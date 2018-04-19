@@ -33,16 +33,16 @@ fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<A
 
 fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaItem) {
   match &meta_item.node {
-    &MetaItemKind::Word if meta_item.name == "debug_api" => {
+    &MetaItemKind::Word if meta_item.ident.name == "debug_api" => {
       grammar.merge_print_code(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if meta_item.name == "show_api" => {
+    &MetaItemKind::Word if meta_item.ident.name == "show_api" => {
       grammar.merge_print_code(PrintLevel::Show);
     },
-    &MetaItemKind::Word if meta_item.name == "debug_typing" => {
+    &MetaItemKind::Word if meta_item.ident.name == "debug_typing" => {
       grammar.merge_print_typing(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if meta_item.name == "show_typing" => {
+    &MetaItemKind::Word if meta_item.ident.name == "show_typing" => {
       grammar.merge_print_typing(PrintLevel::Show);
     },
       &MetaItemKind::Word
@@ -50,7 +50,7 @@ fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaIte
     | &MetaItemKind::NameValue(_) => {
       grammar.warn(format!(
         "Unknown attribute `{}`: it will be ignored.",
-        meta_item.name));
+        meta_item.ident.name));
     }
   }
 }

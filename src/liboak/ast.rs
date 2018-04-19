@@ -26,7 +26,7 @@ pub type RStmt = Option<rust::Stmt>;
 pub type RPat = rust::P<rust::Pat>;
 pub type RArg = rust::Arg;
 
-pub use rust::{ExtCtxt, Attribute, SpannedIdent};
+pub use rust::{ExtCtxt, Attribute};
 pub use partial::Partial;
 
 pub use middle::typing::ast::IType;
@@ -203,13 +203,13 @@ impl<'a, 'b, ExprInfo> ExprByIndex for Grammar<'a, 'b, ExprInfo>
 #[derive(Clone, Copy)]
 pub struct Rule
 {
-  pub name: SpannedIdent,
+  pub name: Ident,
   pub expr_idx: usize,
 }
 
 impl Rule
 {
-  pub fn new(name: SpannedIdent, expr_idx: usize) -> Rule {
+  pub fn new(name: Ident, expr_idx: usize) -> Rule {
     Rule{
       name: name,
       expr_idx: expr_idx
@@ -220,7 +220,7 @@ impl Rule
 impl ItemIdent for Rule
 {
   fn ident(&self) -> Ident {
-    self.name.node.clone()
+    self.name.clone()
   }
 }
 
