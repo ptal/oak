@@ -14,10 +14,20 @@
 
 #![macro_use]
 use middle::analysis::ast::*;
+use std::collections::HashSet;
+
+enum SetInclusion {
+    Empty,
+    Conjunction(Vec<SetInclusion>),
+    Disjunction(Vec<SetInclusion>)
+}
 
 pub struct UnreachableRule<'a: 'c, 'b: 'a, 'c>
 {
-  grammar: &'c AGrammar<'a, 'b>
+  grammar: &'c AGrammar<'a, 'b>,
+  in_choice: bool,
+  hash_set_vector: Vec<HashSet<String>>,
+  current_set: HashSet<String>
 }
 
 impl <'a, 'b, 'c> UnreachableRule<'a, 'b, 'c>
@@ -29,7 +39,10 @@ impl <'a, 'b, 'c> UnreachableRule<'a, 'b, 'c>
 
   fn check_unreachable_rule(grammar: &'c AGrammar<'a, 'b>){
     let mut analyser = UnreachableRule{
-      grammar: grammar
+      grammar: grammar,
+      in_choice: false,
+      hash_set_vector: vec![],
+      current_set: HashSet::new()
     };
 
     for rule in &grammar.rules {
@@ -47,14 +60,37 @@ impl<'a, 'b, 'c> ExprByIndex for UnreachableRule<'a, 'b, 'c>
 
 impl<'a, 'b, 'c> Visitor<()> for UnreachableRule<'a, 'b, 'c>
 {
-    unit_visitor_impl!(str_literal);
     unit_visitor_impl!(atom);
     unit_visitor_impl!(sequence);
     unit_visitor_impl!(non_terminal);
 
-    fn visit_choice(&mut self, _: usize, children: Vec<usize>){
-        for child in children {
-            self.visit_expr(child);
+    fn visit_str_literal(&mut self, _this: usize, lit: String){
+        if self.in_choice {
+            println!("{}",lit.as_str());
+            self.current_set.insert(lit);
         }
+    }
+
+    fn visit_choice(&mut self, this: usize, children: Vec<usize>){
+        self.in_choice = true;
+        for child in children {
+            self.hash_set_vector.push(self.current_set.iter().cloned().collect());
+            self.current_set.clear();
+            self.visit_expr(child)
+        }
+        let len = self.hash_set_vector.len();
+        for i in 0..len {
+            for j in i+1..len {
+                println!("{},{}",i,j);
+                if self.hash_set_vector[i].is_superset(&self.hash_set_vector[j]) {
+                    self.grammar.span_warn(
+                        self.grammar[this].span(),
+                        format!("Test")
+                    )
+                }
+            }
+        }
+        self.hash_set_vector.clear();
+        self.in_choice = false
     }
 }
