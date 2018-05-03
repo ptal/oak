@@ -14,7 +14,43 @@
 
 pub use self::unreachable_rule::*;
 
-grammar! unreachable_rule {
-    test0 =  "a"*
-            /"a"+
+grammar! unreachable_rule{
+    // test0 =  "a"*
+    //         /"a"+  // is detected
+
+    test1 =  "a"
+            /"ab"
+
+    test2 =  "ab"
+            /"a"
+
+    test3 =  "a"
+            /"a"
+
+    test4 =  "a" "bc"
+            /"abcd"
+
+    // test5 =  "a"*
+    //         /"a"?  // is detected
+
+    test6 =  "a"
+            /!"a"
+
+    test7 = !"a"
+            /"a"
+
+    test8 =  "a" !"a"
+            /"a"
+
+    test9 = "a"
+            /&"a"
+
+    test10 = &"a"
+            /"a"
+
+    test11 = "b"
+            /!"a"
+
+    // test12 = .
+    //         /"a" // is detected
 }
