@@ -14,20 +14,122 @@
 
 #![macro_use]
 use middle::analysis::ast::*;
-use std::collections::HashSet;
+use self::Pattern::*;
+use self::Character::*;
 
-enum SetInclusion {
-    Empty,
-    Conjunction(Vec<SetInclusion>),
-    Disjunction(Vec<SetInclusion>)
+#[derive(Copy, Clone)]
+enum Pattern {
+  // OneOrMore, // +
+  // ZeroOrMore, // *
+  // ZeroOrOne, // ?
+  One,
+  // And, // &
+  // Not, // !
+}
+
+#[derive(Copy, Clone)]
+enum Character{
+  Char(char),
+  Any // .
+}
+
+struct Occurence
+{
+  choice: Vec<Vec<(Character,Pattern)>>
+}
+
+impl Occurence
+{
+  fn push_sequence(&self, other: Occurence) -> Occurence{
+    let mut res = vec![];
+    for choice1 in other.choice.clone(){
+      for choice2 in self.choice.clone(){
+        let mut tmp = choice2.clone();
+        for couple in choice1.clone(){
+          tmp.push(couple)
+        }
+        res.push(tmp)
+      }
+    }
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn merge_choice(&self, other: Occurence) -> Occurence {
+    let mut res = self.choice.clone();
+    for choice in other.choice.clone(){
+      res.push(choice)
+    }
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn copy(&self) -> Occurence{
+    Occurence{
+      choice: self.choice.to_vec()
+    }
+  }
+
+  fn is_unreachable_with(&self, target: Occurence) -> bool {
+    let mut res = true;
+    for seq in self.choice.clone(){
+      if !(target.success_with(seq)) {
+        res = false;
+        break;
+      }
+    }
+    res
+  }
+
+  fn success_with(&self, seq2: Vec<(Character, Pattern)>) -> bool {
+    let mut res = false;
+    for seq1 in self.choice.clone(){
+      if self.succeed_before(seq1,seq2.to_vec()) {
+        res = true;
+      }
+    }
+    res
+  }
+
+  fn succeed_before(&self, seq1: Vec<(Character, Pattern)>, seq2: Vec<(Character, Pattern)>) -> bool{
+    let mut res = true;
+    if seq2.len()<seq1.len() {
+      res=false;
+    }
+    else{
+      for (i,character_pattern1) in seq1.iter().enumerate(){
+        if let Some(character_pattern2) = seq2.get(i) {
+          let &(c1,_p1) = character_pattern1;
+          let &(c2,_p2) = character_pattern2;
+          match c1 {
+            Char(character1) => {
+              match c2 {
+                Char(character2) => {
+                  if character1!=character2 {
+                    res=false;
+                    break;
+                  }
+                }
+                Any => {
+                  res=false;
+                  break;
+                }
+              }
+            }
+            Any => { continue; }
+          }
+        }
+      }
+    }
+    res
+  }
 }
 
 pub struct UnreachableRule<'a: 'c, 'b: 'a, 'c>
 {
-  grammar: &'c AGrammar<'a, 'b>,
-  in_choice: bool,
-  hash_set_vector: Vec<HashSet<String>>,
-  current_set: HashSet<String>
+  grammar: &'c AGrammar<'a, 'b>
 }
 
 impl <'a, 'b, 'c> UnreachableRule<'a, 'b, 'c>
@@ -39,14 +141,11 @@ impl <'a, 'b, 'c> UnreachableRule<'a, 'b, 'c>
 
   fn check_unreachable_rule(grammar: &'c AGrammar<'a, 'b>){
     let mut analyser = UnreachableRule{
-      grammar: grammar,
-      in_choice: false,
-      hash_set_vector: vec![],
-      current_set: HashSet::new()
+      grammar: grammar
     };
 
     for rule in &grammar.rules {
-      analyser.visit_expr(rule.expr_idx)
+      analyser.visit_expr(rule.expr_idx);
     }
   }
 }
@@ -58,39 +157,134 @@ impl<'a, 'b, 'c> ExprByIndex for UnreachableRule<'a, 'b, 'c>
   }
 }
 
-impl<'a, 'b, 'c> Visitor<()> for UnreachableRule<'a, 'b, 'c>
+impl<'a, 'b, 'c> Visitor<Occurence> for UnreachableRule<'a, 'b, 'c>
 {
-    unit_visitor_impl!(atom);
-    unit_visitor_impl!(sequence);
-    unit_visitor_impl!(non_terminal);
-
-    fn visit_str_literal(&mut self, _this: usize, lit: String){
-        if self.in_choice {
-            println!("{}",lit.as_str());
-            self.current_set.insert(lit);
+  fn visit_choice(&mut self, _this: usize, children: Vec<usize>) -> Occurence{
+    let mut occurences_of_children = vec![];
+    for child in children.clone(){
+      let occ = self.visit_expr(child);
+      if !occ.choice.is_empty() {
+          occurences_of_children.push((occ,child));
+      }
+    }
+    for (i, cp1) in occurences_of_children.iter().enumerate(){
+      let (_left, right) = occurences_of_children.split_at(i+1);
+      let &(ref occ1, child1) = cp1;
+      for cp2 in right{
+        let &(ref occ2, child2) = cp2;
+        if occ2.is_unreachable_with(occ1.copy()) {
+          self.grammar.span_warn(
+            self.grammar[child2].span(),
+            format!("This rule is unreachable.")
+          );
+          self.grammar.span_note(
+            self.grammar[child1].span(),
+            format!("Because this rule succeeded before reading the previous one.")
+          );
         }
+      }
     }
 
-    fn visit_choice(&mut self, this: usize, children: Vec<usize>){
-        self.in_choice = true;
-        for child in children {
-            self.hash_set_vector.push(self.current_set.iter().cloned().collect());
-            self.current_set.clear();
-            self.visit_expr(child)
-        }
-        let len = self.hash_set_vector.len();
-        for i in 0..len {
-            for j in i+1..len {
-                println!("{},{}",i,j);
-                if self.hash_set_vector[i].is_superset(&self.hash_set_vector[j]) {
-                    self.grammar.span_warn(
-                        self.grammar[this].span(),
-                        format!("Test")
-                    )
-                }
-            }
-        }
-        self.hash_set_vector.clear();
-        self.in_choice = false
+    let mut res = vec![];
+    if let Some((first, rest)) = children.split_first(){
+      let mut occ = self.visit_expr(*first);
+      for child in rest{
+        occ = occ.merge_choice(self.visit_expr(*child))
+      }
+      res = occ.choice;
     }
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> Occurence{
+    let mut res = vec![];
+    if let Some((first, rest)) = children.split_first(){
+      let mut occ = self.visit_expr(*first);
+      for child in rest{
+        occ = occ.push_sequence(self.visit_expr(*child))
+      }
+      res = occ.choice;
+    }
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn visit_atom(&mut self, _this: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_str_literal(&mut self, _this: usize, lit: String) -> Occurence{
+    let mut seq = vec![];
+    for c in lit.chars(){
+      seq.push((Char(c),One))
+    }
+    let mut res = vec![];
+    res.push(seq);
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn visit_any_single_char(&mut self, _this: usize) -> Occurence{
+    let mut seq = vec![];
+    seq.push((Any,One));
+    let mut res = vec![];
+    res.push(seq);
+    Occurence{
+      choice: res
+    }
+  }
+
+  fn visit_character_class(&mut self, _this: usize, _char_class: CharacterClassExpr) -> Occurence{
+    // let mut seq = vec![];
+    // for intervals in char_class.intervals{
+    //   for intervals.lo to intervals.hi{
+    //
+    //   }
+    // }
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_non_terminal_symbol(&mut self, _this: usize, _rule: Ident) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_zero_or_more(&mut self, _this: usize, _child: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_one_or_more(&mut self, _this: usize, _child: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_optional(&mut self, _this: usize, _child: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_not_predicate(&mut self, _this: usize, _child: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
+
+  fn visit_and_predicate(&mut self, _this: usize, _child: usize) -> Occurence{
+    Occurence{
+      choice: vec![]
+    }
+  }
 }
