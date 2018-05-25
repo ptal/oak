@@ -188,7 +188,13 @@ impl<'a, 'b, 'c> ExprByIndex for UselessChaining<'a, 'b, 'c>
 
 impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
 {
+
   fn visit_str_literal(&mut self, _this: usize, _lit: String){
+      self.pred=Predicate::Nothing;
+      self.verify_multiple();
+  }
+
+  fn visit_atom(&mut self, _this: usize){
       self.pred=Predicate::Nothing;
       self.verify_multiple();
   }
@@ -222,11 +228,6 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
           }
           _ => {}
       }
-      self.pred=Predicate::Nothing;
-      self.verify_multiple();
-  }
-
-  fn visit_atom(&mut self, _this: usize){
       self.pred=Predicate::Nothing;
       self.verify_multiple();
   }
