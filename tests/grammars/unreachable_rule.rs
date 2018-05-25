@@ -27,29 +27,32 @@ grammar! unreachable_rule{
     test3 =  "a"
             /"a"
 
-    test4 =  "a" "bc"
-            /"abcd"
+    test4 =  "abcd"
+            /"a" "bc"
+
+    test4bis = "a" "bc"
+             / "abcd"
 
     // test5 =  "a"*
     //         /"a"?  // is detected
 
-    test6 =  "a"
-            /!"a"
-
-    test7 = !"a"
-            /"a"
-
-    test8 =  "a" !"a"
-            /"a"
-
-    test9 = "a"
-            /&"a"
-
-    test10 = &"a"
-            /"a"
-
-    test11 = "b"
-            /!"a"
+    // test6 =  "a"
+    //         /!"a"
+    //
+    // test7 = !"a"
+    //         /"a"
+    //
+    // test8 =  "a" !"a"
+    //         /"a"
+    //
+    // test9 = "a"
+    //         /&"a"
+    //
+    // test10 = &"a"
+    //         /"a"
+    //
+    // test11 = "b"
+    //         /!"a"
 
     // test12 = .
     //         /"a" // is detected
