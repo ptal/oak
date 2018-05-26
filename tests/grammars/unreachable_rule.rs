@@ -33,6 +33,14 @@ grammar! unreachable_rule{
     test4bis = "a" "bc"
              / "abcd"
 
+    keyword = "proc"/"par"/"space"/"end"/"pre"
+         / "read" / "write" / "readwrite" / "or" / "and" / "not"
+         / "when" / "then" / "else" / "loop" / "pause up"
+         / "pause" / "stop" / "in" / "word_line" / "singe_time"
+         / "single_space" / "bot" / "top" / "ref" / "module"
+         / "run" / "true" / "false" / "unknown" / "nothing"
+         / "universe" / "suspend" / "abort" / "java_kw"
+
     // test5 =  "a"*
     //         /"a"?  // is detected
 
