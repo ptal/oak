@@ -283,6 +283,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
 
   fn visit_sequence(&mut self, _: usize, children: Vec<usize>){
     for child in children {
+        self.pred=Predicate::Nothing;
         self.verify_multiple();
         self.visit_expr(child);
     }
@@ -290,6 +291,7 @@ impl<'a, 'b, 'c> Visitor<()> for UselessChaining<'a, 'b, 'c>
 
   fn visit_choice(&mut self, _: usize, children: Vec<usize>){
       for child in children {
+          self.pred=Predicate::Nothing;
           self.verify_multiple();
           self.visit_expr(child);
       }
