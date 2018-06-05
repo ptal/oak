@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #![macro_use]
+use std::char::*;
 use middle::analysis::ast::*;
 use self::Pattern::*;
 use self::Character::*;
@@ -175,11 +176,11 @@ impl<'a, 'b, 'c> Visitor<Occurence> for UnreachableRule<'a, 'b, 'c>
         if occ2.is_unreachable_with(occ1.copy()) {
           self.grammar.span_warn(
             self.grammar[child2].span(),
-            format!("This rule is unreachable.")
+            format!("This alternative will nerver succeed.")
           );
           self.grammar.span_note(
             self.grammar[child1].span(),
-            format!("Because this rule succeeded before reading the previous one.")
+            format!("Because this alternative succeeded before reaching the previous one.")
           );
         }
       }
@@ -240,15 +241,17 @@ impl<'a, 'b, 'c> Visitor<Occurence> for UnreachableRule<'a, 'b, 'c>
     }
   }
 
-  fn visit_character_class(&mut self, _this: usize, _char_class: CharacterClassExpr) -> Occurence{
-    // let mut seq = vec![];
-    // for intervals in char_class.intervals{
-    //   for intervals.lo to intervals.hi{
-    //
-    //   }
-    // }
+  fn visit_character_class(&mut self, _this: usize, char_class: CharacterClassExpr) -> Occurence{
+    let mut res = vec![];
+    for intervals in char_class.intervals{
+      for i in intervals.lo as u32 .. intervals.hi as u32 +1 {
+        if let Some(c) = from_u32(i) {
+          res.push(vec![(Char(c),One)])
+        }
+      }
+    }
     Occurence{
-      choice: vec![]
+      choice: res
     }
   }
 
