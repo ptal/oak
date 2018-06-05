@@ -18,28 +18,29 @@ grammar! unreachable_rule{
     // test0 =  "a"*
     //         /"a"+  // is detected
 
-    test1 =  "a"
-            /"ab"
-
+    // test1 =  "a"
+    //         /"ab"
+    //
     test2 =  "ab"
-            /"a"
+            / "a"
+    // r1 = ["a-c"] -> () / "b" -> () // problem of span
+    //
+    // test3 =  "a"
+    //         /"a"
+    //
+    // test4 =  "abcd"
+    //         /"a" "bc"
+    //
+    // test4bis = "a" "bc"
+    //          / "abcd"
 
-    test3 =  "a"
-            /"a"
-
-    test4 =  "abcd"
-            /"a" "bc"
-
-    test4bis = "a" "bc"
-             / "abcd"
-
-    keyword = "proc"/"par"/"space"/"end"/"pre"
-         / "read" / "write" / "readwrite" / "or" / "and" / "not"
-         / "when" / "then" / "else" / "loop" / "pause up"
-         / "pause" / "stop" / "in" / "word_line" / "singe_time"
-         / "single_space" / "bot" / "top" / "ref" / "module"
-         / "run" / "true" / "false" / "unknown" / "nothing"
-         / "universe" / "suspend" / "abort" / "java_kw"
+    // keyword = "proc"/"par"/"space"/"end"/"pre"
+    //      / "read" / "write" / "readwrite" / "or" / "and" / "not"
+    //      / "when" / "then" / "else" / "loop" / "pause up"
+    //      / "pause" / "stop" / "in" / "word_line" / "singe_time"
+    //      / "single_space" / "bot" / "top" / "ref" / "module"
+    //      / "run" / "true" / "false" / "unknown" / "nothing"
+    //      / "universe" / "suspend" / "abort" / "java_kw"
 
     // test5 =  "a"*
     //         /"a"?  // is detected
