@@ -32,17 +32,18 @@ fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<A
 }
 
 fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaItem) {
+  let attr_name = meta_item.ident.segments[0].ident.name;
   match &meta_item.node {
-    &MetaItemKind::Word if meta_item.ident.name == "debug_api" => {
+    &MetaItemKind::Word if attr_name == "debug_api" => {
       grammar.merge_print_code(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if meta_item.ident.name == "show_api" => {
+    &MetaItemKind::Word if attr_name == "show_api" => {
       grammar.merge_print_code(PrintLevel::Show);
     },
-    &MetaItemKind::Word if meta_item.ident.name == "debug_typing" => {
+    &MetaItemKind::Word if attr_name == "debug_typing" => {
       grammar.merge_print_typing(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if meta_item.ident.name == "show_typing" => {
+    &MetaItemKind::Word if attr_name == "show_typing" => {
       grammar.merge_print_typing(PrintLevel::Show);
     },
       &MetaItemKind::Word
@@ -50,7 +51,7 @@ fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaIte
     | &MetaItemKind::NameValue(_) => {
       grammar.warn(format!(
         "Unknown attribute `{}`: it will be ignored.",
-        meta_item.ident.name));
+        attr_name));
     }
   }
 }

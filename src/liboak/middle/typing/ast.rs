@@ -278,7 +278,7 @@ impl IType
   }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub enum Type
 {
   Unit,
@@ -291,6 +291,24 @@ pub enum Type
   Tuple(Vec<usize>),
   Action(rust::FunctionRetTy)
 }
+
+impl PartialEq for Type
+{
+  fn eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (Unit, Unit)
+    | (Atom, Atom) => true,
+      (Optional(e1), Optional(e2))
+    | (List(e1), List(e2)) => e1 == e2,
+      (Tuple(exprs1), Tuple(exprs2)) => exprs1 == exprs2,
+      (Action(_), Action(_)) =>
+        panic!("Cannot compare `Type::Action` because `rust::FunctionRetTy` are not comparable."),
+      _ => false
+    }
+  }
+}
+
+impl Eq for Type {}
 
 impl Type
 {

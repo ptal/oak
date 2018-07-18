@@ -78,11 +78,46 @@ impl<'a> Parser<'a>
   }
 
   fn parse_inner_attributes(&mut self) -> rust::PResult<'a, ()> {
-    let inners = self.rp.parse_inner_attributes()?;
+    let inners = self.rust_parse_inner_attributes()?;
     for attr in inners {
       self.grammar.push_attr(attr);
     }
     Ok(())
+  }
+
+  // Functions `span_err` and `parse_inner_attributes` extracted from Rust compiler after they became private or crate-only.
+  // See: https://github.com/rust-lang/rust/blob/0db03e635a5e38ebc7635637b870b8fbcc8a7e46/src/libsyntax/parse/parser.rs
+  fn span_err<S: Into<rust::MultiSpan>>(&self, sp: S, m: &str) {
+    self.rp.sess.span_diagnostic.span_err(sp, m)
+  }
+  fn rust_parse_inner_attributes(&mut self) -> rust::PResult<'a, Vec<rust::ast::Attribute>> {
+    let mut attrs: Vec<rust::ast::Attribute> = vec![];
+    loop {
+      match self.rp.token {
+        rtok::Pound => {
+          // Don't even try to parse if it's not an inner attribute.
+          if !self.rp.look_ahead(1, |t| t == &rtok::Not) {
+            break;
+          }
+
+          let attr = self.rp.parse_attribute(true)?;
+          assert_eq!(attr.style, rust::ast::AttrStyle::Inner);
+          attrs.push(attr);
+        }
+        rtok::DocComment(s) => {
+          // we need to get the position of this token before we bump.
+          let attr = rust::attr::mk_sugared_doc_attr(rust::attr::mk_attr_id(), s, self.rp.span);
+          if attr.style == rust::ast::AttrStyle::Inner {
+            attrs.push(attr);
+            self.bump();
+          } else {
+            break;
+          }
+        }
+        _ => break,
+      }
+    }
+    Ok(attrs)
   }
 
   fn parse_rule_decl(&mut self) -> rust::PResult<'a, rust::Ident> {
@@ -153,7 +188,7 @@ impl<'a> Parser<'a>
       }
       _ => {
         let span = self.rp.span;
-        self.rp.span_err(
+        self.span_err(
           span,
           format!("In rule {}: Unknown token after `->`. Use the arrow to annotate an expression with the unit type `()` or the invisible type `(^)`.",
             rule_name).as_str()
@@ -186,7 +221,7 @@ impl<'a> Parser<'a>
     }
     let hi = self.rp.prev_span.hi();
     if seq.len() == 0 {
-      self.rp.span_err(
+      self.span_err(
         Span::new(lo, hi, NO_EXPANSION),
         format!("In rule {}: must define at least one expression.",
           rule_name).as_str())
@@ -329,7 +364,7 @@ impl<'a> Parser<'a>
         self.bump();
         let cooked_lit = cook_lit(name);
         if cooked_lit.is_empty() {
-          self.rp.span_err(span,
+          self.span_err(span,
             "Empty character classes is forbidden. For empty expression \
             you can use the empty string literal `\"\"`.");
         }
@@ -380,7 +415,7 @@ impl<'a> Parser<'a>
       let next = ranges.peek();
       match (lo, next) {
         (Some('-'), Some(_)) => {
-          self.rp.span_err(span, separator_err.as_str());
+          self.span_err(span, separator_err.as_str());
           return res;
         }
         (Some(lo), Some(&sep)) if sep == '-' => {
@@ -395,7 +430,7 @@ impl<'a> Parser<'a>
     };
     ranges.next();
     match ranges.next() {
-      Some('-') => { self.rp.span_err(span, separator_err.as_str()); }
+      Some('-') => { self.span_err(span, separator_err.as_str()); }
       Some(hi) => {
         res.push(CharacterInterval::new(lo, hi));
       }

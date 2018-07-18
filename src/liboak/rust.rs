@@ -14,6 +14,7 @@
 
 pub use syntax::ptr::P;
 pub use syntax::ast;
+pub use syntax::attr;
 pub use syntax::ast::*;
 pub use syntax::print::pprust::*;
 pub use syntax::print::pp;

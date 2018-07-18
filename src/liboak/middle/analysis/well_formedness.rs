@@ -17,6 +17,7 @@ use std::mem::swap;
 use std::collections::{HashMap, HashSet};
 
 /// Well-formedness attributes, it represents the possible behavior of an expression.
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct WFA
 {

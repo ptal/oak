@@ -80,7 +80,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
         $body
       }
     ).expect("Quotation of a generated function.");
-    if let rust::ItemKind::Fn(a,b,c,d,mut generics,f) = fun.node.clone() {
+    if let rust::ItemKind::Fn(a,b,mut generics,d) = fun.node.clone() {
       let stream_gen = self.grammar.stream_generics();
       generics.params = stream_gen.params;
       generics.where_clause = stream_gen.where_clause;
@@ -88,7 +88,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
         ident: fun.ident,
         attrs: fun.attrs.clone(),
         id: fun.id,
-        node: rust::ItemKind::Fn(a,b,c,d,generics,f),
+        node: rust::ItemKind::Fn(a,b,generics,d),
         vis: fun.vis.clone(),
         span: fun.span,
         tokens: None

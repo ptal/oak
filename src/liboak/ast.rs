@@ -126,41 +126,46 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     }
   }
 
-  // This function creates the `stream` type from the associated generics in the grammar.
-  // We must do all of this because `Generics` and `Ty` are not the same entity in the AST.
+  // Given `type Stream<'a, T, ..> where T: X = MyStream<'a, T, ...>`
+  // We generate functions (similar to) the following one:
+  //   fn parse<'a, T, ..>(stream: MyStream<'a, T, ...>) where T: X { ... }
+  // This function creates the type `MyStream<'a, T, ...>` from the type alias.
+  // The generics parameters are supposed to have the same name when we will generate the function.
+  // We must transform the parameters of the type alias into arguments of the function argument's type.
   pub fn stream_type(&self) -> RTy {
-    use rust::*;
-    let generics = self.stream_generics();
-    let mut lifetimes = vec![];
-    let mut types = vec![];
-    for param in generics.params.into_iter() {
-      match param {
-        rust::GenericParam::Lifetime(l) => lifetimes.push(l.lifetime),
-        rust::GenericParam::Type(ty) => {
-          let ty = ty.ident;
-          types.push(quote_ty!(self.cx, $ty));
-        }
-      }
+    match &self.stream_alias.node {
+      &rust::ItemKind::Ty(ref ty, _) => ty.clone(),
+      _ => unreachable!()
     }
-    let generics_params = PathParameters::AngleBracketed(
-      AngleBracketedParameterData {
-        span: rust::DUMMY_SP,
-        lifetimes: lifetimes,
-        types: types,
-        bindings: vec![],
-      });
+    // let generics = self.stream_generics();
+    // let mut generic_args_list = vec![];
+    // for param in generics.params.into_iter() {
+    //   match param.kind {
+    //     rust::GenericParamKind::Lifetime(l) => generic_args_list.push(GenericArg::Lifetime(l.lifetime)),
+    //     rust::GenericParamKind::Type{default: ty} => {
+    //       let ty = ty.expect("generic parameters of type alias must be explicitly defined (no `_`).").ident;
+    //       generic_args_list.push(GenericArg::Type(quote_ty!(self.cx, $ty)));
+    //     }
+    //   }
+    // }
+    // let generic_args = GenericArgs::AngleBracketed(
+    //   AngleBracketedArgs {
+    //     span: rust::DUMMY_SP,
+    //     args: generic_args_list,
+    //     bindings: vec![],
+    //   });
 
-    let stream_ty = quote_ty!(self.cx, Stream);
-    if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
-      path.segments.last_mut().unwrap().parameters = Some(P(generics_params));
-      let ty_path = TyKind::Path(qself, path);
-      let ty = Ty {
-        id: stream_ty.id,
-        node: ty_path,
-        span: stream_ty.span
-      };
-      quote_ty!(self.cx, $ty)
-    } else { unreachable!() }
+    // let stream_ty = quote_ty!(self.cx, Stream);
+    // if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
+    //   path.segments.last_mut().unwrap().args = Some(P(generic_args));
+    //   let ty_path = TyKind::Path(qself, path);
+    //   let ty = Ty {
+    //     id: stream_ty.id,
+    //     node: ty_path,
+    //     span: stream_ty.span
+    //   };
+    //   quote_ty!(self.cx, $ty)
+    // } else { unreachable!() }
   }
 
   pub fn span_type(&self) -> RTy {
