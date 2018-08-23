@@ -29,7 +29,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
     let mod_content = compiler.compile_mod_content();
     let module = compiler.compile_grammar_module(mod_content);
     print_code(&compiler.grammar, &module);
-    rust::MacEager::items(rust::SmallVector::one(module))
+    rust::MacEager::items(rust::SmallVec::one(module))
   }
 
   fn new(grammar: TGrammar<'a, 'b>) -> GrammarCompiler<'a, 'b> {

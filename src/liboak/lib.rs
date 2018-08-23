@@ -19,6 +19,7 @@
 extern crate rustc;
 extern crate rustc_plugin;
 extern crate rustc_errors;
+extern crate rustc_data_structures;
 extern crate syntax;
 extern crate partial;
 
