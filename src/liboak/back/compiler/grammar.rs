@@ -29,7 +29,7 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
     let mod_content = compiler.compile_mod_content();
     let module = compiler.compile_grammar_module(mod_content);
     print_code(&compiler.grammar, &module);
-    let smvec = rust::SmallVec::<[rust::P<rust::Item>; 1]>::new();
+    let smvec = rust::SmallVec::<[rust::P<rust::Item>; 1]>::from_vec(vec![module]);
     rust::MacEager::items(smvec)
   }
 
