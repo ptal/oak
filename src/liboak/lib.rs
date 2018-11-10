@@ -22,6 +22,7 @@ extern crate rustc_errors;
 extern crate rustc_data_structures;
 extern crate syntax;
 extern crate partial;
+extern crate smallvec;
 
 use rustc_plugin::Registry;
 

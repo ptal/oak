@@ -6,9 +6,9 @@
 [travis]: https://travis-ci.org/ptal/oak
 
 Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels.
-You can download and set up the exact same version of the compiler used with `rustup override add nightly-2018-08-18`.
+You can download and set up the exact same version of the compiler used with `rustup override add nightly-2018-11-09`.
 
-Please consult the [Oak manual](http://hyc.io/oak).
+Please consult the [Oak manual](http://hyc.io/oak) and [this grammar](https://github.com/ptal/bonsai/blob/master/src/front/grammar.rs) for a more complete example.
 
 ## Features
 

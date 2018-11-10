@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use smallvec::SmallVec;
+
 pub use syntax::ptr::P;
 pub use syntax::ast;
 pub use syntax::attr;
 pub use syntax::ast::*;
 pub use syntax::print::pprust::*;
 pub use syntax::print::pp;
-pub use syntax::codemap::{DUMMY_SP, NO_EXPANSION, Span, MultiSpan, Spanned, respan, BytePos};
+pub use syntax::source_map::{DUMMY_SP, NO_EXPANSION, Span, MultiSpan, Spanned, respan, BytePos};
 pub use syntax::ext::base::{ExtCtxt,MacResult,MacEager,DummyResult};
 pub use syntax::ext::quote::rt::ToTokens;
 pub use syntax::ext::build::AstBuilder;
@@ -42,5 +44,3 @@ pub use syntax::symbol::Symbol;
 pub use syntax::symbol::keywords::Keyword;
 
 pub use rustc_errors::*;
-
-pub use rustc_data_structures::small_vec::SmallVec;
