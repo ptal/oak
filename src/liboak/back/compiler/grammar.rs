@@ -29,7 +29,8 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
     let mod_content = compiler.compile_mod_content();
     let module = compiler.compile_grammar_module(mod_content);
     print_code(&compiler.grammar, &module);
-    rust::MacEager::items(rust::SmallVector::one(module))
+    let smvec = rust::SmallVec::<[rust::P<rust::Item>; 1]>::new();
+    rust::MacEager::items(smvec)
   }
 
   fn new(grammar: TGrammar<'a, 'b>) -> GrammarCompiler<'a, 'b> {
@@ -73,7 +74,8 @@ impl<'a, 'b> GrammarCompiler<'a, 'b>
           id: rust::DUMMY_NODE_ID,
           node: rust::ItemKind::Mod(rust::Mod{
             inner: rust::DUMMY_SP,
-            items: items
+            items: items,
+            inline: false
           }),
           vis: rust::Spanned { node: rust::VisibilityKind::Public, span: rust::DUMMY_SP },
           span: rust::DUMMY_SP,
