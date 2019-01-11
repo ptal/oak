@@ -41,7 +41,7 @@ impl CompileExpr for SpannedExprCompiler
       .map_success(|success, _| {
         quote_expr!(context.cx(), {
           let $hi_sp = state.mark();
-          let $result = Range { start: $lo_sp, end: $hi_sp }.stream_span();
+          let $result = Range { start: $lo_sp.clone(), end: $hi_sp }.stream_span();
           $success
         })
       })

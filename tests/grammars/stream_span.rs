@@ -23,6 +23,9 @@ grammar! stream_span {
 
   expr = .. span_a . (.. .) "b" > make_expr
 
+  expr2 = .. span_a . inner_expr "b" > make_expr
+  inner_expr = (.. (./.))
+
   span_a = .. "a"
 
   use oak_runtime::str_stream::*;
@@ -46,15 +49,23 @@ grammar! stream_span {
   }
 }
 
-#[test]
-fn test_stream_span() {
-  use oak_runtime::*;
+use oak_runtime::*;
 
-  let state = stream_span::parse_expr("abcb".into_state());
+fn test_state<S>(state: ParseState<S, Expr>)
+  where S: CharStream
+{
   let data = state.unwrap_data();
   assert_eq!(data.c2, 'b');
   assert_eq!(data.c3, 'c');
   assert_eq!(data.full_sp, make_span(0, 4));
   assert_eq!(data.span_a, make_span(0, 1));
   assert_eq!(data.c3_sp, make_span(2, 3));
+}
+
+#[test]
+fn test_stream_span() {
+  let state = stream_span::parse_expr("abcb".into_state());
+  let state2 = stream_span::parse_expr2("abcb".into_state());
+  test_state(state);
+  test_state(state2);
 }
