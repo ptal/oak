@@ -97,6 +97,10 @@ impl<'a, 'b, ExprInfo> Grammar<'a, 'b, ExprInfo>
     }
   }
 
+  pub fn span_warn(&self, span: Span, msg: String) {
+      self.cx.span_warn(span,msg.as_str());
+  }
+
   pub fn span_err(&self, span: Span, msg: String) {
     self.cx.span_err(span, msg.as_str());
   }
