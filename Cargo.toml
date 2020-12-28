@@ -16,7 +16,7 @@ license = "Apache-2.0"
 
 name = "oak"
 path = "src/liboak/lib.rs"
-plugin = true
+proc_macro = true
 
 [dev-dependencies.oak_runtime]
 path = "runtime"
@@ -27,3 +27,6 @@ term = "^0.5.1"
 
 [dependencies]
 partial = "^0.2.3"
+proc-macro2 = { version = "1.0", features = ["nightly"] }
+syn = { version = "~1.0.56", features = ["full", "extra-traits"] }
+quote = "~1.0.8"

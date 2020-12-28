@@ -1,6 +1,4 @@
 # Oak - Rust Module - Useless chaining detection / Non-reachable expressions in prioritized choice
-###### [Original repository of Oak by ptal](https://github.com/ptal/oak "Github ptal")
-#
 
 # Useless chaining detection
 

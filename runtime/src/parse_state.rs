@@ -99,13 +99,13 @@ impl<S, T> Debug for ParseResult<S, T> where
           "Full match, got data `{:?}`.", data))
       }
       &Partial(ref data, ref expectation) => {
-        try!(formatter.write_fmt(format_args!(
+        formatter.write_fmt(format_args!(
           "Partial match, got data `{:?}`. It stopped because:\n\t",
-          data)));
+          data))?;
         expectation.fmt(formatter)
       }
       &Failure(ref expectation) => {
-        try!(formatter.write_str("Error:\n\t"));
+        formatter.write_str("Error:\n\t")?;
         expectation.fmt(formatter)
       }
     }
