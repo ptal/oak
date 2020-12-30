@@ -15,6 +15,7 @@
 //! AST of a PEG expression that is shared across all the compiling steps.
 
 pub use identifier::*;
+pub use syn::spanned::Spanned;
 
 // use rust;
 use std::fmt::{Formatter, Display, Error};
@@ -39,7 +40,6 @@ use std::default::Default;
 use std::ops::{Index, IndexMut};
 
 use syn::parse_quote;
-use syn::spanned::Spanned;
 
 pub struct GrammarAttributes
 {
@@ -218,7 +218,7 @@ pub enum Type
   /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
   /// Precondition: Tuple size >= 2.
   Tuple(Vec<usize>),
-  Action(syn::ReturnType)
+  Rust(syn::Type)
 }
 
 impl PartialEq for Type
@@ -230,8 +230,8 @@ impl PartialEq for Type
       (Optional(e1), Optional(e2))
     | (List(e1), List(e2)) => e1 == e2,
       (Tuple(exprs1), Tuple(exprs2)) => exprs1 == exprs2,
-      (Action(_), Action(_)) =>
-        panic!("Cannot compare `Type::Action` because `syn::ReturnType` are not comparable."),
+      (Rust(_), Rust(_)) =>
+        panic!("Cannot compare `Type::Rust` because `syn::Type` are not comparable."),
       _ => false
     }
   }
@@ -412,16 +412,14 @@ impl<ExprInfo> ExprByIndex for Grammar<ExprInfo>
 pub struct Rule
 {
   pub name: Ident,
+  pub ty: (Span, IType),
   pub expr_idx: usize,
 }
 
 impl Rule
 {
-  pub fn new(name: Ident, expr_idx: usize) -> Rule {
-    Rule{
-      name: name,
-      expr_idx: expr_idx
-    }
+  pub fn new(name: Ident, ty: (Span, IType), expr_idx: usize) -> Rule {
+    Rule { name, ty, expr_idx }
   }
 }
 
@@ -453,8 +451,8 @@ pub enum Expression
   ZeroOrOne(usize), // expr?
   NotPredicate(usize), // !expr
   AndPredicate(usize), // &expr
-  SemanticAction(usize, Ident), // expr > function
-  TypeAscription(usize, IType), // expr -> () or expr -> (^)
+  SemanticAction(usize, syn::Expr), // expr > function
+  TypeAscription(usize, IType), // expr:() or expr:(^) or expr:<rust-ty>
   SpannedExpr(usize), // .. expr
 }
 

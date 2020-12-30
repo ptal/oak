@@ -12,24 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use rust::{Spanned, BytePos, NO_EXPANSION, Ident};
 pub use ast::*;
 
 pub struct FGrammar
 {
-  pub name: Ident,
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<FExpressionInfo>,
-  pub rust_items: Vec<RItem>,
-  pub attributes: Vec<Attribute>
+  pub rust_items: Vec<syn::Item>,
+  pub attributes: Vec<syn::Attribute>
 }
 
 impl FGrammar
 {
-  pub fn new(grammar_name: Ident) -> FGrammar {
+  pub fn new() -> FGrammar {
     FGrammar {
-      name: grammar_name,
       rules: vec![],
       exprs: vec![],
       exprs_info: vec![],
@@ -38,22 +35,22 @@ impl FGrammar
     }
   }
 
-  pub fn alloc_expr(&mut self, lo: BytePos, hi: BytePos, expr: Expression) -> usize {
+  pub fn alloc_expr(&mut self, span: Span, expr: Expression) -> usize {
     let expr_idx = self.exprs.len();
     self.exprs.push(expr);
-    self.exprs_info.push(FExpressionInfo::spanned(lo, hi));
+    self.exprs_info.push(FExpressionInfo::spanned(span));
     expr_idx
   }
 
-  pub fn push_rule(&mut self, name: Ident, def: usize) {
-    self.rules.push(Rule::new(name, def));
+  pub fn push_rule(&mut self, name: Ident, ty: (Span, IType), def: usize) {
+    self.rules.push(Rule::new(name, ty, def));
   }
 
-  pub fn push_attr(&mut self, attr: Attribute) {
-    self.attributes.push(attr);
+  pub fn push_attrs(&mut self, attrs: Vec<syn::Attribute>) {
+    self.attributes.extend(attrs.into_iter());
   }
 
-  pub fn push_rust_item(&mut self, ritem: RItem) {
+  pub fn push_rust_item(&mut self, ritem: syn::Item) {
     self.rust_items.push(ritem);
   }
 }
@@ -67,14 +64,12 @@ pub struct FExpressionInfo
 
 impl FExpressionInfo
 {
-  fn spanned(lo: BytePos, hi: BytePos) -> FExpressionInfo {
-    FExpressionInfo {
-      span: Span::new(lo,hi,NO_EXPANSION)
-    }
+  fn spanned(span: Span) -> FExpressionInfo {
+    FExpressionInfo { span }
   }
 }
 
-impl ItemSpan for FExpressionInfo {
+impl Spanned for FExpressionInfo {
   fn span(&self) -> Span {
     self.span
   }
