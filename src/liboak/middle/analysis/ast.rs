@@ -18,9 +18,9 @@ pub use front::ast::FExpressionInfo;
 
 use std::default::Default;
 
-pub type AGrammar<'a, 'b> = Grammar<'a, 'b, FExpressionInfo>;
+pub type AGrammar = Grammar<FExpressionInfo>;
 
-impl<'a, 'b> AGrammar<'a, 'b>
+impl AGrammar
 {
   pub fn merge_print_code(&mut self, level: PrintLevel) {
     self.attributes.print_code = self.attributes.print_code.merge(level);
@@ -35,7 +35,6 @@ pub struct GrammarAttributes
 {
   pub print_code: PrintLevel,
   pub print_typing: PrintLevel
-
 }
 
 impl Default for GrammarAttributes {

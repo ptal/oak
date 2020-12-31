@@ -14,24 +14,16 @@
 
 //! This is the developer documentation of Oak, if you do not intend to contribute, please read the [user manual](http://hyc.io/oak) instead. This library proposes a syntax extension for a parser generator based on [Parsing Expression Grammar (PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar). It aims at simplifying the construction of the AST by typing the parsing rules. This is an experimental library.
 
-// #![feature(rustc_private, plugin_registrar, quote, box_syntax)]
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 
 #![allow(dead_code)]
 
-// extern crate rustc;
-// extern crate rustc_plugin;
-// extern crate rustc_errors;
-// extern crate rustc_data_structures;
-// extern crate syntax;
 extern crate partial;
 // extern crate smallvec;
 extern crate syn;
 extern crate quote;
 extern crate proc_macro;
 extern crate proc_macro2;
-
-// use rustc_plugin::Registry;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
@@ -43,17 +35,19 @@ use syn::parse_macro_input;
 // use std::error::Error;
 
 mod ast;
-// mod visitor;
+mod visitor;
 mod front;
-// mod middle;
+mod middle;
 // mod back;
 mod identifier;
 
 #[proc_macro]
 pub fn oak(input: TokenStream) -> TokenStream {
   let input2 = input.clone();
-  let _ast = parse_macro_input!(input as front::ast::FGrammar);
+  let ast = parse_macro_input!(input as front::ast::FGrammar);
   println!("parsing successful!");
+  let _tast = middle::typecheck(ast);
+  println!("typing successful!");
   input2
 }
 

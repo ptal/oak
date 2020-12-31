@@ -17,9 +17,7 @@ pub use std::collections::HashMap;
 use middle::analysis::ast::*;
 use partial::Partial::*;
 
-use rust;
-
-pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<Rule>) -> Partial<AGrammar<'a, 'b>>
+pub fn rule_duplicate(mut grammar: AGrammar, rules: Vec<Rule>) -> Partial<AGrammar>
 {
   DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
   .map(move |rules| {
@@ -28,13 +26,12 @@ pub fn rule_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>, rules: Vec<Rule>) -
   })
 }
 
-pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
-  items: Vec<RItem>) -> Partial<AGrammar<'a, 'b>>
+pub fn rust_functions_duplicate(mut grammar: AGrammar, items: Vec<syn::Item>) -> Partial<AGrammar>
 {
   let mut functions = vec![];
   let mut others = vec![];
   for item in items {
-    if let &rust::ItemKind::Fn(..) = &item.node {
+    if let &syn::Item::Fn(..) = &item {
       functions.push(item);
     }
     else {
@@ -49,18 +46,18 @@ pub fn rust_functions_duplicate<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
     })
 }
 
-struct DuplicateItem<'a: 'c, 'b: 'a, 'c, Item>
+struct DuplicateItem<'a, Item>
 {
-  grammar: &'c AGrammar<'a, 'b>,
+  grammar: &'a AGrammar,
   items: Vec<(Ident, Item)>,
   has_duplicate: bool,
   what_is_duplicated: String
 }
 
-impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
- Item: ItemIdent + ItemSpan
+impl<'a, Item> DuplicateItem<'a, Item> where
+ Item: ItemIdent + Spanned
 {
-  pub fn analyse<ItemIter>(grammar: &'c AGrammar<'a, 'b>, iter: ItemIter, item_kind: String)
+  pub fn analyse<ItemIter>(grammar: &'a AGrammar, iter: ItemIter, item_kind: String)
     -> Partial<Vec<(Ident, Item)>> where
    ItemIter: Iterator<Item=Item>
   {
@@ -74,12 +71,12 @@ impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
   }
 
   fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter)
-    -> DuplicateItem<'a, 'b, 'c, Item>
+    -> DuplicateItem<'a, Item>
   {
     for item in iter {
       let ident = item.ident();
-      if self.items.iter().any(|&(id,_)| id == ident) {
-        let &(_, ref dup_item) = self.items.iter().find(|&&(id,_)| id == ident).unwrap();
+      if self.items.iter().any(|&(ref id,_)| *id == ident) {
+        let &(_, ref dup_item) = self.items.iter().find(|&&(ref id,_)| *id == ident).unwrap();
         self.duplicate_items(dup_item, item);
         self.has_duplicate = true;
       }
@@ -91,12 +88,10 @@ impl<'a, 'b, 'c, Item> DuplicateItem<'a, 'b, 'c, Item> where
   }
 
   fn duplicate_items(&self, pre: &Item, current: Item) {
-    self.grammar.multi_locations_err(vec![
-      (current.span(),
-      format!("duplicate definition of {} with name `{}`", self.what_is_duplicated, current.ident())),
-      (pre.span(),
-      format!("previous definition of `{}` here", pre.ident()))]
-    );
+    current.span().unstable()
+      .error(format!("duplicate definition of {} with name `{}`", self.what_is_duplicated, current.ident()))
+      .span_note(pre.span().unstable(), format!("previous definition of `{}` here", pre.ident()))
+      .emit();
   }
 
   fn make(self) -> Partial<Vec<(Ident, Item)>> {

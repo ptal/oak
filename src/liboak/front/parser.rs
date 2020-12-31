@@ -23,7 +23,7 @@ use front::ast::Expression::*;
 
 impl Parse for FGrammar {
   fn parse(ps: ParseStream) -> Result<Self> {
-    let mut grammar = FGrammar::new();
+    let mut grammar = FGrammar::new(ps.span());
     grammar.parse_blocks(ps)?;
     Ok(grammar)
   }
@@ -234,7 +234,7 @@ impl FGrammar {
   {
     match self.parse_suffixed_expr(ps, rule_name)? {
       Some(expr) => {
-        let span = lo.join(ps.span()).unwrap();
+        let span = lo.join(self.span_of(expr)).unwrap();
         Ok(self.alloc_expr(span, make_prefix(expr)))
       }
       None => {

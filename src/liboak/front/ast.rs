@@ -16,6 +16,7 @@ pub use ast::*;
 
 pub struct FGrammar
 {
+  pub start_span: Span,
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<FExpressionInfo>,
@@ -25,8 +26,9 @@ pub struct FGrammar
 
 impl FGrammar
 {
-  pub fn new() -> FGrammar {
+  pub fn new(start_span: Span) -> FGrammar {
     FGrammar {
+      start_span,
       rules: vec![],
       exprs: vec![],
       exprs_info: vec![],

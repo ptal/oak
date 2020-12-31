@@ -33,66 +33,13 @@ pub use partial::Partial;
 pub use ast::IType::*;
 pub use ast::Type::*;
 
-// use middle::analysis::ast::GrammarAttributes;
+use middle::analysis::ast::GrammarAttributes;
 
 use std::collections::HashMap;
 use std::default::Default;
 use std::ops::{Index, IndexMut};
 
 use syn::parse_quote;
-
-pub struct GrammarAttributes
-{
-  pub print_code: PrintLevel,
-  pub print_typing: PrintLevel
-
-}
-
-impl Default for GrammarAttributes {
-  fn default() -> Self {
-    GrammarAttributes {
-      print_code: PrintLevel::default(),
-      print_typing: PrintLevel::default()
-    }
-  }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PrintLevel
-{
-  Debug,
-  Show,
-  Nothing
-}
-
-impl PrintLevel
-{
-  pub fn merge(self, other: PrintLevel) -> PrintLevel {
-    use self::PrintLevel::*;
-    match (self, other) {
-        (Nothing, Debug)
-      | (Show, Debug) => Debug,
-      (Nothing, Show) => Show,
-      _ => Nothing
-    }
-  }
-
-  pub fn debug(self) -> bool {
-    self == PrintLevel::Debug
-  }
-
-  pub fn show(self) -> bool {
-    self == PrintLevel::Show
-  }
-}
-
-impl Default for PrintLevel
-{
-  fn default() -> PrintLevel {
-    PrintLevel::Nothing
-  }
-}
-
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum RecKind
@@ -246,7 +193,7 @@ pub trait ExprByIndex
 
 pub struct Grammar<ExprInfo>
 {
-  pub name: Ident,
+  pub start_span: Span,
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExprInfo>,
@@ -258,14 +205,14 @@ pub struct Grammar<ExprInfo>
 
 impl<ExprInfo> Grammar<ExprInfo>
 {
-  pub fn new(name: Ident, exprs: Vec<Expression>,
+  pub fn new(start_span: Span, exprs: Vec<Expression>,
     exprs_info: Vec<ExprInfo>) -> Grammar<ExprInfo>
   {
     Grammar {
-      name: name,
+      start_span,
       rules: vec![],
-      exprs: exprs,
-      exprs_info: exprs_info,
+      exprs,
+      exprs_info,
       stream_alias: parse_quote!(pub type Stream<'a> = StrStream<'a>;),
       rust_functions: HashMap::new(),
       rust_items: vec![],
@@ -309,14 +256,14 @@ impl<ExprInfo> Grammar<ExprInfo>
   //     .span_note_without_error(span, msg.as_str());
   // }
 
-  pub fn find_rule_by_ident(&self, id: Ident) -> Rule {
+  pub fn find_rule_by_ident(&self, id: &Ident) -> Rule {
     self.rules.iter()
       .find(|r| r.ident().to_string() == id.to_string())
       .expect("Rule ident not registered in the known rules.")
       .clone()
   }
 
-  pub fn expr_index_of_rule(&self, id: Ident) -> usize {
+  pub fn expr_index_of_rule(&self, id: &Ident) -> usize {
     self.find_rule_by_ident(id).expr_idx
   }
 

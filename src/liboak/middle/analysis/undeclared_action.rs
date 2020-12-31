@@ -14,15 +14,15 @@
 
 use middle::analysis::ast::*;
 
-pub struct UndeclaredAction<'a: 'c, 'b: 'a, 'c>
+pub struct UndeclaredAction<'a>
 {
-  grammar: &'c AGrammar<'a, 'b>,
+  grammar: &'a AGrammar,
   has_undeclared: bool
 }
 
-impl<'a, 'b, 'c> UndeclaredAction<'a, 'b, 'c>
+impl<'a> UndeclaredAction<'a>
 {
-  pub fn analyse(grammar: AGrammar<'a, 'b>) -> Partial<AGrammar<'a, 'b>> {
+  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
     if UndeclaredAction::has_undeclared(&grammar) {
       Partial::Nothing
     } else {
@@ -30,7 +30,7 @@ impl<'a, 'b, 'c> UndeclaredAction<'a, 'b, 'c>
     }
   }
 
-  fn has_undeclared(grammar: &'a AGrammar<'a, 'b>) -> bool {
+  fn has_undeclared(grammar: &'a AGrammar) -> bool {
     let mut analyser = UndeclaredAction {
       grammar: grammar,
       has_undeclared: false
@@ -42,14 +42,14 @@ impl<'a, 'b, 'c> UndeclaredAction<'a, 'b, 'c>
   }
 }
 
-impl<'a, 'b, 'c> ExprByIndex for UndeclaredAction<'a, 'b, 'c>
+impl<'a> ExprByIndex for UndeclaredAction<'a>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a, 'b, 'c> Visitor<()> for UndeclaredAction<'a, 'b, 'c>
+impl<'a> Visitor<()> for UndeclaredAction<'a>
 {
   unit_visitor_impl!(str_literal);
   unit_visitor_impl!(atom);
@@ -57,6 +57,8 @@ impl<'a, 'b, 'c> Visitor<()> for UndeclaredAction<'a, 'b, 'c>
   unit_visitor_impl!(choice);
   unit_visitor_impl!(non_terminal);
 
+  // NOTE: This analysis is not really necessary anymore, because the action is not necessarily available in the scope of the macro.
+  // We can retreive the type on the rule, or through type ascription of expression.
   fn visit_semantic_action(&mut self, this: usize, _child: usize, action: Ident) {
     if !self.grammar.rust_functions.contains_key(&action) {
       self.grammar.expr_err(

@@ -16,31 +16,31 @@ use front::ast::FGrammar;
 use middle::analysis::ast::*;
 use middle::analysis::duplicate::*;
 use middle::analysis::undeclared_rule::*;
-use middle::analysis::undeclared_action::*;
+// use middle::analysis::undeclared_action::*;
 use middle::analysis::well_formedness::*;
-use middle::analysis::attribute::*;
+// use middle::analysis::attribute::*;
 use middle::analysis::useless_chaining::*;
-use middle::analysis::unreachable_rule::*;
+// use middle::analysis::unreachable_rule::*;
 
 mod duplicate;
 mod undeclared_rule;
-mod undeclared_action;
+// mod undeclared_action;
 mod well_formedness;
-mod attribute;
+// mod attribute;
 mod useless_chaining;
-mod unreachable_rule;
+// mod unreachable_rule;
 pub mod ast;
 
-pub fn analyse<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<AGrammar<'a, 'b>> {
-  let grammar = AGrammar::new(cx, fgrammar.name, fgrammar.exprs, fgrammar.exprs_info);
+pub fn analyse(fgrammar: FGrammar) -> Partial<AGrammar> {
+  let grammar = AGrammar::new(fgrammar.start_span, fgrammar.exprs, fgrammar.exprs_info);
   let frust_items = fgrammar.rust_items;
-  let fattributes = fgrammar.attributes;
+  // let fattributes = fgrammar.attributes;
   rule_duplicate(grammar, fgrammar.rules)
   .and_then(|grammar| rust_functions_duplicate(grammar, frust_items))
   .and_then(|grammar| UndeclaredRule::analyse(grammar))
-  .and_then(|grammar| UndeclaredAction::analyse(grammar))
+  // .and_then(|grammar| UndeclaredAction::analyse(grammar))
   .and_then(|grammar| WellFormedness::analyse(grammar))
   .and_then(|grammar| UselessChaining::analyse(grammar))
-  .and_then(|grammar| UnreachableRule::analyse(grammar))
-  .and_then(|grammar| decorate_with_attributes(grammar, fattributes))
+  // .and_then(|grammar| UnreachableRule::analyse(grammar))
+  // .and_then(|grammar| decorate_with_attributes(grammar, fattributes))
 }

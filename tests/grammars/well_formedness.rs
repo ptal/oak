@@ -71,4 +71,27 @@ grammar! well_formedness {
 
   // v = "a" .+ / "" / "Z" .+  // ERROR: unreachable branch
 
+
+  u1 = ("x"?)? // Warning useless chaining
+  // u2 = ("x"?)+ // ERROR: loop repeat
+  // u3 = ("x"?)* // ERROR: loop repeat
+  u4 = ("x"+)? // Warning useless chaining
+  u5 = ("x"+)* // Warning useless chaining
+  u6 = ("x"+)+ // Warning useless chaining
+  u7 = ("x"*)? // Warning useless chaining
+  // u8 = ("x"*)+ // ERROR: loop repeat
+  // u9 = ("x"*)* // ERROR: loop repeat
+
+  // v1 = (&"x")+  // ERROR: loop repeat
+  // v2 = (&"x")*  // ERROR: loop repeat
+  // v3 = (&"x")?  // ERROR: always succeed, never consume
+  // v4 = (!"x")+  // ERROR: loop repeat
+  // v5 = (!"x")*  // ERROR: loop repeat
+  // v6 = (!"x")?  // ERROR: always succeed, never consume
+  w1 = &("x"+)
+  // w2 = &("x"*)  // ERROR: always succeed, never consume
+  // w3 = &("x"?)  // ERROR: always succeed, never consume
+  w4 = !("x"+)
+  // w5 = !("x"*)  // ERROR: never succeed
+  // w6 = !("x"?)  // ERROR: never succeed
 }

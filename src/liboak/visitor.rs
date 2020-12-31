@@ -14,18 +14,19 @@
 
 #![macro_use]
 
+use std::default::Default;
 use ast::*;
 use ast::Expression::*;
 
-pub trait Visitor<R> : ExprByIndex
+pub trait Visitor<R: Default> : ExprByIndex
 {
   fn visit_expr(&mut self, this: usize) -> R {
     walk_expr(self, this)
   }
 
-  fn visit_str_literal(&mut self, _this: usize, _lit: String) -> R;
-  fn visit_non_terminal_symbol(&mut self, _this: usize, _rule: Ident) -> R;
-  fn visit_atom(&mut self, _this: usize) -> R;
+  fn visit_str_literal(&mut self, _this: usize, _lit: String) -> R { R::default() }
+  fn visit_non_terminal_symbol(&mut self, _this: usize, _rule: &Ident) -> R { R::default() }
+  fn visit_atom(&mut self, _this: usize) -> R { R::default() }
 
   fn visit_any_single_char(&mut self, this: usize) -> R {
     self.visit_atom(this)
@@ -70,7 +71,7 @@ pub trait Visitor<R> : ExprByIndex
     self.visit_syntactic_predicate(this, child)
   }
 
-  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: Ident) -> R {
+  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: syn::Expr) -> R {
     self.visit_expr(child)
   }
 
@@ -81,11 +82,6 @@ pub trait Visitor<R> : ExprByIndex
 
 /// We need this macro for factorizing the code since we can not specialize a trait on specific type parameter (we would need to specialize on `()` here).
 macro_rules! unit_visitor_impl {
-  (str_literal) => (fn visit_str_literal(&mut self, _this: usize, _lit: String) -> () {});
-  (non_terminal) => (fn visit_non_terminal_symbol(&mut self, _this: usize, _rule: Ident) -> () {});
-  (atom) => (fn visit_atom(&mut self, _this: usize) -> () {});
-  (any_single_char) => (fn visit_any_single_char(&mut self, _this: usize) -> () {});
-  (character_class) => (fn visit_character_class(&mut self, _this: usize, _char_class: CharacterClassExpr) -> () {});
   (sequence) => (
     fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> () {
       walk_exprs(self, children);
@@ -98,7 +94,7 @@ macro_rules! unit_visitor_impl {
   );
 }
 
-pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, this: usize) -> R where
+pub fn walk_expr<R: Default, V: ?Sized>(visitor: &mut V, this: usize) -> R where
   V: Visitor<R>
 {
   match visitor.expr_by_index(this) {
@@ -109,7 +105,7 @@ pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, this: usize) -> R where
       visitor.visit_any_single_char(this)
     }
     NonTerminalSymbol(rule) => {
-      visitor.visit_non_terminal_symbol(this, rule)
+      visitor.visit_non_terminal_symbol(this, &rule)
     }
     Sequence(seq) => {
       visitor.visit_sequence(this, seq)
@@ -147,7 +143,7 @@ pub fn walk_expr<R, V: ?Sized>(visitor: &mut V, this: usize) -> R where
   }
 }
 
-pub fn walk_exprs<R, V: ?Sized>(visitor: &mut V, exprs: Vec<usize>) -> Vec<R> where
+pub fn walk_exprs<R: Default, V: ?Sized>(visitor: &mut V, exprs: Vec<usize>) -> Vec<R> where
   V: Visitor<R>
 {
   exprs.into_iter().map(|expr| visitor.visit_expr(expr)).collect()

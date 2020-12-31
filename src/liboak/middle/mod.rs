@@ -16,56 +16,57 @@
 
 //! The `analysis` module performs some verifications on the grammar description and the `typing` module gives a type to each rule and expression.
 
-use rust;
-use middle::typing::ast::*;
+// use middle::typing::ast::*;
 use middle::analysis::ast::AGrammar;
 
 pub use front::ast::FGrammar;
+use partial::*;
 
 pub mod analysis;
-pub mod typing;
+// pub mod typing;
 
-pub fn typecheck<'a, 'b>(cx: &'a ExtCtxt<'b>, fgrammar: FGrammar) -> Partial<TGrammar<'a, 'b>> {
+pub fn typecheck(fgrammar: FGrammar) -> Partial<AGrammar> {
   Partial::Value(fgrammar)
-    .and_then(|grammar| at_least_one_rule_declared(cx, grammar))
-    .and_then(|grammar| analysis::analyse(cx, grammar))
-    .and_then(|grammar| extract_stream_type(grammar))
-    .and_then(|grammar| typing::type_inference(grammar))
+    .and_then(|grammar| at_least_one_rule_declared(grammar))
+    .and_then(|grammar| analysis::analyse(grammar))
+    // .and_then(|grammar| extract_stream_type(grammar))
+    // .and_then(|grammar| typing::type_inference(grammar))
 }
 
-fn at_least_one_rule_declared(cx: &ExtCtxt, fgrammar: FGrammar) -> Partial<FGrammar> {
+fn at_least_one_rule_declared(fgrammar: FGrammar) -> Partial<FGrammar> {
   if fgrammar.rules.len() == 0 {
-    cx.parse_sess.span_diagnostic.err(
-      "At least one rule must be declared.");
+    fgrammar.start_span.unstable()
+      .error("At least one rule must be declared.")
+      .emit();
     Partial::Nothing
   } else {
     Partial::Value(fgrammar)
   }
 }
 
-/// Modify the default Stream type in the grammar if the user redefined it in its item list.
-fn extract_stream_type<'a, 'b>(mut grammar: AGrammar<'a, 'b>)
-  -> Partial<AGrammar<'a, 'b>>
-{
-  let mut stream_redefined = false;
-  {
-    let stream_alias =
-      grammar.rust_items.iter().find(|item| {
-        match &item.node {
-          &rust::ItemKind::Ty(_,_) => {
-            &*item.ident.name.as_str() == "Stream"
-          }
-          _ => false
-        }
-      });
+// /// Modify the default Stream type in the grammar if the user redefined it in its item list.
+// fn extract_stream_type<'a, 'b>(mut grammar: AGrammar<'a, 'b>)
+//   -> Partial<AGrammar<'a, 'b>>
+// {
+//   let mut stream_redefined = false;
+//   {
+//     let stream_alias =
+//       grammar.rust_items.iter().find(|item| {
+//         match &item.node {
+//           &rust::ItemKind::Ty(_,_) => {
+//             &*item.ident.name.as_str() == "Stream"
+//           }
+//           _ => false
+//         }
+//       });
 
-    if let Some(ty) = stream_alias {
-      grammar.stream_alias = ty.clone();
-      stream_redefined = true;
-    }
-  }
-  if !stream_redefined {
-    grammar.rust_items.push(grammar.stream_alias.clone());
-  }
-  Partial::Value(grammar)
-}
+//     if let Some(ty) = stream_alias {
+//       grammar.stream_alias = ty.clone();
+//       stream_redefined = true;
+//     }
+//   }
+//   if !stream_redefined {
+//     grammar.rust_items.push(grammar.stream_alias.clone());
+//   }
+//   Partial::Value(grammar)
+// }

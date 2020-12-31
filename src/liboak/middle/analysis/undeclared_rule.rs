@@ -16,15 +16,15 @@
 use middle::analysis::ast::*;
 use partial::Partial::*;
 
-pub struct UndeclaredRule<'a: 'c, 'b: 'a, 'c>
+pub struct UndeclaredRule<'a>
 {
-  grammar: &'c AGrammar<'a, 'b>,
+  grammar: &'a AGrammar,
   has_undeclared: bool
 }
 
-impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
+impl<'a> UndeclaredRule<'a>
 {
-  pub fn analyse(grammar: AGrammar<'a, 'b>) -> Partial<AGrammar<'a, 'b>> {
+  pub fn analyse(grammar: AGrammar) -> Partial<AGrammar> {
     if UndeclaredRule::has_undeclared(&grammar) {
       Nothing
     } else {
@@ -32,7 +32,7 @@ impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
     }
   }
 
-  fn has_undeclared(grammar: &'c AGrammar<'a, 'b>) -> bool {
+  fn has_undeclared(grammar: &'a AGrammar) -> bool {
     let mut analyser = UndeclaredRule {
       grammar: grammar,
       has_undeclared: false
@@ -44,23 +44,21 @@ impl<'a, 'b, 'c> UndeclaredRule<'a, 'b, 'c>
   }
 }
 
-impl<'a, 'b, 'c> ExprByIndex for UndeclaredRule<'a, 'b, 'c>
+impl<'a> ExprByIndex for UndeclaredRule<'a>
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index).clone()
   }
 }
 
-impl<'a, 'b, 'c> Visitor<()> for UndeclaredRule<'a, 'b, 'c>
+impl<'a> Visitor<()> for UndeclaredRule<'a>
 {
-  unit_visitor_impl!(str_literal);
-  unit_visitor_impl!(atom);
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 
-  fn visit_non_terminal_symbol(&mut self, this: usize, rule: Ident) {
+  fn visit_non_terminal_symbol(&mut self, this: usize, rule: &Ident) {
     let contains_key = self.grammar.rules.iter()
-      .find(|r| r.ident() == rule).is_some();
+      .find(|r| r.ident() == *rule).is_some();
     if !contains_key {
       self.grammar.expr_err(
         this,

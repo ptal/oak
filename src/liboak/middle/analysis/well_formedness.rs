@@ -29,21 +29,23 @@ struct WFA
 
 impl WFA
 {
-  fn all_true() -> Self {
-    WFA {
-      can_fail: true,
-      can_succeed: true,
-      always_consume: true,
-      never_consume: false
-    }
-  }
-
   fn always_succeed(never_consume: bool) -> Self {
     WFA {
       can_fail: false,
       can_succeed: true,
       always_consume: false,
       never_consume
+    }
+  }
+}
+
+impl Default for WFA {
+  fn default() -> Self {
+    WFA {
+      can_fail: true,
+      can_succeed: true,
+      always_consume: true,
+      never_consume: false
     }
   }
 }
@@ -83,7 +85,7 @@ impl<'a> WellFormedness<'a>
       recursion_path: vec![],
       consumed_input: false,
       rules_wfa: grammar.rules.iter()
-        .map(|rule| (rule.ident(), WFA::all_true()))
+        .map(|rule| (rule.ident(), WFA::default()))
         .collect(),
       reached_fixpoint: false,
       well_formed: true,
@@ -261,7 +263,7 @@ impl<'a> Visitor<WFA> for WellFormedness<'a>
   }
 
   fn visit_str_literal(&mut self, _this: usize, literal: String) -> WFA {
-    let mut wfa = WFA::all_true();
+    let mut wfa = WFA::default();
     if literal.is_empty() {
       wfa.can_fail = false;
       wfa.always_consume = false;
@@ -275,15 +277,11 @@ impl<'a> Visitor<WFA> for WellFormedness<'a>
     self.visit_rule(rule)
   }
 
-  fn visit_atom(&mut self, _this: usize) -> WFA {
-    WFA::all_true()
-  }
-
   fn visit_repeat(&mut self, this: usize, child: usize) -> WFA {
     let child_wfa = self.visit_expr(child);
     if child_wfa.can_succeed && !child_wfa.always_consume {
       self.error_loop_repeat(this);
-      WFA::all_true()
+      WFA::default()
     }
     else {
       child_wfa
