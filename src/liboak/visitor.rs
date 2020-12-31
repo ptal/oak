@@ -26,6 +26,7 @@ pub trait Visitor<R: Default> : ExprByIndex
 
   fn visit_str_literal(&mut self, _this: usize, _lit: String) -> R { R::default() }
   fn visit_non_terminal_symbol(&mut self, _this: usize, _rule: &Ident) -> R { R::default() }
+  fn visit_external_non_terminal_symbol(&mut self, _this: usize, _rule: &syn::Path) -> R { R::default() }
   fn visit_atom(&mut self, _this: usize) -> R { R::default() }
 
   fn visit_any_single_char(&mut self, this: usize) -> R {
@@ -106,6 +107,9 @@ pub fn walk_expr<R: Default, V: ?Sized>(visitor: &mut V, this: usize) -> R where
     }
     NonTerminalSymbol(rule) => {
       visitor.visit_non_terminal_symbol(this, &rule)
+    }
+    ExternalNonTerminalSymbol(rule) => {
+      visitor.visit_external_non_terminal_symbol(this, &rule)
     }
     Sequence(seq) => {
       visitor.visit_sequence(this, seq)

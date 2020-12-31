@@ -15,7 +15,7 @@
 use front::ast::FGrammar;
 use middle::analysis::ast::*;
 use middle::analysis::duplicate::*;
-use middle::analysis::undeclared_rule::*;
+use middle::analysis::resolve_non_terminal::*;
 // use middle::analysis::undeclared_action::*;
 use middle::analysis::well_formedness::*;
 // use middle::analysis::attribute::*;
@@ -23,7 +23,7 @@ use middle::analysis::useless_chaining::*;
 // use middle::analysis::unreachable_rule::*;
 
 mod duplicate;
-mod undeclared_rule;
+mod resolve_non_terminal;
 // mod undeclared_action;
 mod well_formedness;
 // mod attribute;
@@ -37,7 +37,7 @@ pub fn analyse(fgrammar: FGrammar) -> Partial<AGrammar> {
   // let fattributes = fgrammar.attributes;
   rule_duplicate(grammar, fgrammar.rules)
   .and_then(|grammar| rust_functions_duplicate(grammar, frust_items))
-  .and_then(|grammar| UndeclaredRule::analyse(grammar))
+  .and_then(|grammar| ResolveNonTerminal::resolve(grammar))
   // .and_then(|grammar| UndeclaredAction::analyse(grammar))
   .and_then(|grammar| WellFormedness::analyse(grammar))
   .and_then(|grammar| UselessChaining::analyse(grammar))

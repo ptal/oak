@@ -391,6 +391,7 @@ pub enum Expression
   AnySingleChar, // .
   CharacterClass(CharacterClassExpr), // [0-9]
   NonTerminalSymbol(Ident), // a_rule
+  ExternalNonTerminalSymbol(syn::Path), // RustItem
   Sequence(Vec<usize>), // a_rule next_rule
   Choice(Vec<usize>), // try_this / or_try_this_one
   ZeroOrMore(usize), // expr*

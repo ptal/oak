@@ -298,6 +298,12 @@ impl FGrammar {
     }
   }
 
+  fn peek_path(ps: ParseStream) -> bool {
+    let ps2 = ps.fork();
+    let res: Result<syn::Path> = ps2.parse();
+    res.is_ok()
+  }
+
   fn parse_rule_atom(&mut self, ps: ParseStream, rule_name: &str) -> Result<Option<usize>> {
     let span = ps.span();
     let res =
@@ -323,11 +329,11 @@ impl FGrammar {
         Some(self.parse_rule_choice(&sub_ps, rule_name)?)
       }
       // Rule call `r1`
-      else if ps.peek(Ident) {
+      else if Self::peek_path(ps) {
         if self.peek_rule_lhs(ps) { None }
         else {
-          let name: Ident = ps.parse()?;
-          Some(self.alloc_expr(span, NonTerminalSymbol(name)))
+          let name: syn::Path = ps.parse()?;
+          Some(self.alloc_expr(span, ExternalNonTerminalSymbol(name)))
         }
       }
       // Character class `["0-9"]`
