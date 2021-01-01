@@ -36,7 +36,7 @@ impl FGrammar {
 
   fn parse_blocks(&mut self, ps: ParseStream) -> Result<()> {
     while !ps.is_empty() {
-      self.push_attrs(ps.call(Attribute::parse_outer)?);
+      self.push_attrs(ps.call(Attribute::parse_inner)?);
       if self.peek_rule_lhs(ps) {
         self.parse_rule(ps)?;
       }

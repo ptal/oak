@@ -14,44 +14,46 @@
 
 use middle::analysis::ast::*;
 
-use rust::{MetaItemKind, MetaItem};
-
-pub fn decorate_with_attributes<'a, 'b>(mut grammar: AGrammar<'a, 'b>,
-  attributes: Vec<Attribute>) -> Partial<AGrammar<'a, 'b>>
+pub fn decorate_with_attributes(mut grammar: AGrammar,
+  attributes: Vec<syn::Attribute>) -> Partial<AGrammar>
 {
   merge_grammar_attributes(&mut grammar, attributes);
   Partial::Value(grammar)
 }
 
-fn merge_grammar_attributes<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, attrs: Vec<Attribute>) {
+fn warn_ignore_attr(span: Span) {
+    span.unstable().warning(format!(
+      "unknown attribute: it will be ignored."))
+    .emit();
+}
+
+fn merge_grammar_attributes(grammar: &mut AGrammar, attrs: Vec<syn::Attribute>) {
   for attr in attrs {
-    attr.meta().map(|meta_item| {
-        merge_grammar_attr(grammar, meta_item);
-    });
+    if let Some(ident) = attr.path.get_ident() {
+      merge_grammar_attr(grammar, ident);
+    }
+    else {
+      warn_ignore_attr(attr.span());
+    }
   }
 }
 
-fn merge_grammar_attr<'a, 'b>(grammar: &mut AGrammar<'a, 'b>, meta_item: MetaItem) {
-  let attr_name = meta_item.ident.segments[0].ident.name;
-  match &meta_item.node {
-    &MetaItemKind::Word if attr_name == "debug_api" => {
+fn merge_grammar_attr(grammar: &mut AGrammar, ident: &Ident) {
+  match &*ident.to_string() {
+    "debug_api" => {
       grammar.merge_print_code(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if attr_name == "show_api" => {
+    "show_api" => {
       grammar.merge_print_code(PrintLevel::Show);
     },
-    &MetaItemKind::Word if attr_name == "debug_typing" => {
+    "debug_typing" => {
       grammar.merge_print_typing(PrintLevel::Debug);
     },
-    &MetaItemKind::Word if attr_name == "show_typing" => {
+    "show_typing" => {
       grammar.merge_print_typing(PrintLevel::Show);
     },
-      &MetaItemKind::Word
-    | &MetaItemKind::List(_)
-    | &MetaItemKind::NameValue(_) => {
-      grammar.warn(format!(
-        "Unknown attribute `{}`: it will be ignored.",
-        attr_name));
+    _ => {
+      warn_ignore_attr(ident.span());
     }
   }
 }
