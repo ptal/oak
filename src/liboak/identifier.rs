@@ -62,16 +62,7 @@ impl ItemIdent for syn::Item
   }
 }
 
-// impl<InnerItem: ItemIdent> ItemIdent for rust::P<InnerItem>
-// {
-//   fn ident(&self) -> Ident {
-//     self.deref().ident()
-//   }
-// }
-
-// impl<InnerItem: ItemSpan> ItemSpan for rust::P<InnerItem>
-// {
-//   fn span(&self) -> Span {
-//     self.deref().span()
-//   }
-// }
+impl ItemIdent for syn::ItemFn
+{
+  fn ident(&self) -> Ident { self.sig.ident.clone() }
+}

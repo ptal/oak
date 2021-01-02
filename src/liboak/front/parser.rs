@@ -152,7 +152,6 @@ impl FGrammar {
             Err(err)
           }
         }
-
       }
     }
   }

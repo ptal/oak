@@ -17,15 +17,15 @@ use middle::typing::ast::IType::*;
 use middle::typing::type_rewriting::*;
 use middle::typing::typing_printer::*;
 
-pub struct Surface<'a, 'b: 'a>
+pub struct Surface
 {
-  pub grammar: IGrammar<'a, 'b>,
+  pub grammar: IGrammar,
   recursion_path: Vec<Ident>
 }
 
-impl<'a, 'b> Surface<'a, 'b>
+impl Surface
 {
-  pub fn new(grammar: IGrammar<'a, 'b>) -> Surface<'a, 'b> {
+  pub fn new(grammar: IGrammar) -> Surface {
     Surface {
       grammar: grammar,
       recursion_path: vec![]
@@ -34,7 +34,7 @@ impl<'a, 'b> Surface<'a, 'b>
 
   pub fn surface(&mut self) {
     for rule in self.grammar.rules.clone() {
-      self.visit_rule(rule.ident());
+      self.visit_rule(&rule.ident());
     }
     if self.grammar.attributes.print_typing.debug() {
       println!("After applying Surface\n.");
@@ -43,7 +43,7 @@ impl<'a, 'b> Surface<'a, 'b>
     }
   }
 
-  fn visit_rule(&mut self, rule: Ident) -> IType {
+  fn visit_rule(&mut self, rule: &Ident) -> IType {
     let expr_idx = self.grammar.expr_index_of_rule(rule);
     let rule_ty = self.grammar.type_of(expr_idx);
     if rule_ty == Infer {
@@ -51,7 +51,7 @@ impl<'a, 'b> Surface<'a, 'b>
         self.infer_rec_type(rule)
       }
       else {
-        self.recursion_path.push(rule);
+        self.recursion_path.push(rule.clone());
         let ty = self.visit_expr(expr_idx);
         self.recursion_path.pop();
         let reduced_ty = TypeRewriting::reduce_rec_entry_point(rule, ty);
@@ -63,8 +63,8 @@ impl<'a, 'b> Surface<'a, 'b>
     }
   }
 
-  fn is_rec(&self, rule: Ident) -> bool {
-    self.recursion_path.iter().any(|r| *r == rule)
+  fn is_rec(&self, rule: &Ident) -> bool {
+    self.recursion_path.iter().any(|r| r == rule)
   }
 
   pub fn type_of(&self, expr_idx: usize) -> IType {
@@ -76,46 +76,42 @@ impl<'a, 'b> Surface<'a, 'b>
     ty
   }
 
-  fn infer_rec_type(&mut self, entry_rule: Ident) -> IType {
+  fn infer_rec_type(&mut self, entry_rule: &Ident) -> IType {
     let rec_path = self.recursion_path.clone();
-    let mut rec_shorter_path = vec![entry_rule];
+    let mut rec_shorter_path = vec![entry_rule.clone()];
     rec_shorter_path.extend(
       rec_path.into_iter()
         .rev()
-        .take_while(|r| *r != entry_rule));
+        .take_while(|r| r != entry_rule));
     IType::rec(RecKind::Unit, rec_shorter_path)
   }
 
   fn type_mismatch_branches(&self, rec_set: RecSet, sum_expr: usize, branches: Vec<usize>, tys: Vec<IType>) {
-    let mut errors = vec![(
-      self.grammar[sum_expr].span(),
-      format!("Type mismatch between branches of the choice operator.")
-    )];
+    let mut diagnostic = self.grammar[sum_expr].span().unstable().error(
+      format!("Type mismatch between branches of the choice operator."));
     for i in 0..branches.len() {
-      errors.push((
-        self.grammar[branches[i]].span(),
-        format!("{}", tys[i].display(&self.grammar))));
+      diagnostic = diagnostic.span_note(self.grammar[branches[i]].span().unstable(),
+        format!("{}", tys[i].display(&self.grammar)));
     }
     if !rec_set.is_empty() {
-      let entry_point = self.grammar.find_rule_by_ident(rec_set.entry_point());
-      errors.push((
-        entry_point.span(),
+      let entry_point = self.grammar.find_rule_by_ident(&rec_set.entry_point());
+      diagnostic = diagnostic.span_note(entry_point.span().unstable(),
         format!("Types annotated with `*` have been reduced to (^) because they are involved \
           in one of the following rule cycle (generating recursive types):\n{}",
-          rec_set.display())));
+          rec_set.display()));
     }
-    self.grammar.multi_locations_err(errors);
+    diagnostic.emit();
   }
 }
 
-impl<'a, 'b> ExprByIndex for Surface<'a, 'b>
+impl ExprByIndex for Surface
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.grammar.expr_by_index(index)
   }
 }
 
-impl<'a, 'b> Visitor<IType> for Surface<'a, 'b>
+impl Visitor<IType> for Surface
 {
   fn visit_expr(&mut self, this: usize) -> IType {
     let mut this_ty = self.type_of(this);
@@ -147,13 +143,13 @@ impl<'a, 'b> Visitor<IType> for Surface<'a, 'b>
     IType::Regular(Type::Atom)
   }
 
-  fn visit_semantic_action(&mut self, this: usize, _child: usize, action: Ident) -> IType {
-    self.grammar.action_type(this, action)
+  fn visit_semantic_action(&mut self, this: usize, _child: usize, action: syn::Expr) -> IType {
+    self.grammar.resolve_action_type(self.grammar[this].span(), action)
   }
 
   // Inductive rules
 
-  fn visit_non_terminal_symbol(&mut self, _this: usize, rule: Ident) -> IType {
+  fn visit_non_terminal_symbol(&mut self, _this: usize, rule: &Ident) -> IType {
     self.visit_rule(rule)
   }
 
@@ -169,7 +165,7 @@ impl<'a, 'b> Visitor<IType> for Surface<'a, 'b>
 
   fn visit_spanned_expr(&mut self, _this: usize, child: usize) -> IType {
     self.visit_expr(child);
-    IType::Regular(Type::Tuple(vec![self.grammar.span_ty_idx(), child]))
+    IType::Regular(Type::Tuple(vec![/* self.grammar.span_ty_idx() ,*/ child]))
   }
 
   fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> IType {

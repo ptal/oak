@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Give a naive type to any expression of the grammar. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modifies the type accordingly. It does not propagate the invisible types, this step is done in `typing::bottom_up_unit`.
+//! Give a naive type to any expression of the grammar. It also reads the expression type annotations (invisible type `(^)` and the unit type `()`) and modifies the type accordingly. It does not propagate the invisible types, this step is done in the next typing steps.
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
+
+use quote::quote;
 
 pub use ast::*;
 pub use visitor::*;
 pub use ast::Expression::*;
 
-use rust;
 use middle::typing::ast::Type::*;
 use middle::typing::ast::IType::*;
 use middle::analysis::ast::AGrammar;
 
-pub type IGrammar<'a, 'b> = Grammar<'a, 'b, ExprIType>;
-pub type TGrammar<'a, 'b> = Grammar<'a, 'b, ExprType>;
+pub type IGrammar = Grammar<ExprIType>;
+pub type TGrammar = Grammar<ExprType>;
 
-impl<'a, 'b> IGrammar<'a, 'b>
+impl IGrammar
 {
-  pub fn from(agrammar: AGrammar<'a, 'b>) -> IGrammar<'a, 'b> {
+  pub fn from(agrammar: AGrammar) -> IGrammar {
     let exprs_info = agrammar.exprs_info;
     let mut grammar = IGrammar {
-      cx: agrammar.cx,
-      name: agrammar.name,
+      start_span: agrammar.start_span,
       rules: agrammar.rules,
       exprs: agrammar.exprs,
       exprs_info: vec![],
@@ -45,21 +45,43 @@ impl<'a, 'b> IGrammar<'a, 'b>
     grammar.exprs_info = exprs_info.into_iter()
       .map(|e| ExprIType::infer(e.span))
       .collect();
-    grammar.alloc_span_ty_expr();
+    // grammar.alloc_span_ty_expr();
     grammar
   }
 
-  pub fn action_type(&self, expr_idx: usize, action: Ident) -> IType
+  fn error_unit_action_type(span: Span) {
+    span.unstable().error("a semantic action with type unit (`()`) will never be called as a semantic action is supposed to produce data.\n\
+      If this is intentional because the function has side-effects, return a custom type such as `MyUnit` with `type MyUnit = ()`.\n")
+    .emit();
+  }
+
+  /// If the semantic action is a single identifier, and that we can retrieve a Rust function with the same name, it resolves to the return type of that function.
+  /// We try to convert some Rust types into Oak types for better typechecking.
+  /// Otherwise, `Infer` is returned.
+  /// If we detect a semantic action with no type or type `()`, we generate an error because this semantic action will never be called.
+  pub fn resolve_action_type(&self, span: Span, action: syn::Expr) -> IType
   {
-    match self.rust_functions[&action].node {
-      rust::ItemKind::Fn(ref decl,..) => {
-        Regular(Action(decl.output.clone()))
-      },
-      _ => {
-        self.span_err(self[expr_idx].span, format!(
-          "Only function items are currently allowed in semantic actions."));
-        Regular(Unit)
+    match action {
+      syn::Expr::Path(expr_path) => {
+        if let Some(ident) = expr_path.path.get_ident() {
+          if let Some(fun) = self.rust_functions.get(ident) {
+            match &fun.sig.output {
+              &syn::ReturnType::Default => {
+                Self::error_unit_action_type(span);
+                Regular(Unit)
+              },
+              &syn::ReturnType::Type(_, ref ty) => {
+                let unit_ty = syn::parse_str("()").expect("unit type");
+                if (**ty) == unit_ty {
+                  Self::error_unit_action_type(span)
+                }
+                Regular(Rust((**ty).clone()))
+              }
+            }
+          } else { Infer }
+        } else { Infer }
       }
+      _ => Infer
     }
   }
 
@@ -67,10 +89,9 @@ impl<'a, 'b> IGrammar<'a, 'b>
     self[expr_idx].ty()
   }
 
-  pub fn map_exprs_info(self, exprs_info: Vec<ExprType>) -> TGrammar<'a, 'b> {
+  pub fn map_exprs_info(self, exprs_info: Vec<ExprType>) -> TGrammar {
     TGrammar {
-      cx: self.cx,
-      name: self.name,
+      start_span: self.start_span,
       rules: self.rules,
       exprs: self.exprs,
       exprs_info: exprs_info,
@@ -81,20 +102,20 @@ impl<'a, 'b> IGrammar<'a, 'b>
     }
   }
 
-  /// We allocate a fake spanned expr so we can retrieve its type from `grammar.stream_type()`.
-  /// This is because the type of `SpannedExpr(e)` is `(stream_type, e)` but `stream_type` needs an expression index to fit in the type AST.
-  fn alloc_span_ty_expr(&mut self) {
-    self.exprs.push(Expression::SpannedExpr(0)); // fake, just to keep exprs and exprs_info consistent.
-    let span_ty = self.span_type();
-    self.exprs_info.push(
-      ExpressionInfo::new(span_ty.span.clone(),
-        IType::Regular(Type::Action(
-          rust::FunctionRetTy::Ty(span_ty)))));
-  }
+  // /// We allocate a fake spanned expr so we can retrieve its type from `grammar.stream_type()`.
+  // /// This is because the type of `SpannedExpr(e)` is `(stream_type, e)` but `stream_type` needs an expression index to fit in the type AST.
+  // fn alloc_span_ty_expr(&mut self) {
+  //   self.exprs.push(Expression::SpannedExpr(0)); // fake, just to keep exprs and exprs_info consistent.
+  //   let span_ty = self.span_type();
+  //   self.exprs_info.push(
+  //     ExpressionInfo::new(span_ty.span.clone(),
+  //       IType::Regular(Type::Rust(
+  //         rust::FunctionRetTy::Ty(span_ty)))));
+  // }
 
-  pub fn span_ty_idx(&self) -> usize {
-    self.exprs_info.len() - 1
-  }
+  // pub fn span_ty_idx(&self) -> usize {
+  //   self.exprs_info.len() - 1
+  // }
 }
 
 pub type ExprIType = ExpressionInfo<IType>;
@@ -108,7 +129,7 @@ pub struct ExpressionInfo<Ty>
   pub ty: Ty
 }
 
-impl<Ty> ItemSpan for ExpressionInfo<Ty> {
+impl<Ty> Spanned for ExpressionInfo<Ty> {
   fn span(&self) -> Span {
     self.span
   }
@@ -149,7 +170,7 @@ pub enum RecKind
   Value
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct RecPath
 {
   kind: RecKind,
@@ -174,6 +195,15 @@ impl RecPath {
     display_path_cycle(&self.path)
   }
 }
+
+impl PartialEq for RecPath {
+    fn eq(&self, other: &Self) -> bool {
+      self.kind == other.kind &&
+      self.path.len() == other.path.len() &&
+      self.path.iter().zip(other.path.iter()).find(|(a,b)| a.to_string() != b.to_string()).is_none()
+    }
+}
+impl Eq for RecPath {}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RecSet
@@ -209,7 +239,7 @@ impl RecSet
   pub fn entry_point(&self) -> Ident {
     assert!(!self.is_empty(),
       "There is no entry point for empty path set.");
-    self.path_set[0].path[0]
+    self.path_set[0].path[0].clone()
   }
 
   pub fn to_value_kind(self) -> Self {
@@ -278,6 +308,10 @@ impl IType
   }
 }
 
+impl Default for IType {
+  fn default() -> Self { Infer }
+}
+
 #[derive(Clone, Debug)]
 pub enum Type
 {
@@ -285,11 +319,10 @@ pub enum Type
   Atom,
   Optional(usize),
   List(usize),
-  // Spanned(usize),
   /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
   /// Precondition: Tuple size >= 2.
   Tuple(Vec<usize>),
-  Action(rust::FunctionRetTy)
+  Rust(syn::Type)
 }
 
 impl PartialEq for Type
@@ -301,8 +334,8 @@ impl PartialEq for Type
       (Optional(e1), Optional(e2))
     | (List(e1), List(e2)) => e1 == e2,
       (Tuple(exprs1), Tuple(exprs2)) => exprs1 == exprs2,
-      (Action(_), Action(_)) =>
-        panic!("Cannot compare `Type::Action` because `rust::FunctionRetTy` are not comparable."),
+      (Rust(_), Rust(_)) =>
+        panic!("Cannot compare `Type::Rust` because `syn::Type` are not comparable."),
       _ => false
     }
   }
@@ -318,8 +351,7 @@ impl Type
       Atom
     | Optional(_)
     | List(_)
-    | Action(_) => 1,
-    // | Spanned(_) => 1,
+    | Rust(_) => 1,
       Tuple(ref indexes) => indexes.len()
     }
   }
@@ -335,7 +367,6 @@ impl Type
       (Atom, Atom) => true,
       (Optional(e1), Optional(e2))
     | (List(e1), List(e2)) => syntactic_eq_expr(e1, e2),
-    // | (Spanned(e1), Spanned(e2)) => syntactic_eq_expr(e1, e2),
       (Tuple(exprs1), Tuple(exprs2)) => {
         if exprs1.len() == exprs2.len() {
           for (e1, e2) in exprs1.into_iter().zip(exprs2.into_iter()) {
@@ -349,7 +380,7 @@ impl Type
           false
         }
       }
-      (Action(_), Action(_)) => true,
+      (Rust(_), Rust(_)) => true,
       _ => false
     }
   }
@@ -362,8 +393,6 @@ impl Type
         format!("Option<{}>", grammar.type_of(child).display(grammar)),
       List(child) =>
         format!("Vec<{}>", grammar.type_of(child).display(grammar)),
-      // Spanned(child) =>
-      //   format!("<todo>"), //(<Range<Stream> as StreamSpan>::Output, {})", grammar.type_of(child).display(grammar))
       Tuple(children) => {
         let mut display = format!("(");
         for child in children {
@@ -375,12 +404,8 @@ impl Type
         display.push(')');
         display
       }
-      Action(rty) => {
-        use rust::FunctionRetTy::*;
-        match rty {
-          Default(_) => format!("()"),
-          Ty(ty) => rust::ty_to_string(&*ty)
-        }
+      Rust(rty) => {
+        format!("{}", quote!(#rty))
       }
     }
   }

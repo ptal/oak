@@ -31,8 +31,8 @@ pub fn rust_functions_duplicate(mut grammar: AGrammar, items: Vec<syn::Item>) ->
   let mut functions = vec![];
   let mut others = vec![];
   for item in items {
-    if let &syn::Item::Fn(..) = &item {
-      functions.push(item);
+    if let syn::Item::Fn(fun) = item {
+      functions.push(fun);
     }
     else {
       others.push(item);

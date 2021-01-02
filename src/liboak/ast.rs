@@ -17,21 +17,12 @@
 pub use identifier::*;
 pub use syn::spanned::Spanned;
 
-// use rust;
 use std::fmt::{Formatter, Display, Error};
 
-// pub type RTy = rust::P<rust::Ty>;
-// pub type RExpr = rust::P<rust::Expr>;
-// pub type RItem = rust::P<rust::Item>;
-// pub type RStmt = Option<rust::Stmt>;
-// pub type RPat = rust::P<rust::Pat>;
-// pub type RArg = rust::Arg;
-
-// pub use rust::{ExtCtxt, Attribute};
 pub use partial::Partial;
 
-pub use ast::IType::*;
-pub use ast::Type::*;
+pub use middle::typing::ast::IType;
+pub use middle::typing::ast::Type;
 
 use middle::analysis::ast::GrammarAttributes;
 
@@ -40,151 +31,6 @@ use std::default::Default;
 use std::ops::{Index, IndexMut};
 
 use syn::parse_quote;
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum RecKind
-{
-  Unit,
-  Value
-}
-
-#[derive(Clone, Debug)]
-pub struct RecPath
-{
-  kind: RecKind,
-  pub path: Vec<Ident>,
-}
-
-impl PartialEq for RecPath {
-    fn eq(&self, other: &Self) -> bool {
-      self.kind == other.kind &&
-      self.path.len() == other.path.len() &&
-      self.path.iter().zip(other.path.iter()).find(|(a,b)| a.to_string() != b.to_string()).is_none()
-    }
-}
-impl Eq for RecPath {}
-
-impl RecPath {
-  pub fn new(kind: RecKind, path: Vec<Ident>) -> Self {
-    assert!(!path.is_empty(),
-      "Only non-empty path are recursive.");
-    RecPath {
-      kind: kind,
-      path: path
-    }
-  }
-
-  pub fn to_value_kind(self) -> Self {
-    RecPath::new(RecKind::Value, self.path)
-  }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct RecSet
-{
-  pub path_set: Vec<RecPath>
-}
-
-impl RecSet
-{
-  pub fn new(path: RecPath) -> Self {
-     RecSet {
-      path_set: vec![path]
-    }
-  }
-
-  pub fn empty() -> Self {
-    RecSet{ path_set: vec![] }
-  }
-
-  pub fn is_empty(&self) -> bool {
-    self.path_set.is_empty()
-  }
-
-  pub fn union(mut self, other: RecSet) -> RecSet {
-    for path in other.path_set {
-      if !self.path_set.contains(&path) {
-        self.path_set.push(path);
-      }
-    }
-    self
-  }
-
-  pub fn entry_point(&self) -> Ident {
-    assert!(!self.is_empty(),
-      "There is no entry point for empty path set.");
-    self.path_set[0].path[0].clone()
-  }
-
-  pub fn to_value_kind(self) -> Self {
-    RecSet {
-      path_set: self.path_set.into_iter()
-        .map(|path| path.to_value_kind())
-        .collect()
-    }
-  }
-
-  pub fn remove_unit_kind(self) -> Self {
-    RecSet {
-      path_set: self.path_set.into_iter()
-        .filter(|path| path.kind == RecKind::Value)
-        .collect()
-    }
-  }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum IType
-{
-  Infer,
-  Rec(RecSet),
-  Invisible,
-  Regular(Type)
-}
-
-impl IType
-{
-  pub fn rec(kind: RecKind, rec_path: Vec<Ident>) -> IType {
-    let path = RecPath::new(kind, rec_path);
-    Rec(RecSet::new(path))
-  }
-
-  pub fn is_unit_kind(&self) -> bool {
-    self == &Invisible || self == &Regular(Unit)
-  }
-}
-
-#[derive(Clone, Debug)]
-pub enum Type
-{
-  Unit,
-  Atom,
-  Optional(usize),
-  List(usize),
-  // Spanned(usize),
-  /// `Tuple(vec![i,..,j])` is a tuple with the types of the sub-expressions at index `{i,..,j}`.
-  /// Precondition: Tuple size >= 2.
-  Tuple(Vec<usize>),
-  Rust(syn::Type)
-}
-
-impl PartialEq for Type
-{
-  fn eq(&self, other: &Self) -> bool {
-    match (self, other) {
-      (Unit, Unit)
-    | (Atom, Atom) => true,
-      (Optional(e1), Optional(e2))
-    | (List(e1), List(e2)) => e1 == e2,
-      (Tuple(exprs1), Tuple(exprs2)) => exprs1 == exprs2,
-      (Rust(_), Rust(_)) =>
-        panic!("Cannot compare `Type::Rust` because `syn::Type` are not comparable."),
-      _ => false
-    }
-  }
-}
-
-impl Eq for Type {}
 
 pub trait ExprByIndex
 {
@@ -197,8 +43,8 @@ pub struct Grammar<ExprInfo>
   pub rules: Vec<Rule>,
   pub exprs: Vec<Expression>,
   pub exprs_info: Vec<ExprInfo>,
-  pub stream_alias: syn::Item,
-  pub rust_functions: HashMap<Ident, syn::Item>,
+  pub stream_alias: syn::ItemType,
+  pub rust_functions: HashMap<Ident, syn::ItemFn>,
   pub rust_items: Vec<syn::Item>,
   pub attributes: GrammarAttributes
 }
@@ -220,42 +66,6 @@ impl<ExprInfo> Grammar<ExprInfo>
     }
   }
 
-  // pub fn warn(&self, msg: String) {
-  //   self.cx.parse_sess.span_diagnostic.warn(msg.as_str());
-  // }
-
-  // /// The first element of `errors` will be rendered as an error and the other one as notes.
-  // pub fn multi_locations_err(&self, errors: Vec<(Span, String)>) {
-  //   assert!(errors.len() > 0, "`errors` must at least contain one element.");
-  //   let mut errors_iter = errors.into_iter();
-  //   let (span, msg) = errors_iter.next().unwrap();
-  //   let mut db = self.cx.struct_span_err(span, msg.as_str());
-  //   for (span, msg) in errors_iter {
-  //     db.span_note(span, msg.as_str());
-  //   }
-  //   db.emit();
-  // }
-
-  /// The first element of `errors` will be rendered as an error and the other one as notes.
-  // pub fn multi_locations_warn(&self, warnings: Vec<(Span, String)>) {
-  //   for (span, msg) in warnings {
-  //     self.cx.span_warn(span, msg.as_str());
-  //   }
-  // }
-
-  // pub fn span_warn(&self, span: Span, msg: String) {
-  //     self.cx.span_warn(span,msg.as_str());
-  // }
-
-  // pub fn span_err(&self, span: Span, msg: String) {
-  //   self.cx.span_err(span, msg.as_str());
-  // }
-
-  // pub fn span_note(&self, span: Span, msg: String) {
-  //   self.cx.parse_sess.span_diagnostic
-  //     .span_note_without_error(span, msg.as_str());
-  // }
-
   pub fn find_rule_by_ident(&self, id: &Ident) -> Rule {
     self.rules.iter()
       .find(|r| r.ident().to_string() == id.to_string())
@@ -276,48 +86,49 @@ impl<ExprInfo> Grammar<ExprInfo>
   //   }
   // }
 
-  // Given `type Stream<'a, T, ..> where T: X = MyStream<'a, T, ...>`
-  // We generate functions (similar to) the following one:
-  //   fn parse<'a, T, ..>(stream: MyStream<'a, T, ...>) where T: X { ... }
-  // This function creates the type `MyStream<'a, T, ...>` from the type alias.
-  // The generics parameters are supposed to have the same name when we will generate the function.
-  // We must transform the parameters of the type alias into arguments of the function argument's type.
+  // /// Given `type Stream<'a, T, ..> where T: X = MyStream<'a, T, ...>`
+  // /// We generate functions (similar to) the following one:
+  // ///   fn parse<'a, T, ..>(stream: MyStream<'a, T, ...>) where T: X { ... }
+  // /// This function creates the type `MyStream<'a, T, ...>` from the type alias.
+  // /// The generics parameters are supposed to have the same name when we will generate the function.
+  // /// We must transform the parameters of the type alias into arguments of the function argument's type.
   // pub fn stream_type(&self) -> RTy {
   //   match &self.stream_alias.node {
   //     &rust::ItemKind::Ty(ref ty, _) => ty.clone(),
   //     _ => unreachable!()
   //   }
-    // let generics = self.stream_generics();
-    // let mut generic_args_list = vec![];
-    // for param in generics.params.into_iter() {
-    //   match param.kind {
-    //     rust::GenericParamKind::Lifetime(l) => generic_args_list.push(GenericArg::Lifetime(l.lifetime)),
-    //     rust::GenericParamKind::Type{default: ty} => {
-    //       let ty = ty.expect("generic parameters of type alias must be explicitly defined (no `_`).").ident;
-    //       generic_args_list.push(GenericArg::Type(quote!($ty)));
-    //     }
-    //   }
-    // }
-    // let generic_args = GenericArgs::AngleBracketed(
-    //   AngleBracketedArgs {
-    //     span: rust::DUMMY_SP,
-    //     args: generic_args_list,
-    //     bindings: vec![],
-    //   });
+  //   let generics = self.stream_generics();
+  //   let mut generic_args_list = vec![];
+  //   for param in generics.params.into_iter() {
+  //     match param.kind {
+  //       rust::GenericParamKind::Lifetime(l) => generic_args_list.push(GenericArg::Lifetime(l.lifetime)),
+  //       rust::GenericParamKind::Type{default: ty} => {
+  //         let ty = ty.expect("generic parameters of type alias must be explicitly defined (no `_`).").ident;
+  //         generic_args_list.push(GenericArg::Type(quote!($ty)));
+  //       }
+  //     }
+  //   }
+  //   let generic_args = GenericArgs::AngleBracketed(
+  //     AngleBracketedArgs {
+  //       span: rust::DUMMY_SP,
+  //       args: generic_args_list,
+  //       bindings: vec![],
+  //     });
 
-    // let stream_ty = quote!(Stream);
-    // if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
-    //   path.segments.last_mut().unwrap().args = Some(P(generic_args));
-    //   let ty_path = TyKind::Path(qself, path);
-    //   let ty = Ty {
-    //     id: stream_ty.id,
-    //     node: ty_path,
-    //     span: stream_ty.span
-    //   };
-    //   quote!($ty)
-    // } else { unreachable!() }
+  //   let stream_ty = quote!(Stream);
+  //   if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
+  //     path.segments.last_mut().unwrap().args = Some(P(generic_args));
+  //     let ty_path = TyKind::Path(qself, path);
+  //     let ty = Ty {
+  //       id: stream_ty.id,
+  //       node: ty_path,
+  //       span: stream_ty.span
+  //     };
+  //     quote!($ty)
+  //   } else { unreachable!() }
   // }
 
+  // /// The span type of the underlying type is given by the trait's associated type `StreamSpan::Output`.
   // pub fn span_type(&self) -> RTy {
   //   let stream_ty = self.stream_type();
   //   quote!(<Range<$stream_ty> as StreamSpan>::Output)
