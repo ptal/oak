@@ -23,7 +23,8 @@ pub struct Depth
 {
   surface: Surface,
   exprs_info: Vec<ExprType>,
-  under_unit: bool
+  under_unit: bool,
+  under_ty_ascription: Option<IType>
 }
 
 impl Depth
@@ -35,6 +36,7 @@ impl Depth
     engine.reduce_all_rec();
     engine.depth();
     engine.reduce_all_invisible();
+    engine.check_all_rules_have_type();
     let grammar = engine.surface.grammar;
     if grammar.attributes.print_typing.debug() {
       println!("After applying Depth.");
@@ -47,7 +49,8 @@ impl Depth
     Depth {
       surface: Surface::new(grammar),
       exprs_info: vec![],
-      under_unit: false
+      under_unit: false,
+      under_ty_ascription: None
     }
   }
 
@@ -72,6 +75,16 @@ impl Depth
     for expr_info in self.surface.grammar.exprs_info.clone() {
       let ty = TypeRewriting::reduce_final(expr_info.ty);
       self.exprs_info.push(ExprType::new(expr_info.span, ty))
+    }
+  }
+
+  fn check_all_rules_have_type(&mut self) {
+    for rule in self.surface.grammar.rules.clone() {
+      if self.type_of(rule.expr_idx) == External {
+        rule.name.span().unstable()
+          .error(format!("could not infer the type of this rule, please use type ascription, e.g. `r: Expr = e`."))
+          .emit();
+      }
     }
   }
 
@@ -102,6 +115,22 @@ impl Depth
       }
     }
   }
+
+  fn visit_expr_switch_ascription(&mut self, this: usize, new: Option<IType>) {
+    let old = self.under_ty_ascription.clone();
+    self.under_ty_ascription = new;
+    self.visit_expr(this);
+    self.under_ty_ascription = old;
+  }
+
+  fn error_if_not_match_ty_ascription(&self, this: usize, ty: IType, aty: IType) {
+    if !ty.syntactic_eq(&self.surface.grammar, &aty) {
+      self.surface.grammar[this].span().unstable()
+        .error(format!("found type {} but expected type {}",
+          ty.display(&self.surface.grammar), aty.display(&self.surface.grammar)))
+        .emit();
+    }
+  }
 }
 
 impl ExprByIndex for Depth
@@ -123,24 +152,52 @@ impl Visitor<()> for Depth
       self.surface.type_expr(this, Regular(Unit));
       walk_expr(self, this);
     }
-    else if this_ty.is_unit_kind() {
+    else if this_ty.is_unit_kind() && self.under_ty_ascription.is_none() {
       let old = self.under_unit;
       self.under_unit = true;
       walk_expr(self, this);
       self.under_unit = old;
     }
     else {
+      if let Some(aty) = self.under_ty_ascription.clone() {
+        if this_ty == External {
+          self.surface.type_expr(this, aty);
+        }
+        else {
+          self.error_if_not_match_ty_ascription(this, this_ty, aty);
+        }
+      }
       walk_expr(self, this);
     }
   }
 
   // Depth rules
-  unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 
-  fn visit_type_ascription(&mut self, _this: usize, child: usize, _ty: IType) {
+  // If we are under a type ascription, then a single element of the sequence must take that type, all others must be unit.
+  fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) {
+    if self.under_ty_ascription.is_some() {
+      for child in children {
+        let child_ty = self.type_of(child);
+        if child_ty.is_unit_kind() {
+          self.visit_expr_switch_ascription(child, None);
+        }
+        else {
+          self.visit_expr(child);
+        }
+      }
+    }
+    else {
+      walk_exprs(self, children);
+    }
+  }
+
+  fn visit_type_ascription(&mut self, this: usize, child: usize, ty: IType) {
+    if let Some(aty) = self.under_ty_ascription.clone() {
+      self.error_if_not_match_ty_ascription(this, ty.clone(), aty);
+    }
     self.surface_expr(child);
-    self.visit_expr(child);
+    self.visit_expr_switch_ascription(child, Some(ty));
   }
 
   fn visit_syntactic_predicate(&mut self, _this: usize, child: usize) {
@@ -148,8 +205,9 @@ impl Visitor<()> for Depth
     self.visit_expr(child);
   }
 
+  // We rely on the Rust compiler to spot type mismatch between semantic action's return type and type ascription.
   fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: syn::Expr) {
     self.surface_expr(child);
-    self.visit_expr(child);
+    self.visit_expr_switch_ascription(child, None);
   }
 }
