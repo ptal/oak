@@ -19,16 +19,16 @@ use middle::typing::ast::IType::*;
 use middle::typing::surface::*;
 use middle::typing::typing_printer::*;
 
-pub struct Depth<'a, 'b: 'a>
+pub struct Depth
 {
-  surface: Surface<'a, 'b>,
+  surface: Surface,
   exprs_info: Vec<ExprType>,
   under_unit: bool
 }
 
-impl<'a, 'b> Depth<'a, 'b>
+impl Depth
 {
-  pub fn infer(grammar: IGrammar<'a, 'b>) -> TGrammar<'a, 'b> {
+  pub fn infer(grammar: IGrammar) -> TGrammar {
     let mut engine = Depth::new(grammar);
     engine.surface.surface();
     engine.warn_recursive_type();
@@ -43,7 +43,7 @@ impl<'a, 'b> Depth<'a, 'b>
     grammar.map_exprs_info(engine.exprs_info)
   }
 
-  fn new(grammar: IGrammar<'a, 'b>) -> Depth<'a, 'b> {
+  fn new(grammar: IGrammar) -> Depth {
     Depth {
       surface: Surface::new(grammar),
       exprs_info: vec![],
@@ -61,8 +61,10 @@ impl<'a, 'b> Depth<'a, 'b>
   }
 
   fn reduce_all_rec(&mut self) {
-    for expr_info in &mut self.surface.grammar.exprs_info {
-      expr_info.ty = TypeRewriting::reduce_rec(expr_info.ty.clone());
+    let tys: Vec<_> = self.surface.grammar.exprs_info.iter().map(|e| e.ty.clone()).collect();
+    let tys: Vec<_> = tys.into_iter().map(|ty| TypeRewriting::reduce_rec(&self.surface.grammar, ty)).collect();
+    for (expr_info, ty) in self.surface.grammar.exprs_info.iter_mut().zip(tys.into_iter()) {
+      expr_info.ty = ty;
     }
   }
 
@@ -85,33 +87,31 @@ impl<'a, 'b> Depth<'a, 'b>
 
   fn warn_recursive_type(&mut self) {
     let mut rec_set = RecSet::empty();
-    for rule in self.surface.grammar.rules.clone() {
+    for rule in &self.surface.grammar.rules {
       if let Rec(r) = self.type_of(rule.expr_idx) {
         rec_set = rec_set.union(r);
       }
     }
-    rec_set = rec_set.remove_unit_kind();
+    rec_set = rec_set.keep_only_polymorphic_paths();
     if !rec_set.is_empty() {
-      let mut errors = vec![];
       for rec_path in rec_set.path_set {
-        errors.push((
-          self.surface.grammar.find_rule_by_ident(rec_path.path[0]).span(),
-          format!("Infinite recursive type (type inferred: `(^)`): {}", rec_path.display())
-        ));
+        self.surface.grammar.find_rule_by_ident(&rec_path.path[0]).span().unstable()
+          .warning(format!("infinite recursive type automatically replaced by `(^)`: {}\n\
+            Semantic actions along the path are ignored.", rec_path.display()))
+          .emit();
       }
-      self.surface.grammar.multi_locations_warn(errors);
     }
   }
 }
 
-impl<'a, 'b> ExprByIndex for Depth<'a, 'b>
+impl ExprByIndex for Depth
 {
   fn expr_by_index(&self, index: usize) -> Expression {
     self.surface.expr_by_index(index)
   }
 }
 
-impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
+impl Visitor<()> for Depth
 {
   fn visit_expr(&mut self, this: usize) {
     let this_ty = self.type_of(this);
@@ -134,14 +134,7 @@ impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
     }
   }
 
-  // Depth axioms
-
-  unit_visitor_impl!(str_literal);
-  unit_visitor_impl!(non_terminal);
-  unit_visitor_impl!(atom);
-
   // Depth rules
-
   unit_visitor_impl!(sequence);
   unit_visitor_impl!(choice);
 
@@ -155,7 +148,7 @@ impl<'a, 'b> Visitor<()> for Depth<'a, 'b>
     self.visit_expr(child);
   }
 
-  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: Ident) {
+  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: syn::Expr) {
     self.surface_expr(child);
     self.visit_expr(child);
   }

@@ -44,8 +44,8 @@ impl FGrammar
     expr_idx
   }
 
-  pub fn push_rule(&mut self, name: Ident, ty: (Span, IType), def: usize) {
-    self.rules.push(Rule::new(name, ty, def));
+  pub fn push_rule(&mut self, name: Ident, def: usize) {
+    self.rules.push(Rule::new(name, def));
   }
 
   pub fn push_attrs(&mut self, attrs: Vec<syn::Attribute>) {

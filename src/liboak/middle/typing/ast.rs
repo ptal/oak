@@ -56,8 +56,8 @@ impl IGrammar
   }
 
   /// If the semantic action is a single identifier, and that we can retrieve a Rust function with the same name, it resolves to the return type of that function.
-  /// We try to convert some Rust types into Oak types for better typechecking.
-  /// Otherwise, `Infer` is returned.
+  /// We try to convert Rust unit type into Oak unit type for better typechecking.
+  /// Otherwise, `External` is returned.
   /// If we detect a semantic action with no type or type `()`, we generate an error because this semantic action will never be called.
   pub fn resolve_action_type(&self, span: Span, action: syn::Expr) -> IType
   {
@@ -78,10 +78,10 @@ impl IGrammar
                 Regular(Rust((**ty).clone()))
               }
             }
-          } else { Infer }
-        } else { Infer }
+          } else { External }
+        } else { External }
       }
-      _ => Infer
+      _ => External
     }
   }
 
@@ -102,20 +102,22 @@ impl IGrammar
     }
   }
 
-  // /// We allocate a fake spanned expr so we can retrieve its type from `grammar.stream_type()`.
-  // /// This is because the type of `SpannedExpr(e)` is `(stream_type, e)` but `stream_type` needs an expression index to fit in the type AST.
-  // fn alloc_span_ty_expr(&mut self) {
-  //   self.exprs.push(Expression::SpannedExpr(0)); // fake, just to keep exprs and exprs_info consistent.
-  //   let span_ty = self.span_type();
-  //   self.exprs_info.push(
-  //     ExpressionInfo::new(span_ty.span.clone(),
-  //       IType::Regular(Type::Rust(
-  //         rust::FunctionRetTy::Ty(span_ty)))));
-  // }
+  /// The type of an expression `(.. e)` is `(Span, T)` with `T` the type of `e`.
+  /// To construct this tuple type, we need to have an index for the type `Span`, which is not registered in the expression tree.
+  /// The reason is that a spanned expression is of the form `SpannedExpr(e)`, which has the type `(Span, T)`, and `e` has the type `T`, thus there is no expression that has the type `Span` which is why `Span` does not have an index.
+  /// This trick is simply to avoid adding a variant `SpanType` in the `Type` enum.
+  fn alloc_span_ty_expr(&mut self) {
+    self.exprs.push(Expression::SpannedExpr(0)); // useless, just to keep exprs and exprs_info consistent.
+    let span_ty = self.span_type();
+    self.exprs_info.push(
+      ExpressionInfo::new(span_ty.span().clone(),
+        IType::Regular(Type::Rust(span_ty))));
+  }
 
-  // pub fn span_ty_idx(&self) -> usize {
-  //   self.exprs_info.len() - 1
-  // }
+  /// The span type is special: it is always stored in the last position since it is added during typing (in `alloc_span_ty_expr`), and all other expressions are added during parsing.
+  pub fn span_ty_idx(&self) -> usize {
+    self.exprs_info.len() - 1
+  }
 }
 
 pub type ExprIType = ExpressionInfo<IType>;
@@ -166,8 +168,8 @@ impl ExprIType
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum RecKind
 {
-  Unit,
-  Value
+  Unit, // Only unit types are present on the recursive path.
+  Poly, // Polymorphic constructors (optional, vec, tuples) are present on the recursive path.
 }
 
 #[derive(Clone, Debug)]
@@ -187,8 +189,8 @@ impl RecPath {
     }
   }
 
-  pub fn to_value_kind(self) -> Self {
-    RecPath::new(RecKind::Value, self.path)
+  pub fn to_polymorphic_path(self) -> Self {
+    RecPath::new(RecKind::Poly, self.path)
   }
 
   pub fn display(&self) -> String {
@@ -242,20 +244,24 @@ impl RecSet
     self.path_set[0].path[0].clone()
   }
 
-  pub fn to_value_kind(self) -> Self {
+  pub fn to_polymorphic_path(self) -> Self {
     RecSet {
       path_set: self.path_set.into_iter()
-        .map(|path| path.to_value_kind())
+        .map(|path| path.to_polymorphic_path())
         .collect()
     }
   }
 
-  pub fn remove_unit_kind(self) -> Self {
+  pub fn keep_only_polymorphic_paths(self) -> Self {
     RecSet {
       path_set: self.path_set.into_iter()
-        .filter(|path| path.kind == RecKind::Value)
+        .filter(|path| path.kind == RecKind::Poly)
         .collect()
     }
+  }
+
+  pub fn is_polymorphic(&self) -> bool {
+    self.path_set.iter().any(|p| p.kind == RecKind::Poly)
   }
 
   pub fn display(&self) -> String {
@@ -275,6 +281,7 @@ pub enum IType
   Infer,
   Rec(RecSet),
   Invisible,
+  External, // Type not known to Oak, for instance the result of an external parser call.
   Regular(Type)
 }
 
@@ -289,6 +296,7 @@ impl IType
     match (self.clone(), other.clone()) {
       (Rec(r1), Rec(r2)) => r1 == r2,
       (Invisible, Invisible) => true,
+      (External, External) => true,
       (Regular(ty1), Regular(ty2)) => ty1.syntactic_eq(grammar, &ty2),
       _ => false
     }
@@ -301,8 +309,9 @@ impl IType
   pub fn display(&self, grammar: &IGrammar) -> String {
     match self.clone() {
       Infer => format!("_"),
-      Rec(_) => format!("(^)  *"),
+      Rec(_) => format!("(^)*"),
       Invisible => format!("(^)"),
+      External => format!("_"),
       Regular(ty) => ty.display(grammar)
     }
   }

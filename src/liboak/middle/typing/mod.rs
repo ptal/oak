@@ -14,18 +14,15 @@
 
 use middle::analysis::ast::AGrammar;
 use middle::typing::ast::*;
-// use middle::typing::depth::*;
+use middle::typing::depth::*;
 
 pub mod ast;
 mod surface;
-// mod depth;
+mod depth;
 mod type_rewriting;
 mod typing_printer;
 
-pub fn type_inference(agrammar: AGrammar) -> Partial<IGrammar> {
+pub fn type_inference(agrammar: AGrammar) -> Partial<TGrammar> {
   let grammar = IGrammar::from(agrammar);
-  let mut s = surface::Surface::new(grammar);
-  s.surface();
-  Partial::Value(s.grammar)
-  // Partial::Value(Depth::infer(grammar))
+  Partial::Value(Depth::infer(grammar))
 }

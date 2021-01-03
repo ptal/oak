@@ -72,10 +72,14 @@ impl FGrammar {
 
   fn parse_rule(&mut self, ps: ParseStream) -> Result<()> {
     let name: Ident = ps.parse()?;
-    let ty = Self::parse_type(ps)?;
+    let (span, ty) = Self::parse_type(ps)?;
     let _: Token![=] = ps.parse()?;
-    let body = self.parse_rule_choice(ps, name.to_string().as_str())?;
-    self.push_rule(name, ty, body);
+    let mut body = self.parse_rule_choice(ps, name.to_string().as_str())?;
+    // `r: T = e` is turned into `r = e:T`.
+    if ty != IType::Infer {
+      body = self.alloc_expr(span, TypeAscription(body, ty))
+    }
+    self.push_rule(name, body);
     Ok(())
   }
 
@@ -160,7 +164,15 @@ impl FGrammar {
     if ps.peek(Token![>]) {
       let _: Token![>] = ps.parse()?;
       let span = ps.span();
-      let action: syn::Expr = ps.parse()?;
+      let action: syn::Expr =
+        if ps.peek(syn::token::Brace) {
+          let action: syn::ExprBlock = ps.parse()?;
+          syn::Expr::Block(action)
+        }
+        else {
+          let action: syn::ExprPath = ps.parse()?;
+          syn::Expr::Path(action)
+        };
       Ok(self.alloc_expr(span, SemanticAction(expr, action)))
     }
     else {

@@ -25,16 +25,28 @@ pub struct TypeRewriting;
 
 impl TypeRewriting
 {
-  pub fn reduce_rec_entry_point(rule: &Ident, ty: IType) -> IType {
+  pub fn reduce_rec_entry_point(grammar: &IGrammar, rule: &Ident, ty: IType) -> IType {
     match ty {
-      Rec(ref r) if r.entry_point() == *rule => Invisible,
+      Rec(ref r) if r.entry_point() == *rule => Self::reduce_rec(grammar, ty),
       ty => ty
     }
   }
 
-  pub fn reduce_rec(ty: IType) -> IType {
+  pub fn reduce_rec(grammar: &IGrammar, ty: IType) -> IType {
     match ty {
-      Rec(_) => Invisible,
+      Rec(r) if r.is_polymorphic() => Invisible,
+      Rec(r) => {
+        for rec_path in &r.path_set {
+          for ident in &rec_path.path {
+            let ty = grammar.type_of(grammar.expr_index_of_rule(ident));
+            match ty {
+              Rec(_) => (),
+              ty => return ty
+            }
+          }
+        }
+        Invisible
+      }
       ty => ty
     }
   }
@@ -44,6 +56,7 @@ impl TypeRewriting
       Invisible => Type::Unit,
       Infer => unreachable!("Type must be inferred before reducing to a final type."),
       Rec(_) => unreachable!("Rec types must be removed after the first surface algorithm."),
+      External => Type::Rust(syn::parse_str("_").expect("_ (type)")),
       Regular(ty) => ty
     }
   }
@@ -70,7 +83,7 @@ impl TypeRewriting
     let expr_ty = grammar.type_of(expr_idx);
     match expr_ty {
       Invisible => Invisible,
-      Rec(r) => Rec(r.to_value_kind()),
+      Rec(r) => Rec(r.to_polymorphic_path()),
       _ => ty
     }
   }
@@ -112,15 +125,23 @@ impl TypeRewriting
 
   fn tuple_rec(grammar: &IGrammar, indexes: &Vec<usize>) -> Option<IType> {
     let mut rec_set = RecSet::empty();
+    let mut is_polymorphic = false;
     for idx in indexes {
-      if let Rec(r) = grammar.type_of(*idx) {
-        rec_set = rec_set.union(r);
+      match grammar.type_of(*idx) {
+        Rec(r) => rec_set = rec_set.union(r),
+        External => is_polymorphic = true,
+        Regular(Unit) => (),
+        Regular(_) => is_polymorphic = true,
+        _ => ()
       }
     }
     if rec_set.is_empty() {
       None
     }
     else {
+      if is_polymorphic {
+        rec_set = rec_set.to_polymorphic_path();
+      }
       Some(Rec(rec_set))
     }
   }
@@ -137,6 +158,12 @@ impl TypeRewriting
       .collect()
   }
 
+  /// We try to unify the types of each branch of a choice expression.
+  /// Let `e1:T1 / ... / en:Tn` be the annotated choice with the types in `tys`, then
+  ///   1. We divide the types into two groups: recursive T1..Ti-1 (with `Rec`) and non-recursive Ti..Tn.
+  ///   2. If two types in the non-recursive set are different (except for External which unifies with other type), return Err.
+  ///   3. If there is a branch with `Rec(Poly)`, return Err.
+  ///   4. Otherwise return Ok(T1)
   pub fn reduce_sum(grammar: &IGrammar, tys: Vec<IType>) -> Result<IType, RecSet> {
     assert!(!tys.is_empty(),
       "Only non-empty sum type can be reduced.");
@@ -144,7 +171,7 @@ impl TypeRewriting
     let mut non_rec_tys = vec![];
     for ty in tys {
       match ty {
-        Rec(r) => rec_set = rec_set.union(r),
+        Rec(r) => { rec_set = rec_set.union(r) },
         ty => {
           let contained = non_rec_tys.iter()
             .any(|ty2| ty.syntactic_eq(grammar, ty2));
@@ -154,14 +181,29 @@ impl TypeRewriting
         }
       }
     }
-    if non_rec_tys.len() == 1 && rec_set.is_empty() {
-      Ok(non_rec_tys[0].clone())
+    // Contains recursive types that we cannot type.
+    if rec_set.is_polymorphic() {
+      return Err(rec_set)
     }
-    else if non_rec_tys.is_empty() ||
-      non_rec_tys.iter().all(|ty|
-        ty == &Invisible || ty == &Regular(Unit))
-    {
+    else if non_rec_tys.len() == 1 {
+      return Ok(non_rec_tys[0].clone())
+    }
+    // External type unifies with the other type.
+    else if non_rec_tys.len() == 2 {
+      if non_rec_tys[0] == External {
+        return Ok(non_rec_tys[1].clone())
+      }
+      else if non_rec_tys[1] == External {
+        return Ok(non_rec_tys[0].clone())
+      }
+    }
+    // In case of unit recursive paths only.
+    if non_rec_tys.is_empty() {
       Ok(Rec(rec_set))
+    }
+    // If all types are (^) or ().
+    else if non_rec_tys.iter().all(|ty| ty == &Invisible || ty == &Regular(Unit)) {
+      Ok(Invisible)
     }
     else {
       Err(rec_set)

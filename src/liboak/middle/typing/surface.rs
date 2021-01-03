@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This typing step infers a type for all rules (`surface`) or an expression (`visit_rule`), although it might not be the final type.
+//! It is used in `Depth`.
+//! This typing step does not go under type ascription or semantic action.
+
 use middle::typing::ast::*;
 use middle::typing::ast::IType::*;
 use middle::typing::type_rewriting::*;
@@ -43,18 +47,18 @@ impl Surface
     }
   }
 
-  fn visit_rule(&mut self, rule: &Ident) -> IType {
-    let expr_idx = self.grammar.expr_index_of_rule(rule);
+  fn visit_rule(&mut self, rule_name: &Ident) -> IType {
+    let expr_idx = self.grammar.expr_index_of_rule(rule_name);
     let rule_ty = self.grammar.type_of(expr_idx);
     if rule_ty == Infer {
-      if self.is_rec(rule) {
-        self.infer_rec_type(rule)
+      if self.is_rec(rule_name) {
+        self.infer_rec_type(rule_name)
       }
       else {
-        self.recursion_path.push(rule.clone());
+        self.recursion_path.push(rule_name.clone());
         let ty = self.visit_expr(expr_idx);
         self.recursion_path.pop();
-        let reduced_ty = TypeRewriting::reduce_rec_entry_point(rule, ty);
+        let reduced_ty = TypeRewriting::reduce_rec_entry_point(&self.grammar, rule_name, ty);
         self.type_expr(expr_idx, reduced_ty)
       }
     }
@@ -91,7 +95,7 @@ impl Surface
       format!("Type mismatch between branches of the choice operator."));
     for i in 0..branches.len() {
       diagnostic = diagnostic.span_note(self.grammar[branches[i]].span().unstable(),
-        format!("{}", tys[i].display(&self.grammar)));
+        format!("branch {} of type `{}`", i+1, tys[i].display(&self.grammar)));
     }
     if !rec_set.is_empty() {
       let entry_point = self.grammar.find_rule_by_ident(&rec_set.entry_point());
@@ -153,6 +157,10 @@ impl Visitor<IType> for Surface
     self.visit_rule(rule)
   }
 
+  fn visit_external_non_terminal_symbol(&mut self, _this: usize, _rule: &syn::Path) -> IType {
+    IType::External
+  }
+
   fn visit_repeat(&mut self, _this: usize, child: usize) -> IType {
     self.visit_expr(child);
     IType::Regular(Type::List(child))
@@ -165,7 +173,7 @@ impl Visitor<IType> for Surface
 
   fn visit_spanned_expr(&mut self, _this: usize, child: usize) -> IType {
     self.visit_expr(child);
-    IType::Regular(Type::Tuple(vec![/* self.grammar.span_ty_idx() ,*/ child]))
+    IType::Regular(Type::Tuple(vec![self.grammar.span_ty_idx(), child]))
   }
 
   fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> IType {

@@ -77,62 +77,28 @@ impl<ExprInfo> Grammar<ExprInfo>
     self.find_rule_by_ident(id).expr_idx
   }
 
-  // pub fn stream_generics(&self) -> syn::Generics {
-  //   match &self.stream_alias.node {
-  //     // The first arg is the type on the right of the type alias declaration.
-  //     // `generics` is actually the alias together with all its lifetimes, types and where clause.
-  //     &syn::ItemKind::Ty(_, ref generics) => generics.clone(),
-  //     _ => unreachable!()
-  //   }
-  // }
+  pub fn stream_generics(&self) -> syn::Generics {
+    self.stream_alias.generics.clone()
+  }
 
-  // /// Given `type Stream<'a, T, ..> where T: X = MyStream<'a, T, ...>`
-  // /// We generate functions (similar to) the following one:
-  // ///   fn parse<'a, T, ..>(stream: MyStream<'a, T, ...>) where T: X { ... }
-  // /// This function creates the type `MyStream<'a, T, ...>` from the type alias.
-  // /// The generics parameters are supposed to have the same name when we will generate the function.
-  // /// We must transform the parameters of the type alias into arguments of the function argument's type.
-  // pub fn stream_type(&self) -> RTy {
-  //   match &self.stream_alias.node {
-  //     &rust::ItemKind::Ty(ref ty, _) => ty.clone(),
-  //     _ => unreachable!()
-  //   }
-  //   let generics = self.stream_generics();
-  //   let mut generic_args_list = vec![];
-  //   for param in generics.params.into_iter() {
-  //     match param.kind {
-  //       rust::GenericParamKind::Lifetime(l) => generic_args_list.push(GenericArg::Lifetime(l.lifetime)),
-  //       rust::GenericParamKind::Type{default: ty} => {
-  //         let ty = ty.expect("generic parameters of type alias must be explicitly defined (no `_`).").ident;
-  //         generic_args_list.push(GenericArg::Type(quote!($ty)));
-  //       }
-  //     }
-  //   }
-  //   let generic_args = GenericArgs::AngleBracketed(
-  //     AngleBracketedArgs {
-  //       span: rust::DUMMY_SP,
-  //       args: generic_args_list,
-  //       bindings: vec![],
-  //     });
+  /// Given `type Stream<'a, T, ..> where T: X = MyStream<'a, T, ...>`
+  /// We generate functions (similar to) the following one:
+  ///   fn parse<'a, T, ..>(stream: MyStream<'a, T, ...>) where T: X { ... }
+  /// This function creates the type `MyStream<'a, T, ...>` from the type alias.
+  /// The generics parameters are supposed to have the same name when we will generate the function.
+  /// We must transform the parameters of the type alias into arguments of the function argument's type.
+  pub fn stream_type(&self) -> syn::Type {
+    let name = self.stream_alias.ident.clone();
+    let (_, ty_generics, _) = self.stream_alias.generics.split_for_impl();
+    let stream_ty: syn::Type = parse_quote!(#name #ty_generics);
+    stream_ty
+  }
 
-  //   let stream_ty = quote!(Stream);
-  //   if let TyKind::Path(qself, mut path) = stream_ty.node.clone() {
-  //     path.segments.last_mut().unwrap().args = Some(P(generic_args));
-  //     let ty_path = TyKind::Path(qself, path);
-  //     let ty = Ty {
-  //       id: stream_ty.id,
-  //       node: ty_path,
-  //       span: stream_ty.span
-  //     };
-  //     quote!($ty)
-  //   } else { unreachable!() }
-  // }
-
-  // /// The span type of the underlying type is given by the trait's associated type `StreamSpan::Output`.
-  // pub fn span_type(&self) -> RTy {
-  //   let stream_ty = self.stream_type();
-  //   quote!(<Range<$stream_ty> as StreamSpan>::Output)
-  // }
+  /// The span type of the underlying type is given by the trait's associated type `StreamSpan::Output`.
+  pub fn span_type(&self) -> syn::Type {
+    let stream_ty = self.stream_type();
+    parse_quote!(<Range<#stream_ty> as StreamSpan>::Output)
+  }
 }
 
 impl<ExprInfo> Index<usize> for Grammar<ExprInfo>
@@ -170,14 +136,13 @@ impl<ExprInfo> ExprByIndex for Grammar<ExprInfo>
 pub struct Rule
 {
   pub name: Ident,
-  pub ty: (Span, IType),
   pub expr_idx: usize,
 }
 
 impl Rule
 {
-  pub fn new(name: Ident, ty: (Span, IType), expr_idx: usize) -> Rule {
-    Rule { name, ty, expr_idx }
+  pub fn new(name: Ident, expr_idx: usize) -> Rule {
+    Rule { name, expr_idx }
   }
 }
 

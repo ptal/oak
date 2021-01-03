@@ -25,7 +25,7 @@ use partial::*;
 pub mod analysis;
 pub mod typing;
 
-pub fn typecheck(fgrammar: FGrammar) -> Partial<IGrammar> {
+pub fn typecheck(fgrammar: FGrammar) -> Partial<TGrammar> {
   Partial::Value(fgrammar)
     .and_then(|grammar| at_least_one_rule_declared(grammar))
     .and_then(|grammar| analysis::analyse(grammar))
