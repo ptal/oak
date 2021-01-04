@@ -41,20 +41,20 @@ pub struct NonTerminalRecognizerCompiler
 
 impl CompileExpr for NonTerminalRecognizerCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, _context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
-    let recognizer_fn = recognizer_name(context.cx(), self.id);
+    let recognizer_fn = recognizer_name(self.id.clone());
     continuation
-      .map_success(|success, failure| quote_expr!(context.cx(),
+      .map_success(|success, failure| parse_quote!(
         {
-          state = $recognizer_fn(state);
+          state = #recognizer_fn(state);
           if state.is_successful() {
             state.discard_data();
-            $success
+            #success
           }
           else {
-            $failure
+            #failure
           }
         }
       ))
@@ -70,11 +70,10 @@ pub struct NonTerminalParserCompiler
 
 impl CompileExpr for NonTerminalParserCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
-    let cx = context.cx();
-    let parser_fn = parser_name(cx, self.id);
+    let parser_fn = parser_name(self.id.clone());
     let cardinality = context.expr_cardinality(self.this_idx);
     let mut vars_names: Vec<_> = (0..cardinality)
       .map(|_| context.next_free_var())
@@ -82,19 +81,19 @@ impl CompileExpr for NonTerminalParserCompiler
     // Due to the reverse compilation scheme, variables are given as `a3, a2,...`, however we need to match them in the good order.
     // Note that we cannot use `rev()` since we depend on a global state.
     vars_names.reverse();
-    let vars = tuple_pattern(cx, context.expr_span(self.this_idx), vars_names);
+    let vars = tuple_pattern(vars_names);
     continuation
-      .map_success(|success, failure| quote_expr!(cx,
+      .map_success(|success, failure| parse_quote!(
         {
-          let stateful = $parser_fn(state);
+          let stateful = #parser_fn(state);
           if stateful.is_successful() {
-            let (stateless, $vars) = stateful.extract_data();
+            let (stateless, #vars) = stateful.extract_data();
             state = stateless;
-            $success
+            #success
           }
           else {
             state = stateful.failure();
-            $failure
+            #failure
           }
         }
       ))

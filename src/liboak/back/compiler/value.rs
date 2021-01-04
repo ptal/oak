@@ -15,36 +15,14 @@
 //! Generates Rust value from Oak expression.
 
 use middle::typing::ast::*;
-use rust::AstBuilder;
+use syn::parse_quote;
 
-pub fn tuple_value(cx: &ExtCtxt, span: Span, vars_names: Vec<Ident>) -> RExpr
+pub fn tuple_value(vars_names: Vec<Ident>) -> syn::Expr
 {
-  let values: Vec<_> = vars_names.into_iter()
-    .map(|name| quote_expr!(cx, $name))
-    .collect();
-  if values.len() == 0 {
-    quote_expr!(cx, ())
-  }
-  else if values.len() == 1 {
-    values[0].clone()
-  }
-  else {
-    cx.expr_tuple(span, values)
-  }
+  parse_quote!((#(#vars_names),*))
 }
 
-pub fn tuple_pattern(cx: &ExtCtxt, span: Span, vars_names: Vec<Ident>) -> RPat
+pub fn tuple_pattern(vars_names: Vec<Ident>) -> syn::Pat
 {
-  let values: Vec<_> = vars_names.into_iter()
-    .map(|name| quote_pat!(cx, $name))
-    .collect();
-  if values.len() == 0 {
-    quote_pat!(cx, ())
-  }
-  else if values.len() == 1 {
-    values[0].clone()
-  }
-  else {
-    cx.pat_tuple(span, values)
-  }
+  parse_quote!((#(#vars_names),*))
 }

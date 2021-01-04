@@ -39,8 +39,8 @@ impl SequenceCompiler
 
 impl CompileExpr for SequenceCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     self.seq.clone().into_iter()
       .rev()

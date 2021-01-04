@@ -33,27 +33,27 @@ impl SyntacticPredicateCompiler
     }
   }
 
-  pub fn compile<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    success_case: RExpr, failure_case: RExpr) -> RExpr
+  pub fn compile<'a>(&self, context: &mut Context<'a>,
+    success_case: syn::Expr, failure_case: syn::Expr) -> syn::Expr
   {
     let mark = context.next_mark_name();
     let expr = Continuation::new(
-        quote_expr!(context.cx(), state),
-        quote_expr!(context.cx(), state.failure())
+        parse_quote!(state),
+        parse_quote!(state.failure())
       )
       .compile_success(context, recognizer_compiler, self.expr_idx)
       .unwrap_success();
-    quote_expr!(context.cx(),
+    parse_quote!(
       {
-        let $mark = state.mark();
-        state = $expr;
+        let #mark = state.mark();
+        state = #expr;
         let is_success = state.is_successful();
-        state = state.restore($mark);
+        state = state.restore(#mark);
         if is_success {
-          $success_case
+          #success_case
         }
         else {
-          $failure_case
+          #failure_case
         }
       }
     )
@@ -62,16 +62,13 @@ impl SyntacticPredicateCompiler
 
 impl CompileExpr for SyntacticPredicateCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     let (success, failure) = continuation.unwrap();
-
     match self.kind {
-      Kind::Not =>
-        self.compile(context, failure, success),
-      Kind::And =>
-        self.compile(context, success, failure)
+      Kind::Not => self.compile(context, failure, success),
+      Kind::And => self.compile(context, success, failure)
     }
   }
 }

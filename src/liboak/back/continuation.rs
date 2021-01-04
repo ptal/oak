@@ -16,15 +16,17 @@ pub use middle::typing::ast::*;
 use back::compiler::ExprCompilerFn;
 use back::context::Context;
 
+use syn::parse_quote;
+
 pub struct Continuation
 {
-  success: RExpr,
-  failure: RExpr
+  success: syn::Expr,
+  failure: syn::Expr
 }
 
 impl Continuation
 {
-  pub fn new(success: RExpr, failure: RExpr) -> Self {
+  pub fn new(success: syn::Expr, failure: syn::Expr) -> Self {
     Continuation {
       success: success,
       failure: failure
@@ -39,30 +41,29 @@ impl Continuation
   }
 
   pub fn compile_and_wrap(&self, context: &mut Context,
-    compiler: ExprCompilerFn, idx: usize, before_success: RStmt) -> RExpr
+    compiler: ExprCompilerFn, idx: usize, before_success: syn::Stmt) -> syn::Expr
   {
-    let cx = context.cx();
     let success = self.success.clone();
     context.compile_success(compiler, idx,
-      quote_expr!(cx, {
-        $before_success
-        $success
-      }),
+      parse_quote!(
+        #before_success
+        #success
+      ),
       self.failure.clone())
   }
 
   pub fn map_success<F>(mut self, f: F) -> Self where
-   F: FnOnce(RExpr, RExpr) -> RExpr
+   F: FnOnce(syn::Expr, syn::Expr) -> syn::Expr
   {
     self.success = f(self.success, self.failure.clone());
     self
   }
 
-  pub fn unwrap_success(self) -> RExpr {
+  pub fn unwrap_success(self) -> syn::Expr {
     self.success
   }
 
-  pub fn unwrap(self) -> (RExpr, RExpr) {
+  pub fn unwrap(self) -> (syn::Expr, syn::Expr) {
     (self.success, self.failure)
   }
 }

@@ -23,10 +23,8 @@ mod code_printer;
 mod compiler;
 
 use middle::typing::ast::*;
-use rust;
 
-pub fn compile<'a, 'b>(grammar: TGrammar<'a, 'b>)
-  -> Partial<Box<rust::MacResult + 'a>>
+pub fn compile(grammar: TGrammar) -> proc_macro2::TokenStream
 {
-  Partial::Value(compiler::GrammarCompiler::compile(grammar))
+  compiler::GrammarCompiler::compile(grammar)
 }

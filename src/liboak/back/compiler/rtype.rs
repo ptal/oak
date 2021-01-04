@@ -14,70 +14,59 @@
 
 //! Generates Rust type from Oak type.
 
-use rust;
-use rust::{FunctionRetTy, AstBuilder};
 use middle::typing::ast::*;
 use middle::typing::ast::Type::*;
+use syn::parse_quote;
 
-pub struct TypeCompiler<'a: 'c, 'b: 'a, 'c>
+pub struct TypeCompiler<'a>
 {
-  grammar: &'c TGrammar<'a, 'b>
+  grammar: &'a TGrammar
 }
 
-impl<'a, 'b, 'c> TypeCompiler<'a, 'b, 'c>
+impl<'a> TypeCompiler<'a>
 {
-  pub fn compile(grammar: &'c TGrammar<'a, 'b>, expr_idx: usize) -> RTy {
+  pub fn compile(grammar: &'a TGrammar, expr_idx: usize) -> syn::Type {
     let compiler = TypeCompiler::new(grammar);
     compiler.compile_type(expr_idx)
   }
 
-  fn new(grammar: &'c TGrammar<'a, 'b>) -> TypeCompiler<'a, 'b, 'c> {
-    TypeCompiler {
-      grammar: grammar
-    }
+  fn new(grammar: &'a TGrammar) -> TypeCompiler<'a> {
+    TypeCompiler { grammar }
   }
 
-  fn compile_type(&self, expr_idx: usize) -> RTy {
+  fn compile_type(&self, expr_idx: usize) -> syn::Type {
     match self.grammar[expr_idx].ty.clone() {
-      Unit => self.unit_type(),
+      Unit => Self::unit_type(),
       Atom => self.atom_type(),
       List(expr_idx) => self.list_type(expr_idx),
       Optional(expr_idx) => self.optional_type(expr_idx),
-      Action(rust_ty) => self.action_type(rust_ty),
-      Tuple(indexes) => self.tuple_type(expr_idx, indexes),
+      Rust(rust_ty) => rust_ty,
+      Tuple(indexes) => self.tuple_type(indexes),
     }
   }
 
-  fn action_type(&self, return_ty: FunctionRetTy) -> RTy {
-    match return_ty {
-      FunctionRetTy::Default(_) => self.unit_type(),
-      FunctionRetTy::Ty(ty) => ty
-    }
+  pub fn unit_type() -> syn::Type {
+    parse_quote!(())
   }
 
-  fn unit_type(&self) -> RTy {
-    quote_ty!(self.grammar.cx, ())
-  }
-
-  fn tuple_type(&self, expr_idx: usize, indexes: Vec<usize>) -> RTy {
+  fn tuple_type(&self, indexes: Vec<usize>) -> syn::Type {
     let tys: Vec<_> = indexes.into_iter()
       .map(|idx| self.compile_type(idx))
       .collect();
-    let span = self.grammar[expr_idx].span;
-    self.grammar.cx.ty(span, rust::TyKind::Tup(tys))
+    parse_quote!((#(#tys),*))
   }
 
-  fn atom_type(&self) -> RTy {
-    quote_ty!(self.grammar.cx, char)
+  fn atom_type(&self) -> syn::Type {
+    parse_quote!(char)
   }
 
-  fn list_type(&self, expr_idx: usize) -> RTy {
+  fn list_type(&self, expr_idx: usize) -> syn::Type {
     let ty = self.compile_type(expr_idx);
-    quote_ty!(self.grammar.cx, Vec<$ty>)
+    parse_quote!(Vec<#ty>)
   }
 
-  fn optional_type(&self, expr_idx: usize) -> RTy {
+  fn optional_type(&self, expr_idx: usize) -> syn::Type {
     let ty = self.compile_type(expr_idx);
-    quote_ty!(self.grammar.cx, Option<$ty>)
+    parse_quote!(Option<#ty>)
   }
 }

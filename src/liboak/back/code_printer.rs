@@ -13,47 +13,47 @@
 // limitations under the License.
 
 use middle::typing::ast::*;
-use rust;
-use rust::{State, PrintState, Visibility, Mod};
-use std::io;
 
-pub fn print_code(grammar: &TGrammar, grammar_module: &RItem) {
+use syn::parse::*;
+use quote::quote;
+
+struct Printer {
+  result: String
+}
+
+impl Parse for Printer {
+  fn parse(ps: ParseStream) -> Result<Self> {
+    let mut r = Printer { result: String::new() };
+    while !ps.is_empty() {
+      let item: syn::Item = ps.parse()?;
+      r.print_item(item);
+    }
+    Ok(r)
+  }
+}
+
+impl Printer {
+  fn print_item(&mut self, item: syn::Item) {
+    match item {
+      syn::Item::Fn(mut item_fn) => {
+        item_fn.block.stmts = vec![];
+        self.result.push_str(format!("{}\n", quote!(#item_fn)).as_str())
+      }
+      _ => self.result.push_str(format!("{}\n", quote!(#item)).as_str())
+    }
+  }
+}
+
+pub fn print_code(grammar: &TGrammar, items: &proc_macro2::TokenStream) {
   let print_code = grammar.attributes.print_code;
   if print_code.debug() {
-    grammar.cx.parse_sess.span_diagnostic.note_without_error(
-      rust::item_to_string(grammar_module).as_str());
+    grammar.start_span.unstable().note(format!("{}", items).as_str()).emit();
   }
   else if print_code.show() {
-    if let &rust::ItemKind::Mod(ref module) = &grammar_module.node {
-      let res = rust::to_string(|s| {
-        print_module(s, module, grammar_module.ident, grammar_module.vis.clone(), grammar_module.span)
-      });
-      grammar.cx.parse_sess.span_diagnostic.note_without_error(res.as_str());
-    } else {
-      panic!("Expected the grammar module.");
+    let items = proc_macro::TokenStream::from(items.clone());
+    match syn::parse::<Printer>(items) {
+      Ok(p) => { grammar.start_span.unstable().note(p.result).emit(); },
+      Err(e) => { let _ = e.into_compile_error(); }
     }
   }
-}
-
-fn print_module(s: &mut State, module: &Mod, ident: Ident, vis: Visibility, span: Span)
-  -> io::Result<()>
-{
-  s.head(&rust::visibility_qualified(&vis, "mod"))?;
-  s.print_ident(ident)?;
-  s.nbsp()?;
-  s.bopen()?;
-
-  for item in &module.items {
-    print_visible_fn(s, item)?;
-  }
-  s.bclose(span)
-}
-
-fn print_visible_fn(s: &mut State, item: &RItem) -> io::Result<()> {
-  if let rust::VisibilityKind::Public = item.vis.node {
-    if let &rust::ItemKind::Fn(_,_,_,_) = &item.node {
-      return s.print_item(item);
-    }
-  }
-  Ok(())
 }

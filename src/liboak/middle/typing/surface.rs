@@ -24,6 +24,7 @@ use middle::typing::typing_printer::*;
 pub struct Surface
 {
   pub grammar: IGrammar,
+  pub error: bool,
   recursion_path: Vec<Ident>
 }
 
@@ -32,6 +33,7 @@ impl Surface
   pub fn new(grammar: IGrammar) -> Surface {
     Surface {
       grammar: grammar,
+      error: false,
       recursion_path: vec![]
     }
   }
@@ -90,7 +92,8 @@ impl Surface
     IType::rec(RecKind::Unit, rec_shorter_path)
   }
 
-  fn type_mismatch_branches(&self, rec_set: RecSet, sum_expr: usize, branches: Vec<usize>, tys: Vec<IType>) {
+  fn type_mismatch_branches(&mut self, rec_set: RecSet, sum_expr: usize, branches: Vec<usize>, tys: Vec<IType>) {
+    self.error = true;
     let mut diagnostic = self.grammar[sum_expr].span().unstable().error(
       format!("Type mismatch between branches of the choice operator."));
     for i in 0..branches.len() {

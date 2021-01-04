@@ -19,22 +19,23 @@ use back::compiler::ExprCompilerFn;
 use back::compiler::rtype::*;
 use back::compiler::{recognizer_compiler, parser_compiler};
 use back::compiler::value::*;
-use rust;
-use rust::AstBuilder;
 
-pub struct Context<'a: 'c, 'b: 'a, 'c>
+use quote::quote;
+use syn::parse_quote;
+
+pub struct Context<'a>
 {
-  grammar: &'c TGrammar<'a, 'b>,
-  closures: Vec<RStmt>,
+  grammar: &'a TGrammar,
+  closures: Vec<syn::Stmt>,
   name_factory: NameFactory,
   free_variables: Vec<Ident>,
-  mut_ref_free_variables: Vec<(Ident, RTy)>,
+  mut_ref_free_variables: Vec<(Ident, syn::Type)>,
   num_combinators_compiled: usize
 }
 
-impl<'a, 'b, 'c> Context<'a, 'b, 'c>
+impl<'a> Context<'a>
 {
-  pub fn new(grammar: &'c TGrammar<'a, 'b>) -> Self
+  pub fn new(grammar: &'a TGrammar) -> Self
   {
     Context {
       grammar: grammar,
@@ -46,87 +47,69 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     }
   }
 
-  pub fn into_recognizer_function(self, body: RExpr, rule: Rule) -> RItem {
-    let cx = self.cx();
-    let recognizer_fn = recognizer_name(cx, rule.ident());
-    self.function(recognizer_fn, true, body, quote_ty!(cx, ()))
+  pub fn into_recognizer_function(self, body: syn::Expr, rule: Rule) -> syn::Item {
+    let recognizer_fn = recognizer_name(rule.ident());
+    self.function(recognizer_fn, true, body, parse_quote!(()))
   }
 
-  pub fn into_parser_alias(self, rule: Rule) -> RItem {
-    let cx = self.cx();
-    let recognizer_fn = recognizer_name(cx, rule.ident());
-    let parser_fn = parser_name(cx, rule.ident());
+  pub fn into_parser_alias(self, rule: Rule) -> syn::Item {
+    let recognizer_fn = recognizer_name(rule.ident());
+    let parser_fn = parser_name(rule.ident());
     self.function(parser_fn, false,
-      quote_expr!(cx, $recognizer_fn(state)),
-      quote_ty!(cx, ()))
+      parse_quote!(#recognizer_fn(state)),
+      parse_quote!(()))
   }
 
-  pub fn into_parser_function(self, body: RExpr, rule: Rule) -> RItem {
-    let parser_fn = parser_name(self.cx(), rule.ident());
+  pub fn into_parser_function(self, body: syn::Expr, rule: Rule) -> syn::Item {
+    let parser_fn = parser_name(rule.ident());
     let ty = TypeCompiler::compile(self.grammar, rule.expr_idx);
     self.function(parser_fn, true, body, ty)
   }
 
-  fn function(self, name: Ident, state_mut: bool, body: RExpr, ty: RTy) -> RItem {
-    let cx = self.cx();
+  fn function(self, name: Ident, state_mut: bool, body: syn::Expr, ty: syn::Type) -> syn::Item {
     let state_param = self.state_param(state_mut);
     let stream_ty = self.grammar.stream_type();
+    let generics = self.grammar.stream_generics();
     let closures = self.closures;
-    let fun = quote_item!(cx,
+    parse_quote!(
       #[inline]
-      pub fn $name($state_param) -> oak_runtime::ParseState<$stream_ty, $ty>
+      pub fn #name #generics (#state_param) -> oak_runtime::ParseState<#stream_ty, #ty>
       {
-        $closures
-        $body
+        #(#closures)*
+        #body
       }
-    ).expect("Quotation of a generated function.");
-    if let rust::ItemKind::Fn(a,b,mut generics,d) = fun.node.clone() {
-      let stream_gen = self.grammar.stream_generics();
-      generics.params = stream_gen.params;
-      generics.where_clause = stream_gen.where_clause;
-      let item = rust::Item {
-        ident: fun.ident,
-        attrs: fun.attrs.clone(),
-        id: fun.id,
-        node: rust::ItemKind::Fn(a,b,generics,d),
-        vis: fun.vis.clone(),
-        span: fun.span,
-        tokens: None
-      };
-      fun.map(|_| item)
-    } else { unreachable!() }
+    )
   }
 
-  #[allow(unused_imports)] // `quote_tokens` generates a warning.
-  fn state_param(&self, state_mut: bool) -> RArg {
+  fn state_param(&self, state_mut: bool) -> syn::FnArg {
     let mut_kw = if state_mut {
-      Some(quote_tokens!(self.cx(), mut))
+      Some(quote!(mut))
     } else {
       None
     };
     let stream_ty = self.grammar.stream_type();
-    quote_arg!(self.cx(), $mut_kw state: oak_runtime::ParseState<$stream_ty, ()>)
+    parse_quote!(#mut_kw state: oak_runtime::ParseState<#stream_ty, ()>)
   }
 
   pub fn compile(&mut self, compiler: ExprCompilerFn, idx: usize,
-    success: RExpr, failure: RExpr) -> RExpr
+    success: syn::Expr, failure: syn::Expr) -> syn::Expr
   {
     let compiler = compiler(&self.grammar, idx);
     compiler.compile_expr(self, Continuation::new(success, failure))
   }
 
   pub fn compile_success(&mut self, compiler: ExprCompilerFn, idx: usize,
-    success: RExpr, failure: RExpr) -> RExpr
+    success: syn::Expr, failure: syn::Expr) -> syn::Expr
   {
     let expr = self.compile(compiler, idx, success, failure);
     self.num_combinators_compiled += 1;
     expr
   }
 
-  pub fn compile_recognizer_expr(&mut self, idx: usize) -> RExpr {
+  pub fn compile_recognizer_expr(&mut self, idx: usize) -> syn::Expr {
     Continuation::new(
-      quote_expr!(self.cx(), state),
-      quote_expr!(self.cx(), state.failure())
+      parse_quote!(state),
+      parse_quote!(state.failure())
     )
     .compile_success(self, recognizer_compiler, idx)
     .unwrap_success()
@@ -134,19 +117,18 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
 
   pub fn value_constructor<F>(&mut self,
     expr_idx: usize,
-    value_ty: RTy,
-    value_constructor: F) -> (RExpr, Ident) where
-   F: FnOnce(&ExtCtxt, Ident, RExpr) -> RExpr,
+    value_ty: syn::Type,
+    value_constructor: F) -> (syn::Expr, Ident) where
+   F: FnOnce(Ident, syn::Expr) -> syn::Expr,
   {
     let result_var = self.next_free_var();
     let scope = self.open_scope(expr_idx);
-    self.push_mut_ref_fv(result_var, value_ty);
-    let span = self.cx().call_site();
-    let result_value = tuple_value(self.cx(), span, self.free_variables());
+    self.push_mut_ref_fv(result_var.clone(), value_ty);
+    let result_value = tuple_value(self.free_variables());
     let body =
       Continuation::new(
-        value_constructor(self.cx(), result_var, result_value),
-        quote_expr!(self.cx(), state.failure())
+        value_constructor(result_var.clone(), result_value),
+        parse_quote!(state.failure())
       )
       .compile_success(self, parser_compiler, expr_idx)
       .unwrap_success();
@@ -161,19 +143,12 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
   pub fn success_as_closure(&mut self, continuation: Continuation) -> Continuation {
     if self.do_not_duplicate_success() {
       self.num_combinators_compiled = 0;
-      let cx = self.cx();
-      let closure_name = self.name_factory.next_closure_name(cx);
+      let closure_name = self.name_factory.next_closure_name();
       let args = self.closure_args();
       let params = self.closure_params();
       continuation.map_success(|success, _| {
-        let lambda = cx.lambda_fn_decl(cx.call_site(),
-          cx.fn_decl(params, rust::ast::FunctionRetTy::Ty(cx.ty_infer(cx.call_site()))),
-          quote_expr!(cx, $success),
-          cx.call_site());
-        self.closures.push(quote_stmt!(cx,
-          let $closure_name = $lambda;
-        ));
-        cx.expr_call_ident(cx.call_site(), closure_name, args)
+        self.closures.push(parse_quote!(let #closure_name = |#(#params),*| #success;));
+        parse_quote!(#closure_name(#(#args),*))
       })
     }
     else {
@@ -181,43 +156,40 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     }
   }
 
-  fn closure_params(&self) -> Vec<RArg> {
+  fn closure_params(&self) -> Vec<syn::FnArg> {
     vec![self.state_param(true)]
       .into_iter()
       .chain(self.mut_ref_free_variables
         .iter().cloned()
-        .map(|(var, ty)| quote_arg!(self.cx(), $var: &mut $ty)))
+        .map(|(var, ty)| parse_quote!(#var: &mut #ty)))
       .chain(self.free_variables
         .iter()
-        .map(|var| quote_arg!(self.cx(), $var:_)))
+        .map(|var| parse_quote!(#var:_)))
       .collect()
   }
 
-  fn closure_args(&self) -> Vec<RExpr> {
-    vec![quote_expr!(self.cx(), state)]
+  fn closure_args(&self) -> Vec<syn::Expr> {
+    vec![parse_quote!(state)]
       .into_iter()
       .chain(self.mut_ref_free_variables
         .iter().cloned()
-        .map(|(var, _)| quote_expr!(self.cx(), &mut $var)))
+        .map(|(var, _)| parse_quote!(&mut #var)))
       .chain(self.free_variables
         .iter()
-        .map(|var| quote_expr!(self.cx(), $var)))
+        .map(|var| parse_quote!(#var)))
       .collect()
   }
 
   pub fn next_mark_name(&mut self) -> Ident {
-    let cx = self.cx();
-    self.name_factory.next_mark_name(cx)
+    self.name_factory.next_mark_name()
   }
 
   pub fn next_counter_name(&mut self) -> Ident {
-    let cx = self.cx();
-    self.name_factory.next_counter_name(cx)
+    self.name_factory.next_counter_name()
   }
 
   pub fn next_branch_failed_name(&mut self) -> Ident {
-    let cx = self.cx();
-    self.name_factory.next_branch_failed_name(cx)
+    self.name_factory.next_branch_failed_name()
   }
 
   pub fn next_free_var(&mut self) -> Ident {
@@ -234,7 +206,7 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.free_variables.clone()
   }
 
-  pub fn push_mut_ref_fv(&mut self, mut_ref_var: Ident, mut_ref_ty: RTy) {
+  pub fn push_mut_ref_fv(&mut self, mut_ref_var: Ident, mut_ref_ty: syn::Type) {
     self.mut_ref_free_variables.push((mut_ref_var,mut_ref_ty));
   }
 
@@ -247,17 +219,12 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.grammar[expr_idx].type_cardinality()
   }
 
-  pub fn expr_span(&self, expr_idx: usize) -> Span {
-    self.grammar[expr_idx].span
-  }
-
   pub fn open_scope(&mut self, expr_idx: usize) -> Scope {
-    let cx = self.cx();
     let scope = self.save_scope();
     self.num_combinators_compiled = 0;
     self.mut_ref_free_variables = vec![];
     let cardinality = self.expr_cardinality(expr_idx);
-    let free_vars = self.name_factory.fresh_vars(cx, cardinality);
+    let free_vars = self.name_factory.fresh_vars(cardinality);
     self.free_variables = free_vars;
     scope
   }
@@ -281,21 +248,17 @@ impl<'a, 'b, 'c> Context<'a, 'b, 'c>
     self.mut_ref_free_variables = scope.mut_ref_free_variables;
     self.free_variables = scope.free_variables;
   }
-
-  pub fn cx(&self) -> &'a ExtCtxt<'b> {
-    &self.grammar.cx
-  }
 }
 
 #[derive(Clone)]
 pub struct Scope {
   num_combinators_compiled: usize,
   free_variables: Vec<Ident>,
-  mut_ref_free_variables: Vec<(Ident, RTy)>
+  mut_ref_free_variables: Vec<(Ident, syn::Type)>
 }
 
 impl Scope {
-  fn new(n: usize, fv: Vec<Ident>, mfv: Vec<(Ident, RTy)>) -> Self {
+  fn new(n: usize, fv: Vec<Ident>, mfv: Vec<(Ident, syn::Type)>) -> Self {
     Scope {
       num_combinators_compiled: n,
       free_variables: fv,

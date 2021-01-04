@@ -16,10 +16,7 @@
 
 #![feature(proc_macro_diagnostic, proc_macro_span)]
 
-#![allow(dead_code)]
-
 extern crate partial;
-// extern crate smallvec;
 extern crate syn;
 extern crate quote;
 extern crate proc_macro;
@@ -27,73 +24,19 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
-// use quote::quote;
-
-// use front::parser;
-// use front::ast::FGrammar;
-
-// use std::error::Error;
 
 mod ast;
 mod visitor;
 mod front;
 mod middle;
-// mod back;
+mod back;
 mod identifier;
 
 #[proc_macro]
 pub fn oak(input: TokenStream) -> TokenStream {
-  let input2 = input.clone();
   let ast = parse_macro_input!(input as front::ast::FGrammar);
   println!("parsing successful!");
-  let _tast = middle::typecheck(ast);
+  let tast = middle::typecheck(ast);
   println!("typing successful!");
-  input2
+  proc_macro::TokenStream::from(back::compile(tast))
 }
-
-// #[plugin_registrar]
-// pub fn plugin_registrar(reg: &mut Registry) {
-//   reg.register_syntax_extension(
-//     rust::Symbol::intern("grammar"),
-//     rust::SyntaxExtension::IdentTT(Box::new(expand), None, true));
-// }
-
-// fn expand<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, _sp: rust::Span, grammar_name: rust::Ident,
-//   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'a>
-// {
-//   parse(cx, grammar_name, tts)
-// }
-
-// fn abort_if_errors(cx: &rust::ExtCtxt) {
-//   cx.parse_sess.span_diagnostic.abort_if_errors();
-// }
-
-// fn unwrap_parser_ast<'a>(cx: &rust::ExtCtxt, ast: rust::PResult<'a, FGrammar>) -> FGrammar {
-//   match ast {
-//     Ok(ast) => {
-//       abort_if_errors(cx);
-//       ast
-//     }
-//     Err(mut err_diagnostic) => {
-//       err_diagnostic.emit();
-//       abort_if_errors(cx);
-//       let err = rust::FatalError.description();
-//       panic!(err);
-//     }
-//   }
-// }
-
-// fn parse<'a, 'b>(cx: &'a mut rust::ExtCtxt<'b>, grammar_name: rust::Ident,
-//   tts: Vec<rust::TokenTree>) -> Box<rust::MacResult + 'a>
-// {
-//   let parser = parser::Parser::new(cx.parse_sess(), tts, grammar_name);
-//   let ast = parser.parse_grammar();
-//   let ast = unwrap_parser_ast(cx, ast);
-//   let cx: &'a rust::ExtCtxt = cx;
-//   middle::typecheck(cx, ast)
-//     .and_next(|ast| back::compile(ast))
-//     .unwrap_or_else(|| {
-//       abort_if_errors(cx);
-//       rust::DummyResult::any(rust::DUMMY_SP)
-//     })
-// }

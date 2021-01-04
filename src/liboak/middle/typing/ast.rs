@@ -45,7 +45,7 @@ impl IGrammar
     grammar.exprs_info = exprs_info.into_iter()
       .map(|e| ExprIType::infer(e.span))
       .collect();
-    // grammar.alloc_span_ty_expr();
+    grammar.alloc_span_ty_expr();
     grammar
   }
 

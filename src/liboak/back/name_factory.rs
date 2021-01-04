@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use identifier::*;
-use rust::ExtCtxt;
+use proc_macro2::Ident;
+use quote::format_ident;
 
-pub fn parser_name(cx: &ExtCtxt, rule_name: Ident) -> Ident {
-  string_to_ident(cx, format!("parse_{}", ident_to_string(rule_name)))
+pub fn parser_name(rule_name: Ident) -> Ident {
+  format_ident!("parse_{}", rule_name)
 }
 
-pub fn recognizer_name(cx: &ExtCtxt, rule_name: Ident) -> Ident {
-  string_to_ident(cx, format!("recognize_{}", ident_to_string(rule_name)))
+pub fn recognizer_name(rule_name: Ident) -> Ident {
+  format_ident!("recognize_{}", rule_name)
 }
 
 pub struct NameFactory
@@ -44,30 +44,30 @@ impl NameFactory
     }
   }
 
-  pub fn next_mark_name(&mut self, cx: &ExtCtxt) -> Ident {
+  pub fn next_mark_name(&mut self) -> Ident {
     self.mark_uid += 1;
-    string_to_ident(cx, format!("mark{}", self.mark_uid))
+    format_ident!("mark{}", self.mark_uid)
   }
 
-  pub fn next_branch_failed_name(&mut self, cx: &ExtCtxt) -> Ident {
+  pub fn next_branch_failed_name(&mut self) -> Ident {
     self.branch_failed_uid += 1;
-    string_to_ident(cx, format!("branch_failed_{}", self.branch_failed_uid))
+    format_ident!("branch_failed_{}", self.branch_failed_uid)
   }
 
-  pub fn next_closure_name(&mut self, cx: &ExtCtxt) -> Ident {
+  pub fn next_closure_name(&mut self) -> Ident {
     self.closure_uid += 1;
-    string_to_ident(cx, format!("success_continuation_{}", self.closure_uid))
+    format_ident!("success_continuation_{}", self.closure_uid)
   }
 
-  pub fn next_counter_name(&mut self, cx: &ExtCtxt) -> Ident {
+  pub fn next_counter_name(&mut self) -> Ident {
     self.counter_uid += 1;
-    string_to_ident(cx, format!("counter{}", self.counter_uid))
+    format_ident!("counter{}", self.counter_uid)
   }
 
-  pub fn fresh_vars(&mut self, cx: &ExtCtxt, cardinality: usize) -> Vec<Ident> {
+  pub fn fresh_vars(&mut self, cardinality: usize) -> Vec<Ident> {
     let prefix = self.next_var_prefix();
     (0..cardinality)
-      .map(|i| string_to_ident(cx, format!("{}{}", prefix, i)))
+      .map(|i| format_ident!("{}{}", prefix, i))
       .collect()
   }
 

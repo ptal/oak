@@ -15,15 +15,15 @@
 use back::compiler::*;
 use back::compiler::value::*;
 
-pub struct RuleCompiler<'a: 'c, 'b: 'a, 'c>
+pub struct RuleCompiler<'a>
 {
-  grammar: &'c TGrammar<'a, 'b>,
+  grammar: &'a TGrammar,
   rule: Rule
 }
 
-impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
+impl<'a> RuleCompiler<'a>
 {
-  pub fn compile(grammar: &'c TGrammar<'a, 'b>, rule: Rule) -> Vec<RItem> {
+  pub fn compile(grammar: &'a TGrammar, rule: Rule) -> Vec<syn::Item> {
     let compiler = RuleCompiler::new(grammar, rule);
     vec![
       compiler.compile_recognizer(),
@@ -31,50 +31,45 @@ impl<'a, 'b, 'c> RuleCompiler<'a, 'b, 'c>
     ]
   }
 
-  fn new(grammar: &'c TGrammar<'a, 'b>, rule: Rule) -> Self {
+  fn new(grammar: &'a TGrammar, rule: Rule) -> Self {
     RuleCompiler {
       grammar: grammar,
       rule: rule
     }
   }
 
-  fn compile_recognizer(&self) -> RItem {
+  fn compile_recognizer(&self) -> syn::Item {
     let mut context = Context::new(self.grammar);
-    let success = quote_expr!(self.cx(), state.success(()));
-    let failure = quote_expr!(self.cx(), state.failure());
+    let success = parse_quote!(state.success(()));
+    let failure = parse_quote!(state.failure());
 
     let body = context.compile(recognizer_compiler,
       self.expr(), success, failure);
 
-    context.into_recognizer_function(body, self.rule)
+    context.into_recognizer_function(body, self.rule.clone())
   }
 
-  fn compile_parser(&self) -> RItem {
+  fn compile_parser(&self) -> syn::Item {
     let mut context = Context::new(self.grammar);
     if self.parser_equals_recognizer() {
-      context.into_parser_alias(self.rule)
+      context.into_parser_alias(self.rule.clone())
     }
     else {
       let scope = context.open_scope(self.expr());
-      let span = context.expr_span(self.expr());
-      let vars = tuple_value(self.cx(), span, context.free_variables());
+      let vars = tuple_value(context.free_variables());
 
-      let success = quote_expr!(self.cx(), state.success($vars));
-      let failure = quote_expr!(self.cx(), state.failure());
+      let success = parse_quote!(state.success(#vars));
+      let failure = parse_quote!(state.failure());
       let body = context.compile(parser_compiler,
         self.expr(), success, failure);
 
       context.close_scope(scope);
-      context.into_parser_function(body, self.rule)
+      context.into_parser_function(body, self.rule.clone())
     }
   }
 
   fn parser_equals_recognizer(&self) -> bool {
     self.grammar[self.expr()].ty == Type::Unit
-  }
-
-  fn cx(&self) -> &'a ExtCtxt<'b> {
-    &self.grammar.cx
   }
 
   fn expr(&self) -> usize {

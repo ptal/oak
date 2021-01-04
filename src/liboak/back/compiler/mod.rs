@@ -30,6 +30,9 @@ mod non_terminal;
 mod semantic_action;
 mod spanned_expr;
 
+pub use quote::quote;
+pub use syn::parse_quote;
+
 pub use back::compiler::grammar::*;
 pub use back::context::*;
 use back::compiler::str_literal::*;
@@ -52,12 +55,12 @@ pub enum CompilerKind
 
 pub trait CompileExpr
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>, cont: Continuation) -> RExpr;
+  fn compile_expr<'a>(&self, context: &mut Context<'a>, cont: Continuation) -> syn::Expr;
 }
 
-pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<CompileExpr>;
+pub type ExprCompilerFn = fn(&TGrammar, usize) -> Box<dyn CompileExpr>;
 
-pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
+pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<dyn CompileExpr> {
   if grammar[idx].ty == Type::Unit {
     recognizer_compiler(grammar, idx)
   }
@@ -72,6 +75,7 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
       ZeroOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 0)),
       OneOrMore(expr_idx) => Box::new(RepeatCompiler::parser(expr_idx, 1)),
       NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::parser(id, idx)),
+      ExternalNonTerminalSymbol(_) => unimplemented!(), // Box::new(ExternalNonTerminalCompiler::parser(id, idx)),
       SemanticAction(expr_idx, id) => Box::new(SemanticActionCompiler::parser(expr_idx, id, idx)),
       TypeAscription(expr_idx, _) => parser_compiler(grammar, expr_idx),
       SpannedExpr(expr_idx) => Box::new(SpannedExprCompiler::parser(expr_idx)),
@@ -82,7 +86,7 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
   }
 }
 
-pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
+pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<dyn CompileExpr> {
   match grammar.expr_by_index(idx) {
     StrLiteral(lit) => Box::new(StrLiteralCompiler::recognizer(lit)),
     CharacterClass(classes) => Box::new(CharacterClassCompiler::recognizer(classes)),
@@ -95,6 +99,7 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<CompileExpr> {
     NotPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::Not)),
     AndPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::And)),
     NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::recognizer(id)),
+    ExternalNonTerminalSymbol(_) => unimplemented!(), // Box::new(ExternalNonTerminalCompiler::recognizer(id)),
     SemanticAction(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
     TypeAscription(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
     SpannedExpr(expr_idx) => recognizer_compiler(grammar, expr_idx),

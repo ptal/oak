@@ -117,14 +117,6 @@ impl<ExprInfo> IndexMut<usize> for Grammar<ExprInfo>
   }
 }
 
-impl<ExprInfo> Grammar<ExprInfo> where
- ExprInfo: Spanned
-{
-  pub fn expr_err(&self, expr_idx: usize, msg: String) {
-    self[expr_idx].span().unwrap().error(msg).emit();
-  }
-}
-
 impl<ExprInfo> ExprByIndex for Grammar<ExprInfo>
 {
   fn expr_by_index(&self, index: usize) -> Expression {

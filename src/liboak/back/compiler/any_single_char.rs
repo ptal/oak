@@ -14,15 +14,15 @@
 
 use back::compiler::*;
 
-type MatchPatternFn = for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> RPat;
+type MatchPatternFn = for <'a> fn(&mut Context<'a>) -> syn::Pat;
 
-fn ignore_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
-  quote_pat!(context.cx(), _)
+fn ignore_value<'a>(_context: &mut Context<'a>) -> syn::Pat {
+  parse_quote!(_)
 }
 
-fn bind_value<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> RPat {
+fn bind_value<'a>(context: &mut Context<'a>) -> syn::Pat {
   let var = context.next_free_var();
-  quote_pat!(context.cx(), $var)
+  parse_quote!(#var)
 }
 
 pub struct AnySingleCharCompiler
@@ -47,19 +47,19 @@ impl AnySingleCharCompiler
 
 impl CompileExpr for AnySingleCharCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     let pattern = (self.matched_pattern)(context);
     continuation
-      .map_success(|success, failure| quote_expr!(context.cx(),
+      .map_success(|success, failure| parse_quote!(
         match state.next() {
-          Some($pattern) => {
-            $success
+          Some(#pattern) => {
+            #success
           }
           None => {
             state.error("<character>");
-            $failure
+            #failure
           }
         }
       ))

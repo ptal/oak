@@ -19,7 +19,7 @@ use partial::Partial::*;
 
 pub fn rule_duplicate(mut grammar: AGrammar, rules: Vec<Rule>) -> Partial<AGrammar>
 {
-  DuplicateItem::analyse(&grammar, rules.into_iter(), String::from("rule"))
+  DuplicateItem::analyse(rules.into_iter(), String::from("rule"))
   .map(move |rules| {
     grammar.rules = rules.into_iter().map(|x| x.1).collect();
     grammar
@@ -38,7 +38,7 @@ pub fn rust_functions_duplicate(mut grammar: AGrammar, items: Vec<syn::Item>) ->
       others.push(item);
     }
   }
-  DuplicateItem::analyse(&grammar, functions.into_iter(), String::from("rust function"))
+  DuplicateItem::analyse(functions.into_iter(), String::from("rust function"))
     .map(move |functions| {
       grammar.rust_functions = functions.into_iter().collect();
       grammar.rust_items = others;
@@ -46,23 +46,21 @@ pub fn rust_functions_duplicate(mut grammar: AGrammar, items: Vec<syn::Item>) ->
     })
 }
 
-struct DuplicateItem<'a, Item>
+struct DuplicateItem<Item>
 {
-  grammar: &'a AGrammar,
   items: Vec<(Ident, Item)>,
   has_duplicate: bool,
   what_is_duplicated: String
 }
 
-impl<'a, Item> DuplicateItem<'a, Item> where
+impl<Item> DuplicateItem<Item> where
  Item: ItemIdent + Spanned
 {
-  pub fn analyse<ItemIter>(grammar: &'a AGrammar, iter: ItemIter, item_kind: String)
+  pub fn analyse<ItemIter>(iter: ItemIter, item_kind: String)
     -> Partial<Vec<(Ident, Item)>> where
    ItemIter: Iterator<Item=Item>
   {
     DuplicateItem {
-      grammar: grammar,
       items: vec![],
       has_duplicate: false,
       what_is_duplicated: item_kind
@@ -71,7 +69,7 @@ impl<'a, Item> DuplicateItem<'a, Item> where
   }
 
   fn populate<ItemIter: Iterator<Item=Item>>(mut self, iter: ItemIter)
-    -> DuplicateItem<'a, Item>
+    -> DuplicateItem<Item>
   {
     for item in iter {
       let ident = item.ident();

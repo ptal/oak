@@ -39,53 +39,53 @@ impl RepeatCompiler
     }
   }
 
-  fn compile<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation, body: RExpr) -> RExpr
+  fn compile<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation, body: syn::Expr) -> syn::Expr
   {
     let mark = context.next_mark_name();
     continuation.map_success(|success, failure|
       if self.cardinality_min > 0 {
         let counter = context.next_counter_name();
         let cardinality_min = self.cardinality_min;
-        quote_expr!(context.cx(),
+        parse_quote!(
           {
-            let mut $mark = state.mark();
-            let mut $counter = 0;
+            let mut #mark = state.mark();
+            let mut #counter = 0;
             loop {
-              state = $body;
+              state = #body;
               if state.is_successful() {
-                $counter += 1;
-                $mark = state.mark();
+                #counter += 1;
+                #mark = state.mark();
               }
               else {
                 break;
               }
             }
-            if $counter < $cardinality_min {
-              $failure
+            if #counter < #cardinality_min {
+              #failure
             }
             else {
-              let mut state = state.restore_from_failure($mark);
-              $success
+              let mut state = state.restore_from_failure(#mark);
+              #success
             }
           }
         )
       }
       else {
-        quote_expr!(context.cx(),
+        parse_quote!(
           {
-            let mut $mark = state.mark();
+            let mut #mark = state.mark();
             loop {
-              state = $body;
+              state = #body;
               if state.is_successful() {
-                $mark = state.mark();
+                #mark = state.mark();
               }
               else {
                 break;
               }
             }
-            let mut state = state.restore_from_failure($mark);
-            $success
+            let mut state = state.restore_from_failure(#mark);
+            #success
           }
         )
       }
@@ -93,41 +93,41 @@ impl RepeatCompiler
     .unwrap_success()
   }
 
-  fn compile_recognizer<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_recognizer<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     let body = context.compile_recognizer_expr(self.expr_idx);
     self.compile(context, continuation, body)
   }
 
-  fn value_constructor(cx: &ExtCtxt, result_var: Ident, result_value: RExpr) -> RExpr {
-    quote_expr!(cx, {
-      $result_var.push($result_value);
+  fn value_constructor(result_var: Ident, result_value: syn::Expr) -> syn::Expr {
+    parse_quote!({
+      #result_var.push(#result_value);
       state
     })
   }
 
-  fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_parser<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
-    let ty = quote_ty!(context.cx(), Vec<_>);
+    let ty: syn::Type = parse_quote!(Vec<_>);
     let (body, result_var) = context.value_constructor(
       self.expr_idx,
       ty,
       RepeatCompiler::value_constructor
     );
     let repeat_expr = self.compile(context, continuation, body);
-    quote_expr!(context.cx(), {
-      let mut $result_var = vec![];
-      $repeat_expr
+    parse_quote!({
+      let mut #result_var = vec![];
+      #repeat_expr
     })
   }
 }
 
 impl CompileExpr for RepeatCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     match self.compiler_kind {
       CompilerKind::Recognizer => self.compile_recognizer(context, continuation),

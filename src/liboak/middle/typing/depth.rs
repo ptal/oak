@@ -29,12 +29,14 @@ pub struct Depth
 
 impl Depth
 {
-  pub fn infer(grammar: IGrammar) -> TGrammar {
+  pub fn infer(grammar: IGrammar) -> Partial<TGrammar> {
     let mut engine = Depth::new(grammar);
     engine.surface.surface();
+    if engine.surface.error { return Partial::Nothing }
     engine.warn_recursive_type();
     engine.reduce_all_rec();
     engine.depth();
+    if engine.surface.error { return Partial::Nothing }
     engine.reduce_all_invisible();
     engine.check_all_rules_have_type();
     let grammar = engine.surface.grammar;
@@ -42,7 +44,12 @@ impl Depth
       println!("After applying Depth.");
       print_debug(&grammar);
     }
-    grammar.map_exprs_info(engine.exprs_info)
+    if engine.surface.error {
+      Partial::Nothing
+    }
+    else {
+      Partial::Value(grammar.map_exprs_info(engine.exprs_info))
+    }
   }
 
   fn new(grammar: IGrammar) -> Depth {
@@ -81,6 +88,7 @@ impl Depth
   fn check_all_rules_have_type(&mut self) {
     for rule in self.surface.grammar.rules.clone() {
       if self.type_of(rule.expr_idx) == External {
+        self.surface.error = true;
         rule.name.span().unstable()
           .error(format!("could not infer the type of this rule, please use type ascription, e.g. `r: Expr = e`."))
           .emit();
@@ -123,8 +131,9 @@ impl Depth
     self.under_ty_ascription = old;
   }
 
-  fn error_if_not_match_ty_ascription(&self, this: usize, ty: IType, aty: IType) {
+  fn error_if_not_match_ty_ascription(&mut self, this: usize, ty: IType, aty: IType) {
     if !ty.syntactic_eq(&self.surface.grammar, &aty) {
+      self.surface.error = true;
       self.surface.grammar[this].span().unstable()
         .error(format!("found type {} but expected type {}",
           ty.display(&self.surface.grammar), aty.display(&self.surface.grammar)))

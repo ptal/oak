@@ -29,8 +29,8 @@ impl SpannedExprCompiler
 
 impl CompileExpr for SpannedExprCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     let lo_sp = context.next_mark_name();
     let hi_sp = context.next_mark_name();
@@ -39,17 +39,17 @@ impl CompileExpr for SpannedExprCompiler
 
     let spanned_expr = continuation
       .map_success(|success, _| {
-        quote_expr!(context.cx(), {
-          let $hi_sp = state.mark();
-          let $result = Range { start: $lo_sp.clone(), end: $hi_sp }.stream_span();
-          $success
+        parse_quote!({
+          let #hi_sp = state.mark();
+          let #result = Range { start: #lo_sp.clone(), end: #hi_sp }.stream_span();
+          #success
         })
       })
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
-    quote_expr!(context.cx(), {
-      let $lo_sp = state.mark();
-      $spanned_expr
+    parse_quote!({
+      let #lo_sp = state.mark();
+      #spanned_expr
     })
   }
 }

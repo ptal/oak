@@ -24,5 +24,5 @@ mod typing_printer;
 
 pub fn type_inference(agrammar: AGrammar) -> Partial<TGrammar> {
   let grammar = IGrammar::from(agrammar);
-  Partial::Value(Depth::infer(grammar))
+  Depth::infer(grammar)
 }

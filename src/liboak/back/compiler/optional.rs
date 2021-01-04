@@ -36,59 +36,59 @@ impl OptionalCompiler
     }
   }
 
-  fn compile<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation, body: RExpr) -> RExpr
+  fn compile<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation, body: syn::Expr) -> syn::Expr
   {
     let mark = context.next_mark_name();
     continuation
       .map_success(|success, _|
-        quote_expr!(context.cx(), {
-          let $mark = state.mark();
-          state = $body;
+        parse_quote!({
+          let #mark = state.mark();
+          state = #body;
           if state.is_failed() {
-            state = state.restore_from_failure($mark);
+            state = state.restore_from_failure(#mark);
           }
-          $success
+          #success
         })
       )
       .unwrap_success()
   }
 
-  fn compile_recognizer<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_recognizer<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     let body = context.compile_recognizer_expr(self.expr_idx);
     self.compile(context, continuation, body)
   }
 
-  fn value_constructor(cx: &ExtCtxt, result_var: Ident, result_value: RExpr) -> RExpr {
-    quote_expr!(cx, {
-      $result_var = Some($result_value);
+  fn value_constructor(result_var: Ident, result_value: syn::Expr) -> syn::Expr {
+    parse_quote!({
+      #result_var = Some(#result_value);
       state
     })
   }
 
-  fn compile_parser<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_parser<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
-    let ty = quote_ty!(context.cx(), Option<_>);
+    let ty: syn::Type = parse_quote!(Option<_>);
     let (body, result_var) = context.value_constructor(
       self.expr_idx,
       ty,
       OptionalCompiler::value_constructor
     );
     let optional_expr = self.compile(context, continuation, body);
-    quote_expr!(context.cx(), {
-      let mut $result_var = None;
-      $optional_expr
+    parse_quote!({
+      let mut #result_var = None;
+      #optional_expr
     })
   }
 }
 
 impl CompileExpr for OptionalCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
     match self.compiler_kind {
       CompilerKind::Recognizer => self.compile_recognizer(context, continuation),

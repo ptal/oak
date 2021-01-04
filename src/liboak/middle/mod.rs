@@ -25,12 +25,14 @@ use partial::*;
 pub mod analysis;
 pub mod typing;
 
-pub fn typecheck(fgrammar: FGrammar) -> Partial<TGrammar> {
+pub fn typecheck(fgrammar: FGrammar) -> TGrammar {
   Partial::Value(fgrammar)
     .and_then(|grammar| at_least_one_rule_declared(grammar))
     .and_then(|grammar| analysis::analyse(grammar))
+    .ensure("aborting due to previous error (analysis phase).")
     .and_then(|grammar| extract_stream_type(grammar))
     .and_then(|grammar| typing::type_inference(grammar))
+    .expect("aborting due to previous error (typing phase).")
 }
 
 fn at_least_one_rule_declared(fgrammar: FGrammar) -> Partial<FGrammar> {

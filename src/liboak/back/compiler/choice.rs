@@ -39,16 +39,15 @@ impl ChoiceCompiler
 
 impl CompileExpr for ChoiceCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self,  context: &mut Context<'a, 'b, 'c>,
-    mut continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self,  context: &mut Context<'a>,
+    mut continuation: Continuation) -> syn::Expr
   {
-    let cx = context.cx();
     // Since we copy the success continuation for each branch, to avoid code explosion, we can extract it into a closure shared by all branches under criterion maintained by the context.
     continuation = context.success_as_closure(continuation);
 
     let mark = context.next_mark_name();
     let branch_failed = context.next_branch_failed_name();
-    context.push_mut_ref_fv(branch_failed, quote_ty!(cx, bool));
+    context.push_mut_ref_fv(branch_failed.clone(), parse_quote!(bool));
 
     // Each branch of the choice must be compiled in the same variable names environment (they share names of the variables they are building) and with a fresh success continuation size (each branch might create independent success continuation).
     let scope = context.save_scope();
@@ -59,7 +58,7 @@ impl CompileExpr for ChoiceCompiler
       .map(|idx| {
         context.restore_scope(scope.clone());
         continuation.compile_and_wrap(context, self.compiler, idx,
-          quote_stmt!(cx, $branch_failed = false;))
+          parse_quote!(#branch_failed = false;))
       })
       .collect();
     // The last branch does not need to assign `false` to the variable `branch_failed`.
@@ -73,21 +72,21 @@ impl CompileExpr for ChoiceCompiler
 
     let choice = branches_iter
       .rev()
-      .fold(quote_expr!(cx, state), |accu, branch|
-        quote_expr!(cx,
-          if $branch_failed {
-            let mut state = state.restore_from_failure($mark.clone());
-            let state = $branch;
-            $accu
+      .fold(parse_quote!(state), |accu: syn::Stmt, branch|
+        parse_quote!(
+          if #branch_failed {
+            let mut state = state.restore_from_failure(#mark.clone());
+            let state = #branch;
+            #accu
           }
           else { state }
         ));
 
-    quote_expr!(cx, {
-      let $mark = state.mark();
-      let mut $branch_failed = true;
-      let state = $first;
-      $choice
+    parse_quote!({
+      let #mark = state.mark();
+      let mut #branch_failed = true;
+      let state = #first;
+      #choice
     })
   }
 }

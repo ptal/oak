@@ -13,14 +13,15 @@
 // limitations under the License.
 
 use back::compiler::*;
+use quote::format_ident;
 
-type VarInPatternFn = for <'a, 'b, 'c> fn(&mut Context<'a, 'b, 'c>) -> Ident;
+type VarInPatternFn = for <'a> fn(&mut Context<'a>) -> Ident;
 
-fn bind_x_var<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> Ident {
-  context.cx().ident_of("x")
+fn bind_x_var<'a>(_context: &mut Context<'a>) -> Ident {
+  format_ident!("x")
 }
 
-fn bind_var<'a, 'b, 'c>(context: &mut Context<'a, 'b, 'c>) -> Ident {
+fn bind_var<'a>(context: &mut Context<'a>) -> Ident {
   context.next_free_var()
 }
 
@@ -46,50 +47,47 @@ impl CharacterClassCompiler
     }
   }
 
-  fn compile_interval(&self, cx: &ExtCtxt,
-    char_interval: CharacterInterval, x: Ident) -> RExpr
+  fn compile_interval(&self, char_interval: CharacterInterval, x: Ident) -> syn::Expr
   {
     let CharacterInterval{lo, hi} = char_interval;
-    quote_expr!(cx, ($x >= $lo && $x <= $hi))
+    parse_quote!((#x >= #lo && #x <= #hi))
   }
 
-  fn compile_condition(&self, cx: &ExtCtxt, x: Ident) -> RExpr {
+  fn compile_condition(&self, x: Ident) -> syn::Expr {
     let mut intervals = self.classes.intervals.iter().cloned();
     let first_interval = intervals.next()
       .expect("Empty character intervals should be forbidden at the parsing stage.");
     intervals
-      .map(|char_interval| self.compile_interval(cx, char_interval, x))
+      .map(|char_interval| self.compile_interval(char_interval, x.clone()))
       .fold(
-        self.compile_interval(cx, first_interval, x),
-        |accu, interval| quote_expr!(cx, $accu || $interval)
+        self.compile_interval(first_interval, x.clone()),
+        |accu, interval| parse_quote!(#accu || #interval)
       )
   }
 }
 
 impl CompileExpr for CharacterClassCompiler
 {
-  fn compile_expr<'a, 'b, 'c>(&self, context: &mut Context<'a, 'b, 'c>,
-    continuation: Continuation) -> RExpr
+  fn compile_expr<'a>(&self, context: &mut Context<'a>,
+    continuation: Continuation) -> syn::Expr
   {
-    let cx = context.cx();
-
     let classes_desc = format!("{}", self.classes);
     let classes_desc_str = classes_desc.as_str();
 
     let var = (self.bounded_var)(context);
-    let condition = self.compile_condition(cx, var);
+    let condition = self.compile_condition(var.clone());
     let mark = context.next_mark_name();
     continuation
-      .map_success(|success, failure| quote_expr!(cx, {
-        let $mark = state.mark();
+      .map_success(|success, failure| parse_quote!({
+        let #mark = state.mark();
         match state.next() {
-          Some($var) if $condition => {
-            $success
+          Some(#var) if #condition => {
+            #success
           }
           _ => {
-            state = state.restore($mark);
-            state.error($classes_desc_str);
-            $failure
+            state = state.restore(#mark);
+            state.error(#classes_desc_str);
+            #failure
           }
         }
       }))

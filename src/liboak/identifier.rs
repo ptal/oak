@@ -14,21 +14,6 @@
 
 pub use std::string::String;
 pub use proc_macro2::{Ident,Span};
-// pub use rust::{Ident, Name, Span, str_lit};
-// use rust;
-// use std::ops::Deref;
-
-// pub fn ident_to_string(ident: Ident) -> String {
-//   ident.to_string()
-// }
-
-// pub fn string_to_ident(cx: &rust::ExtCtxt, name: String) -> Ident {
-//   cx.ident_of(name.as_str())
-// }
-
-// pub fn cook_lit(name: Name) -> String {
-//   str_lit(name.to_string().as_str(), None)
-// }
 
 pub trait ItemIdent
 {
