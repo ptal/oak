@@ -35,8 +35,8 @@ mod identifier;
 #[proc_macro]
 pub fn oak(input: TokenStream) -> TokenStream {
   let ast = parse_macro_input!(input as front::ast::FGrammar);
-  println!("parsing successful!");
+  // println!("parsing successful!");
   let tast = middle::typecheck(ast);
-  println!("typing successful!");
+  // println!("typing successful!");
   proc_macro::TokenStream::from(back::compile(tast))
 }

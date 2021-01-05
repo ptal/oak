@@ -1,10 +1,22 @@
-#![feature(plugin)]
-#![plugin(oak)]
+// Copyright 2018 Chao Lin & William Sergeant (Sorbonne University)
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 extern crate oak_runtime;
 use oak_runtime::*;
+use oak::oak;
 
-grammar! json {
+oak! {
     // #![show_api]
     program =  spacing json_expr spacing
     // well_formed_json = lbrace json_expr? rbrace
@@ -33,7 +45,7 @@ grammar! json {
 
     //Generic Types
     dquote = "\""
-    spacing = [" \n\r\t"]* -> (^)
+    spacing = [" \n\r\t"]*:(^)
     digit = ["0-9"]
     colon = ":" spacing
     semicolon = ";" spacing

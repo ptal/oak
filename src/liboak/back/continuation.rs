@@ -44,11 +44,9 @@ impl Continuation
     compiler: ExprCompilerFn, idx: usize, before_success: syn::Stmt) -> syn::Expr
   {
     let success = self.success.clone();
+    let s: syn::Expr = parse_quote!({#before_success #success});
     context.compile_success(compiler, idx,
-      parse_quote!(
-        #before_success
-        #success
-      ),
+      s,
       self.failure.clone())
   }
 

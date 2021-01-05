@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::ntcc::*;
+use oak::oak;
 
-grammar! ntcc {
+oak! {
 
   // #![debug_api]
   // #![debug_typing]
 
-  ntcc = spacing expression -> (^)
+  ntcc = spacing expression:(^)
 
   expression
     = sum
@@ -36,13 +36,13 @@ grammar! ntcc {
     = pick_kw or? when sum_body* end_kw?
 
   sum_body
-    = or when -> (^)
+    = (or when):(^)
 
   par
     = par_kw oror? expression par_body* end_kw?
 
   par_body
-    = oror expression -> (^)
+    = (oror expression):(^)
 
   tell
     = store_kw left_arrow constraint
@@ -77,7 +77,7 @@ grammar! ntcc {
 
   comparison = le / neq / lt / ge / gt / eq
 
-  spacing = [" \n\t"]* -> (^)
+  spacing = [" \n\t"]*:(^)
 
   let_in = let_kw var_decl in_kw expression
 
@@ -100,8 +100,8 @@ grammar! ntcc {
   min_bound = min_kw var_ident
   max_bound = max_kw var_ident
 
-  integer = ["0-9"]+ spacing -> (^)
-  var_ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing -> (^)
+  integer:(^) = ["0-9"]+ spacing
+  var_ident:(^) = !["0-9"] ["a-zA-Z0-9_"]+ spacing
 
   pick_kw = "pick" spacing
   when_kw = "when" spacing

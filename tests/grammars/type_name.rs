@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::type_name::*;
+use oak::oak;
 
-grammar! type_name{
+oak! {
   // #![debug_api]
 
   lparen = "(" spacing
@@ -24,9 +24,9 @@ grammar! type_name{
 
   type_names = spacing type_name (lparen type_names (comma type_names)* rparen)?
 
-  spacing = [" \n\t"]* -> (^)
+  spacing = [" \n\t"]*:(^)
 
-  ident = !["0-9"] ["a-zA-Z0-9_"]+ spacing -> (^)
+  ident = (!["0-9"] ["a-zA-Z0-9_"]+ spacing):(^)
   auto_infer_kw = "_" spacing
   rparen = ")" spacing
   not_eof = !.

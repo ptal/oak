@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::unreachable_rule::*;
+use oak::oak;
 
-grammar! unreachable_rule{
+oak! {
     // test0 =  "a"*
     //         /"a"+  // is detected
 

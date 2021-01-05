@@ -14,7 +14,8 @@
 
 //! This is the documentation of the Oak runtime. Oak is a parser generator of _Parsing Expression Grammar_, please read first the [manual](http://hyc.io/oak).
 //!
-//! This library is used by the generated code of Oak and is also necessary to any Oak users for interfacing with the code generated. A PEG combinator returns a `ParseState`, please consult the methods `into_result` or `unwrap_data` as they are good starting point for retrieving useful information.
+//! This library is used by the generated code of Oak and is also necessary to any Oak users for interfacing with the code generated.
+//! A PEG combinator returns a `ParseState`, please consult the methods `into_result` or `unwrap_data` as they are good starting point for retrieving useful information.
 
 extern crate syntex_pos;
 

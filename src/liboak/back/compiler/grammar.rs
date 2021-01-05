@@ -41,7 +41,8 @@ impl GrammarCompiler
 
   fn compile_grammar_module(&self, module_content: Vec<syn::Item>) -> proc_macro2::TokenStream {
     quote!(
-      #![allow(unused_mut)]
+      // #![allow(unused_mut)]
+      #[allow(unused_imports)]
       use oak_runtime::stream::*;
       #[allow(unused_imports)]
       use oak_runtime::str_stream::StrStream;

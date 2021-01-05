@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::stream_span::*;
+use oak::oak;
 
-grammar! stream_span {
+oak! {
   // #![debug_api]
   // #![show_api]
 
@@ -27,8 +27,6 @@ grammar! stream_span {
   inner_expr = (.. (./.))
 
   span_a = .. "a"
-
-  use oak_runtime::str_stream::*;
 
   pub struct Expr {
     pub full_sp: Span,
@@ -64,8 +62,8 @@ fn test_state<S>(state: ParseState<S, Expr>)
 
 #[test]
 fn test_stream_span() {
-  let state = stream_span::parse_expr("abcb".into_state());
-  let state2 = stream_span::parse_expr2("abcb".into_state());
+  let state = parse_expr("abcb".into_state());
+  let state2 = parse_expr2("abcb".into_state());
   test_state(state);
   test_state(state2);
 }

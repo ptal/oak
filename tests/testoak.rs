@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(plugin, box_syntax, rustc_private)]
-#![plugin(oak)]
-
 /// This is a test framework for grammars and inputs that should be accepted or rejected by these grammars.
 /// The grammars to test are sub-modules and the inputs are in the directory `data/` at the root of this project. There is one directory per grammar to test with the same name. There is two test mode possible:
 /// * Bulk test: Two files are present in the directory and finish with either `.bulk.pass` or `.bulk.fail`. Each line of these files represent one input to test for the grammar considered.
 /// * Full test: Two directories are present: `run-pass` and `run-fail` and each files in these directories represent a full input to test against the considered grammar.
 
+extern crate oak;
 extern crate oak_runtime;
 extern crate term;
 
@@ -36,7 +34,7 @@ use ExpectedResult::*;
 
 mod grammars;
 
-type RecognizerFn = Box<for<'a> Fn(ParseState<StrStream<'a>, ()>) -> ParseState<StrStream<'a>, ()>>;
+type RecognizerFn = Box<dyn for<'a> Fn(ParseState<StrStream<'a>, ()>) -> ParseState<StrStream<'a>, ()>>;
 
 #[test]
 fn test_data_directory()

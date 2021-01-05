@@ -14,9 +14,9 @@
 
 //! The types of the rules of this grammar must be valid (Bug #75).
 
-pub use self::recursive_type::*;
+use oak::oak;
 
-grammar! recursive_type {
+oak! {
 
   r = "a" r
     / "b"

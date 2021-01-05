@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::combinators::*;
+use oak::oak;
 
-grammar! combinators {
+oak! {
   // #![debug_api]
   // #![show_api]
 
@@ -28,7 +28,7 @@ grammar! combinators {
          / "let" . .
          / "if " ("-" . / .) " else " ("-" . / "+" .)
 
-  repeat = (("a" / "b"+ ) .)* "c"*
+  repeat = (("a" / "b"+) .)* "c"*
 
   predicate = &"a" (!"b" .)+ / &"b" (!"a" .)+
 

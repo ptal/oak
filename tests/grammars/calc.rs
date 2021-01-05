@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::calc::*;
+use oak::oak;
 
-grammar! calc {
+oak! {
   // #![debug_api]
   // #![show_api]
 
@@ -56,7 +56,7 @@ grammar! calc {
 
   digit = ["0-9"]
   number = digit+ spacing > to_number
-  spacing = [" \n\r\t"]* -> (^)
+  spacing = [" \n\r\t"]*:(^)
 
   kw_tail = !ident_char spacing
 

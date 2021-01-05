@@ -57,10 +57,12 @@ impl CompileExpr for ChoiceCompiler
     let mut branches: Vec<_> = choices.into_iter()
       .map(|idx| {
         context.restore_scope(scope.clone());
-        continuation.compile_and_wrap(context, self.compiler, idx,
-          parse_quote!(#branch_failed = false;))
+        let b = branch_failed.clone();
+        let success: syn::Stmt = parse_quote!(#b = false;);
+        continuation.compile_and_wrap(context, self.compiler, idx, success)
       })
       .collect();
+
     // The last branch does not need to assign `false` to the variable `branch_failed`.
     context.restore_scope(scope.clone());
     context.pop_mut_ref_fv();
@@ -72,15 +74,15 @@ impl CompileExpr for ChoiceCompiler
 
     let choice = branches_iter
       .rev()
-      .fold(parse_quote!(state), |accu: syn::Stmt, branch|
-        parse_quote!(
+      .fold(parse_quote!(state), |accu: syn::Expr, branch|
+        parse_quote!({
           if #branch_failed {
             let mut state = state.restore_from_failure(#mark.clone());
             let state = #branch;
             #accu
           }
           else { state }
-        ));
+        }));
 
     parse_quote!({
       let #mark = state.mark();

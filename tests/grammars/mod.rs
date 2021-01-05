@@ -24,3 +24,4 @@ pub mod useless_chaining;
 pub mod unreachable_rule;
 pub mod issue94;
 mod stream_span;
+mod typing;

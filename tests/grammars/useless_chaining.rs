@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::useless_chaining::*;
+use oak::oak;
 
-grammar! useless_chaining {
+oak! {
 
   // test1 = !(!"a") // &"a"
   // test2 = &(&"a") // &"a"
   // test3 = !(&"a") // !"a"
   // test4 = &(!"a") // !"a"
-  // //test5 = ("a"*)* // infinite loop -> deja detectee
+  // //test5 = ("a"*)* // infinite loop -> already detected by WFA
   // test6 = ("a"+)+ // "a"+
   // test7 = ("a"+)* // "a"+
-  // //test8 = ("a"*)+ // infinite loop -> deja detectee
+  // //test8 = ("a"*)+ // infinite loop -> already detected by WFA
   //
   test9 = !"a"
   // test10 = !test9

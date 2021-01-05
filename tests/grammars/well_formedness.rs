@@ -14,9 +14,9 @@
 
 //! The types of the rules of this grammar must be valid (Bug #75).
 
-pub use self::well_formedness::*;
+use oak::oak;
 
-grammar! well_formedness {
+oak! {
 
   // a = a "a" / "b"          // ERROR: left recursion
 
@@ -72,13 +72,13 @@ grammar! well_formedness {
   // v = "a" .+ / "" / "Z" .+  // ERROR: unreachable branch
 
 
-  u1 = ("x"?)? // Warning useless chaining
+  // u1 = ("x"?)? // Warning useless chaining
   // u2 = ("x"?)+ // ERROR: loop repeat
   // u3 = ("x"?)* // ERROR: loop repeat
-  u4 = ("x"+)? // Warning useless chaining
-  u5 = ("x"+)* // Warning useless chaining
-  u6 = ("x"+)+ // Warning useless chaining
-  u7 = ("x"*)? // Warning useless chaining
+  // u4 = ("x"+)? // Warning useless chaining
+  // u5 = ("x"+)* // Warning useless chaining
+  // u6 = ("x"+)+ // Warning useless chaining
+  // u7 = ("x"*)? // Warning useless chaining
   // u8 = ("x"*)+ // ERROR: loop repeat
   // u9 = ("x"*)* // ERROR: loop repeat
 
