@@ -40,7 +40,6 @@ oak! {
     Add, Sub, Mul, Div, Exp
   }
 
-
   program = spacing expression
 
   expression
@@ -61,15 +60,15 @@ oak! {
   let_expr = let_kw let_binding in_kw expression
   let_binding = identifier bind_op expression
 
-  term_op
-    = add_op > add_bin_op
-    / sub_op > sub_bin_op
+  term_op: BinOp
+    = add_op > Add
+    / sub_op > Sub
 
-  factor_op
-    = mul_op > mul_bin_op
-    / div_op > div_bin_op
+  factor_op: BinOp
+    = mul_op > Mul
+    / div_op > Div
 
-  exponent_op = exp_op > exp_bin_op
+  exponent_op: BinOp = exp_op > Exp
 
   identifier = !digit !keyword ident_char+ spacing > to_string
   ident_char = ["a-zA-Z0-9_"]
@@ -110,10 +109,4 @@ oak! {
     front.into_iter().rev().fold(last,
       |accu, (expr, op)| Box::new(BinaryExpr(op, expr, accu)))
   }
-
-  fn add_bin_op() -> BinOp { Add }
-  fn sub_bin_op() -> BinOp { Sub }
-  fn mul_bin_op() -> BinOp { Mul }
-  fn div_bin_op() -> BinOp { Div }
-  fn exp_bin_op() -> BinOp { Exp }
 }

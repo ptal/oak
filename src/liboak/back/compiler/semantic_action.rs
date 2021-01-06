@@ -41,20 +41,32 @@ impl CompileExpr for SemanticActionCompiler
       .map(|var| parse_quote!(#var))
       .collect();
     let action = self.action.clone();
+    let is_unit_variant =
+      match self.action {
+        syn::Expr::Path(ref expr_path) =>
+          if let Some(x) = expr_path.path.segments.last() {
+            x.ident.to_string().chars().next().expect("non empty identifier").is_uppercase() &&
+            context.has_unit_type(self.expr_idx)
+          }
+          else { false }
+        _ => false
+      };
     let expr = continuation
-      .map_success(|success, _|
-        if self.boxed {
-          parse_quote!({
-            let #result = Box::new(#action(#(#args),*));
-            #success
-          })
-        }
-        else {
-          parse_quote!({
-            let #result = #action(#(#args),*);
-            #success
-          })
-        })
+      .map_success(|success, _| {
+        let action_call: syn::Expr =
+          if is_unit_variant {
+            parse_quote!(#action)
+          }
+          else {
+            parse_quote!(#action(#(#args),*))
+          };
+        let boxed_action_call: syn::Expr =
+          if self.boxed { parse_quote!(Box::new(#action_call)) }
+          else { action_call };
+        parse_quote!({
+          let #result = #boxed_action_call;
+          #success
+        })})
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
     context.close_scope(scope);

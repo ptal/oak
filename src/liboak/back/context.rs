@@ -219,6 +219,10 @@ impl<'a> Context<'a>
     self.grammar[expr_idx].type_cardinality()
   }
 
+  pub fn has_unit_type(&self, expr_idx: usize) -> bool {
+    self.grammar[expr_idx].ty == crate::middle::typing::ast::Type::Unit
+  }
+
   pub fn open_scope(&mut self, expr_idx: usize) -> Scope {
     let scope = self.save_scope();
     self.num_combinators_compiled = 0;
