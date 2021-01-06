@@ -215,7 +215,7 @@ impl Visitor<()> for Depth
   }
 
   // We rely on the Rust compiler to spot type mismatch between semantic action's return type and type ascription.
-  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: syn::Expr) {
+  fn visit_semantic_action(&mut self, _this: usize, child: usize, _boxed: bool, _action: syn::Expr) {
     self.surface_expr(child);
     self.visit_expr_switch_ascription(child, None);
   }

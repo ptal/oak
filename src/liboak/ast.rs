@@ -167,7 +167,7 @@ pub enum Expression
   ZeroOrOne(usize), // expr?
   NotPredicate(usize), // !expr
   AndPredicate(usize), // &expr
-  SemanticAction(usize, syn::Expr), // expr > function
+  SemanticAction(usize, bool, syn::Expr), // expr > function, the boolean is true if boxed.
   TypeAscription(usize, IType), // expr:() or expr:(^) or expr:<rust-ty>
   SpannedExpr(usize), // .. expr
 }

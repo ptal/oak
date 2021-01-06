@@ -16,6 +16,7 @@
 //! Literals (e.g. `"lit"`) and syntactic predicates (e.g. `&e` and `!e`) are by default invisibles.
 
 use quote::quote;
+use syn::parse_quote;
 
 pub use ast::*;
 pub use visitor::*;
@@ -59,7 +60,7 @@ impl IGrammar
   /// We try to convert Rust unit type into Oak unit type for better typechecking.
   /// Otherwise, `External` is returned.
   /// If we detect a semantic action with no type or type `()`, we generate an error because this semantic action will never be called.
-  pub fn resolve_action_type(&self, span: Span, action: syn::Expr) -> IType
+  pub fn resolve_action_type(&self, span: Span, boxed: bool, action: syn::Expr) -> IType
   {
     match action {
       syn::Expr::Path(expr_path) => {
@@ -72,10 +73,14 @@ impl IGrammar
               },
               &syn::ReturnType::Type(_, ref ty) => {
                 let unit_ty = syn::parse_str("()").expect("unit type");
-                if (**ty) == unit_ty {
+                let ty = (**ty).clone();
+                if ty == unit_ty {
                   Self::error_unit_action_type(span)
                 }
-                Regular(Rust((**ty).clone()))
+                let ty: syn::Type =
+                  if boxed { parse_quote!(Box<#ty>) }
+                  else { ty };
+                Regular(Rust(ty))
               }
             }
           } else { External }

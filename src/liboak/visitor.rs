@@ -72,7 +72,7 @@ pub trait Visitor<R: Default> : ExprByIndex
     self.visit_syntactic_predicate(this, child)
   }
 
-  fn visit_semantic_action(&mut self, _this: usize, child: usize, _action: syn::Expr) -> R {
+  fn visit_semantic_action(&mut self, _this: usize, child: usize, _boxed: bool, _action: syn::Expr) -> R {
     self.visit_expr(child)
   }
 
@@ -135,8 +135,8 @@ pub fn walk_expr<R: Default, V: ?Sized>(visitor: &mut V, this: usize) -> R where
     CharacterClass(char_class) => {
       visitor.visit_character_class(this, char_class)
     }
-    SemanticAction(child, action) => {
-      visitor.visit_semantic_action(this, child, action)
+    SemanticAction(child, boxed, action) => {
+      visitor.visit_semantic_action(this, child, boxed, action)
     }
     TypeAscription(child, ty) => {
       visitor.visit_type_ascription(this, child, ty)

@@ -150,8 +150,8 @@ impl Visitor<IType> for Surface
     IType::Regular(Type::Atom)
   }
 
-  fn visit_semantic_action(&mut self, this: usize, _child: usize, action: syn::Expr) -> IType {
-    self.grammar.resolve_action_type(self.grammar[this].span(), action)
+  fn visit_semantic_action(&mut self, this: usize, _child: usize, boxed: bool, action: syn::Expr) -> IType {
+    self.grammar.resolve_action_type(self.grammar[this].span(), boxed, action)
   }
 
   // Inductive rules

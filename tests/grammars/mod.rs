@@ -17,6 +17,7 @@
 pub mod ntcc;
 pub mod type_name;
 pub mod calc;
+pub mod calc2;
 pub mod recursive_type;
 pub mod combinators;
 pub mod well_formedness;

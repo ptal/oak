@@ -164,16 +164,9 @@ impl FGrammar {
     if ps.peek(Token![>]) {
       let _: Token![>] = ps.parse()?;
       let span = ps.span();
-      let action: syn::Expr =
-        if ps.peek(syn::token::Brace) {
-          let action: syn::ExprBlock = ps.parse()?;
-          syn::Expr::Block(action)
-        }
-        else {
-          let action: syn::ExprPath = ps.parse()?;
-          syn::Expr::Path(action)
-        };
-      Ok(self.alloc_expr(span, SemanticAction(expr, action)))
+      let boxed = ps.parse::<Token![box]>().is_ok();
+      let action: syn::ExprPath = ps.parse()?;
+      Ok(self.alloc_expr(span, SemanticAction(expr, boxed, syn::Expr::Path(action))))
     }
     else {
       Ok(expr)

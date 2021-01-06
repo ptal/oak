@@ -17,14 +17,15 @@ use back::compiler::*;
 pub struct SemanticActionCompiler
 {
   expr_idx: usize,
+  boxed: bool,
   action: syn::Expr
 }
 
 impl SemanticActionCompiler
 {
-  pub fn parser(expr_idx: usize, action: syn::Expr, _this_idx: usize) -> SemanticActionCompiler {
+  pub fn parser(expr_idx: usize, boxed: bool, action: syn::Expr, _this_idx: usize) -> SemanticActionCompiler {
     SemanticActionCompiler {
-      expr_idx, action
+      expr_idx, boxed, action
     }
   }
 }
@@ -42,11 +43,18 @@ impl CompileExpr for SemanticActionCompiler
     let action = self.action.clone();
     let expr = continuation
       .map_success(|success, _|
-        parse_quote!({
-          let #result = #action(#(#args),*);
-          #success
+        if self.boxed {
+          parse_quote!({
+            let #result = Box::new(#action(#(#args),*));
+            #success
+          })
+        }
+        else {
+          parse_quote!({
+            let #result = #action(#(#args),*);
+            #success
+          })
         })
-      )
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
     context.close_scope(scope);
