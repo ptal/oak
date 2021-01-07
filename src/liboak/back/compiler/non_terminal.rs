@@ -22,21 +22,29 @@ impl NonTerminalCompiler
 {
   pub fn recognizer(id: Ident) -> NonTerminalRecognizerCompiler {
     NonTerminalRecognizerCompiler {
-      id: id
+      path: parse_quote!(#id)
     }
   }
 
   pub fn parser(id: Ident, this_idx: usize) -> NonTerminalParserCompiler {
     NonTerminalParserCompiler {
-      id: id,
-      this_idx: this_idx
+      path: parse_quote!(#id),
+      this_idx
     }
+  }
+
+  pub fn external_recognizer(path: syn::Path) -> NonTerminalRecognizerCompiler {
+    NonTerminalRecognizerCompiler { path }
+  }
+
+  pub fn external_parser(path: syn::Path, this_idx: usize) -> NonTerminalParserCompiler {
+    NonTerminalParserCompiler { path, this_idx}
   }
 }
 
 pub struct NonTerminalRecognizerCompiler
 {
-  id: Ident
+  path: syn::Path
 }
 
 impl CompileExpr for NonTerminalRecognizerCompiler
@@ -44,7 +52,7 @@ impl CompileExpr for NonTerminalRecognizerCompiler
   fn compile_expr<'a>(&self, _context: &mut Context<'a>,
     continuation: Continuation) -> syn::Expr
   {
-    let recognizer_fn = recognizer_name(self.id.clone());
+    let recognizer_fn = recognizer_name(self.path.clone());
     continuation
       .map_success(|success, failure| parse_quote!(
         {
@@ -64,7 +72,7 @@ impl CompileExpr for NonTerminalRecognizerCompiler
 
 pub struct NonTerminalParserCompiler
 {
-  id: Ident,
+  path: syn::Path,
   this_idx: usize
 }
 
@@ -73,7 +81,7 @@ impl CompileExpr for NonTerminalParserCompiler
   fn compile_expr<'a>(&self, context: &mut Context<'a>,
     continuation: Continuation) -> syn::Expr
   {
-    let parser_fn = parser_name(self.id.clone());
+    let parser_fn = parser_name(self.path.clone());
     let cardinality = context.expr_cardinality(self.this_idx);
     let mut vars_names: Vec<_> = (0..cardinality)
       .map(|_| context.next_free_var())

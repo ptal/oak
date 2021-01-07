@@ -15,12 +15,27 @@
 use proc_macro2::Ident;
 use quote::format_ident;
 
-pub fn parser_name(rule_name: Ident) -> Ident {
-  format_ident!("parse_{}", rule_name)
+fn modify_path(mut path: syn::Path, prefix: &str) -> syn::Path {
+  let segment = path.segments.last_mut().expect("rule path");
+  let x = format_ident!("{}_{}", prefix, segment.ident);
+  segment.ident = x;
+  path
 }
 
-pub fn recognizer_name(rule_name: Ident) -> Ident {
-  format_ident!("recognize_{}", rule_name)
+pub fn parser_name(rule_path: syn::Path) -> syn::Path {
+  modify_path(rule_path, "parse")
+}
+
+pub fn recognizer_name(rule_path: syn::Path) -> syn::Path {
+  modify_path(rule_path, "recognize")
+}
+
+pub fn parser_id(id: Ident) -> Ident {
+  format_ident!("parse_{}", id)
+}
+
+pub fn recognizer_id(id: Ident) -> Ident {
+  format_ident!("recognize_{}", id)
 }
 
 pub struct NameFactory

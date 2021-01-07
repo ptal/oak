@@ -87,7 +87,7 @@ impl Depth
 
   fn check_all_rules_have_type(&mut self) {
     for rule in self.surface.grammar.rules.clone() {
-      if self.type_of(rule.expr_idx) == External {
+      if self.type_of(rule.expr_idx).contains_external(&self.surface.grammar) {
         self.surface.error = true;
         rule.name.span().unstable()
           .error(format!("could not infer the type of this rule, please use type ascription, e.g. `r: Expr = e`."))

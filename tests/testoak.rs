@@ -55,6 +55,8 @@ fn test_data_directory()
     |s| calc::recognize_program(s)));
   test_engine.register("calc2", None, Box::new(
     |s| calc2::recognize_program(s)));
+  test_engine.register("calc3", None, Box::new(
+    |s| calc3::recognize_program(s)));
   test_engine.register("combinators", Some(format!("str_literal")), Box::new(
     |s| combinators::recognize_str_literal(s)));
   test_engine.register("combinators", Some(format!("sequence")), Box::new(

@@ -48,20 +48,21 @@ impl<'a> Context<'a>
   }
 
   pub fn into_recognizer_function(self, body: syn::Expr, rule: Rule) -> syn::Item {
-    let recognizer_fn = recognizer_name(rule.ident());
+    let recognizer_fn = recognizer_id(rule.ident());
     self.function(recognizer_fn, true, body, parse_quote!(()))
   }
 
   pub fn into_parser_alias(self, rule: Rule) -> syn::Item {
-    let recognizer_fn = recognizer_name(rule.ident());
-    let parser_fn = parser_name(rule.ident());
+    let id = rule.ident();
+    let recognizer_fn = recognizer_name(parse_quote!(#id));
+    let parser_fn = parser_id(id);
     self.function(parser_fn, false,
       parse_quote!(#recognizer_fn(state)),
       parse_quote!(()))
   }
 
   pub fn into_parser_function(self, body: syn::Expr, rule: Rule) -> syn::Item {
-    let parser_fn = parser_name(rule.ident());
+    let parser_fn = parser_id(rule.ident());
     let ty = TypeCompiler::compile(self.grammar, rule.expr_idx);
     self.function(parser_fn, true, body, ty)
   }

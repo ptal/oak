@@ -13,6 +13,24 @@
 // limitations under the License.
 
 use oak::oak;
+use self::Expression::*;
+use self::BinOp::*;
+use std::str::FromStr;
+
+pub type PExpr = Box<Expression>;
+
+#[derive(Debug)]
+pub enum Expression {
+  Variable(String),
+  Number(u32),
+  BinaryExpr(BinOp, PExpr, PExpr),
+  LetIn(String, PExpr, PExpr)
+}
+
+#[derive(Debug)]
+pub enum BinOp {
+  Add, Sub, Mul, Div, Exp
+}
 
 oak! {
   // #![debug_api]
@@ -20,25 +38,6 @@ oak! {
 
   // Optional stream declaration.
   type Stream<'a> = StrStream<'a>;
-
-  use std::str::FromStr;
-  use self::Expression::*;
-  use self::BinOp::*;
-
-  pub type PExpr = Box<Expression>;
-
-  #[derive(Debug)]
-  pub enum Expression {
-    Variable(String),
-    Number(u32),
-    BinaryExpr(BinOp, PExpr, PExpr),
-    LetIn(String, PExpr, PExpr)
-  }
-
-  #[derive(Debug)]
-  pub enum BinOp {
-    Add, Sub, Mul, Div, Exp
-  }
 
   program = spacing expression
 

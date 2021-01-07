@@ -311,6 +311,14 @@ impl IType
     self == &Invisible || self == &Regular(Unit)
   }
 
+  pub fn contains_external(&self, grammar: &IGrammar) -> bool {
+    match self.clone() {
+      Infer | Rec(_) | Invisible => false,
+      External => true,
+      Regular(ty) => ty.contains_external(grammar)
+    }
+  }
+
   pub fn display(&self, grammar: &IGrammar) -> String {
     match self.clone() {
       Infer => format!("_"),
@@ -420,6 +428,20 @@ impl Type
       }
       Rust(rty) => {
         format!("{}", quote!(#rty))
+      }
+    }
+  }
+
+  pub fn contains_external(&self, grammar: &IGrammar) -> bool {
+    match self.clone() {
+      Unit | Atom | Rust(_) => false,
+      Optional(child) | List(child) => {
+        let ty = grammar.type_of(child);
+        ty.contains_external(grammar)
+      }
+      Tuple(children) => {
+        let tys: Vec<_> = children.into_iter().map(|c| grammar.type_of(c)).collect();
+        tys.into_iter().any(|ty| ty.contains_external(grammar))
       }
     }
   }
