@@ -50,7 +50,6 @@ impl FGrammar {
   // A rule can have two shapes:
   //   1. rule1 = ...     (untyped)
   //   2. rule2:ty = ...  (typed)
-  // I am unsure if it is enough to just check <ident> followed by ":" for the typed version, or if we need to perform more speculative parsing.
   fn peek_rule_lhs(&mut self, ps: ParseStream) -> bool {
     if ps.peek(Ident) {
       if ps.peek2(Token![=]) {

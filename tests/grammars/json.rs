@@ -17,7 +17,6 @@ use oak_runtime::*;
 use oak::oak;
 
 oak! {
-    // #![show_api]
     program =  spacing json_expr spacing
     // well_formed_json = lbrace json_expr? rbrace
 

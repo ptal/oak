@@ -15,9 +15,6 @@
 use oak::oak;
 
 oak! {
-  // #![debug_api]
-  // #![show_api]
-
   str_literal = "return"
 
   sequence = "if" " " "then" " " "else"

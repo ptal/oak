@@ -23,19 +23,6 @@ pub trait Stream
   fn stream(self) -> Self::Output;
 }
 
-/// Requirements of a stream of characters. It is currently required by most parser combinators.
-pub trait CharStream
- : Clone + Ord + HasNext + Eq
- + Iterator<Item=char>
- + ConsumePrefix<&'static str>
-{}
-
-impl<R> CharStream for R where
- R: Clone + Ord + HasNext + Eq
-  + Iterator<Item=char>
-  + ConsumePrefix<&'static str>
-{}
-
 /// Produces a textual representation of the current position in the stream. For example, it can be `2:5` if the position is at line 2 and column 5.
 pub trait Location
 {

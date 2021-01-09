@@ -15,10 +15,6 @@
 use oak::oak;
 
 oak! {
-
-  // #![debug_api]
-  // #![debug_typing]
-
   ntcc = spacing expression:(^)
 
   expression

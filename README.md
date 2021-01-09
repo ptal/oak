@@ -6,15 +6,17 @@
 [travis]: https://travis-ci.org/ptal/oak
 
 Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels.
-You can download and set up the exact same version of the compiler used with `rustup override add nightly-2018-11-09`.
+You can download and set up the exact same version of the compiler used with `rustup override add 2021-01-06`.
 
-Please consult the [Oak manual](http://hyc.io/oak) and [this grammar](https://github.com/ptal/bonsai/blob/master/src/front/grammar.rs) for a more complete example.
+Please consult the [Oak manual](http://hyc.io/oak).
 
 ## Features
 
-* Grammar description as a Rust syntax extension.
-* Generation of both *recognizer* and *parser* functions for each rules.
-* *Type inference* for each parsing expressions. Simplify the AST construction.
+* *Easy to install*: PEG grammar description as a Rust procedural macro.
+* *User-friendly*: most of the types are automatically inferred from the parsing expressions.
+* *Safe*: Well-formedness analysis guarantees termination.
+* *Modular*: External parser rules can be called at any time.
+* *Fast*: Generation of both recognizer and parser functions for each rule.
 
 ## Build local documentation
 
@@ -22,7 +24,7 @@ You might want to build the manual or code documentation from the repository bec
 
 #### Build the manual
 
-You need the utility [mdbook](https://rust-lang-nursery.github.io/mdBook/):
+You need the utility [mdbook](https://rust-lang.github.io/mdBook/):
 
 ```
 cargo install mdbook

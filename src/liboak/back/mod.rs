@@ -19,7 +19,6 @@
 mod context;
 mod continuation;
 mod name_factory;
-mod code_printer;
 mod compiler;
 
 use middle::typing::ast::*;

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 pub use middle::typing::ast::*;
-use back::code_printer::*;
 use back::compiler::rule::*;
 
 use quote::quote;
@@ -29,7 +28,6 @@ impl GrammarCompiler
     let compiler = GrammarCompiler::new(grammar);
     let mod_content = compiler.compile_mod_content();
     let result = compiler.compile_grammar_module(mod_content);
-    print_code(&compiler.grammar, &result);
     result
   }
 
@@ -54,8 +52,8 @@ impl GrammarCompiler
   }
 
   fn compile_mod_content(&self) -> Vec<syn::Item> {
-    let mut mod_content = self.compile_rules();
-    mod_content.extend(self.grammar.rust_items.clone().into_iter());
+    let mut mod_content = self.grammar.rust_items.clone();
+    mod_content.extend(self.compile_rules().into_iter());
     mod_content.extend(self.grammar.rust_functions.values().cloned()
       .map(syn::Item::Fn));
     mod_content
@@ -67,4 +65,3 @@ impl GrammarCompiler
       .collect()
   }
 }
-

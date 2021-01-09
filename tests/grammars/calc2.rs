@@ -33,9 +33,6 @@ pub enum BinOp {
 }
 
 oak! {
-  // #![debug_api]
-  // #![show_api]
-
   // Optional stream declaration.
   type Stream<'a> = StrStream<'a>;
 
@@ -50,7 +47,7 @@ oak! {
   exponent
     = (factor exponent_op)* factor > fold_right
 
-  factor: Box<Expression>
+  factor: PExpr
     = number > box Number
     / identifier > box Variable
     / let_expr > box LetIn

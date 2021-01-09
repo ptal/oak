@@ -15,9 +15,6 @@
 use oak::oak;
 
 oak! {
-  // #![debug_api]
-  // #![show_api]
-
   // Optional stream declaration.
   type Stream<'a> = StrStream<'a>;
 
@@ -49,8 +46,7 @@ oak! {
 
 use oak_runtime::*;
 
-fn test_state<S>(state: ParseState<S, Expr>)
-  where S: CharStream
+fn test_state<'a>(state: ParseState<StrStream<'a>, Expr>)
 {
   let data = state.unwrap_data();
   assert_eq!(data.c2, 'b');

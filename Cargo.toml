@@ -1,7 +1,7 @@
 [package]
 
 name = "oak"
-version = "0.7.0"
+version = "0.8.0"
 authors = [ "Pierre Talbot <ptalbot@hyc.io>" ]
 
 description = "A typed parser generator syntax extension for Parsing Expression Grammar (PEG)."
@@ -20,13 +20,13 @@ proc_macro = true
 
 [dev-dependencies.oak_runtime]
 path = "runtime"
-version = "0.5.5"
+version = "0.6.0"
 
 [dev-dependencies]
-term = "^0.5.1"
+term = "0.5"
 
 [dependencies]
 partial = "^0.2.3"
 proc-macro2 = { version = "1.0", features = ["nightly"] }
-syn = { version = "~1.0.56", features = ["full", "extra-traits"] }
-quote = "~1.0.8"
+syn = { version = "1.0", features = ["full", "extra-traits"] }
+quote = "1.0"

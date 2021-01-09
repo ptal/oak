@@ -1,6 +1,9 @@
 # Getting Started
 
-Before starting playing with Oak, let's install the nightly compiler and create a skeleton project. We are using the [compiler plugins](https://doc.rust-lang.org/book/compiler-plugins.html) extension which is only available in nightly build of Rust. We advise to use the tool [rustup](http://www.rustup.rs) for installing, updating and switching between stable, beta and nightly channels of Rust. The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compiler.
+Before starting playing with Oak, let's install the nightly compiler and create a skeleton project.
+We are using the features `proc_macro_diagnostic` and `proc_macro_span` which are only available in nightly build of Rust.
+We advise to use the tool [rustup](http://www.rustup.rs) for installing, updating and switching between stable, beta and nightly channels of Rust.
+The Rust packages manager [Cargo](http://doc.crates.io/) will also be installed with the compi
 
 ```bash
 $ curl https://sh.rustup.rs -sSf | sh
@@ -27,7 +30,8 @@ oak = "*"
 oak_runtime = "*"
 ```
 
-The `[package]` section describe the usual information about your project, here named *oak_skeleton* and the `[dependencies]` section lists the libraries available on [crates.io](http://crates.io/) that you depend on. You can also directly depend on the git repository:
+The `[package]` section describe the usual information about your project, here named *oak_skeleton* and the `[dependencies]` section lists the libraries available on [crates.io](http://crates.io/) that you depend on.
+You can also directly depend on the git repository:
 
 ```bash
 [dependencies.oak]
@@ -41,19 +45,16 @@ path = "runtime"
 Oak is now usable from your `src/main.rs`:
 
 ```rust
-#![feature(plugin)]
-#![plugin(oak)]
-
 extern crate oak_runtime;
 use oak_runtime::*;
+use oak::oak;
+use std::str::FromStr;
 
-grammar! sum{
+oak!{
   #![show_api]
 
   sum = number ("+" number)* > add
   number = ["0-9"]+ > to_number
-
-  use std::str::FromStr;
 
   fn add(x: u32, rest: Vec<u32>) -> u32 {
     rest.iter().fold(x, |x,y| x+y)
@@ -66,9 +67,12 @@ grammar! sum{
 }
 
 fn main() {
-  let state = sum::parse_sum("7+2+1".into_state());
+  let state = parse_sum("7+2+1".into_state());
   assert_eq!(state.unwrap_data(), 10);
 }
 ```
 
-We organized the library into two packages: `oak` and `oak_runtime`. The `oak` dependency is the syntax extension compiling your grammar description into Rust code, the attribute `#![plugin(oak)]` exposes the macro `grammar!` which is the only thing you will use from `oak`. The generated code depends on the library `oak_runtime`, it also contains structures that you will have to use such as `ParseState`. The attribute `#![feature(plugin)]` tells the Rust compiler that we are using unstable features, and that's why we need to use the nightly channel. Keep reading to learn more about the language used in the macro `grammar!`.
+We organized the library into two packages: `oak` and `oak_runtime`.
+The `oak` dependency is the syntax extension compiling your grammar description into Rust code, the statement `use oak::oak` exposes the macro `oak!` which is the only thing you will use from `oak`.
+The generated code depends on the library `oak_runtime`, it also contains structures that you will have to use such as `ParseState`.
+Keep reading to learn more about the language used in the macro `oak!`.

@@ -22,10 +22,6 @@ pub type AGrammar = Grammar<FExpressionInfo>;
 
 impl AGrammar
 {
-  pub fn merge_print_code(&mut self, level: PrintLevel) {
-    self.attributes.print_code = self.attributes.print_code.merge(level);
-  }
-
   pub fn merge_print_typing(&mut self, level: PrintLevel) {
     self.attributes.print_typing = self.attributes.print_typing.merge(level);
   }
@@ -33,14 +29,12 @@ impl AGrammar
 
 pub struct GrammarAttributes
 {
-  pub print_code: PrintLevel,
   pub print_typing: PrintLevel
 }
 
 impl Default for GrammarAttributes {
   fn default() -> Self {
     GrammarAttributes {
-      print_code: PrintLevel::default(),
       print_typing: PrintLevel::default()
     }
   }
@@ -68,10 +62,6 @@ impl PrintLevel
 
   pub fn debug(self) -> bool {
     self == PrintLevel::Debug
-  }
-
-  pub fn show(self) -> bool {
-    self == PrintLevel::Show
   }
 }
 

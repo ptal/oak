@@ -40,12 +40,6 @@ fn merge_grammar_attributes(grammar: &mut AGrammar, attrs: Vec<syn::Attribute>) 
 
 fn merge_grammar_attr(grammar: &mut AGrammar, ident: &Ident) {
   match &*ident.to_string() {
-    "debug_api" => {
-      grammar.merge_print_code(PrintLevel::Debug);
-    },
-    "show_api" => {
-      grammar.merge_print_code(PrintLevel::Show);
-    },
     "debug_typing" => {
       grammar.merge_print_typing(PrintLevel::Debug);
     },

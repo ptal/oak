@@ -2,8 +2,6 @@ use oak::*;
 
 
 oak! {
-  // #![debug_typing]
-
   ra = "a" ra / "b" .
   // rb = "a" rb . / "b" .
   // rc = ra . / .

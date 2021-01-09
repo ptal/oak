@@ -33,9 +33,6 @@ pub enum BinOp {
 }
 
 oak! {
-  // #![debug_api]
-  // #![show_api]
-
   // Optional stream declaration.
   type Stream<'a> = StrStream<'a>;
 

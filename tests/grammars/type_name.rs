@@ -15,8 +15,6 @@
 use oak::oak;
 
 oak! {
-  // #![debug_api]
-
   lparen = "(" spacing
 
   type_name = auto_infer_kw &(lparen / not_eof / comma)
