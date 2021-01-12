@@ -153,9 +153,9 @@ impl Visitor<()> for Depth
 {
   fn visit_expr(&mut self, this: usize) {
     let this_ty = self.type_of(this);
-    assert!(this_ty != Infer,
-      format!("Every expression must be typed during the surface inference: {}: {:?}",
-        this, self.expr_by_index(this)));
+    // assert!(this_ty != Infer,
+    //   format!("Every expression must be typed during the surface inference: {}: {:?}",
+    //     this, self.expr_by_index(this)));
 
     if self.under_unit {
       self.surface.type_expr(this, Regular(Unit));
@@ -205,13 +205,10 @@ impl Visitor<()> for Depth
     if let Some(aty) = self.under_ty_ascription.clone() {
       self.error_if_not_match_ty_ascription(this, ty.clone(), aty);
     }
-    self.surface_expr(child);
+    if !self.under_unit {
+      self.surface_expr(child);
+    }
     self.visit_expr_switch_ascription(child, Some(ty));
-  }
-
-  fn visit_syntactic_predicate(&mut self, _this: usize, child: usize) {
-    self.surface_expr(child);
-    self.visit_expr(child);
   }
 
   // We rely on the Rust compiler to spot type mismatch between semantic action's return type and type ascription.

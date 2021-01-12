@@ -179,6 +179,11 @@ impl Visitor<IType> for Surface
     IType::Regular(Type::Tuple(vec![self.grammar.span_ty_idx(), child]))
   }
 
+  fn visit_range_expr(&mut self, _this: usize, child: usize) -> IType {
+    self.visit_expr(child);
+    IType::Regular(Type::Rust(self.grammar.range_type()))
+  }
+
   fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> IType {
     walk_exprs(self, children.clone());
     IType::Regular(Type::Tuple(children))

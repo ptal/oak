@@ -37,7 +37,7 @@ impl<'a> Stream for &'a String
 }
 
 /// Represents a stream from a `&'a str`. It implements all traits required by `CharStream`.
-#[derive(Clone)]
+#[derive(Clone, Hash, Debug)]
 pub struct StrStream<'a>
 {
   raw_data: &'a str,
@@ -80,6 +80,12 @@ impl<'a> StrStream<'a>
 
   pub fn current_char(&self) -> Option<char> {
     self.raw_data[self.bytes_offset..].chars().next()
+  }
+
+  pub fn slice(&self, end: StrStream<'a>) -> &'a str {
+    unsafe {
+      self.raw_data.get_unchecked(self.bytes_offset..end.bytes_offset)
+    }
   }
 }
 

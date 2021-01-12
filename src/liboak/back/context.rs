@@ -138,7 +138,8 @@ impl<'a> Context<'a>
   }
 
   pub fn do_not_duplicate_success(&self) -> bool {
-    self.num_combinators_compiled > 0
+    // self.num_combinators_compiled > 0
+    false
   }
 
   pub fn success_as_closure(&mut self, continuation: Continuation) -> Continuation {

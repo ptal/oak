@@ -172,10 +172,17 @@ impl FGrammar {
     }
   }
 
-  // An expression starting with `..` to capture the span of the current sequence.
+  // An expression starting with `..` or `...` to capture the span of the current sequence.
+  // A range expression `(... e)` is rewritten as `(... (e:()))` because we don't care about the value of `e`.
   fn parse_spanned_expr(&mut self, ps: ParseStream, rule_name: &str) -> Result<usize> {
-    if ps.peek(Token![..]) {
-      let span = ps.span();
+    let span = ps.span();
+    if ps.peek(Token![...]) {
+      let _: Token![...] = ps.parse()?;
+      let seq = self.parse_seq(ps, rule_name)?;
+      let unit_seq = self.alloc_expr(span, TypeAscription(seq, IType::Regular(Type::Unit)));
+      Ok(self.alloc_expr(span, RangeExpr(unit_seq)))
+    }
+    else if ps.peek(Token![..]) {
       let _: Token![..] = ps.parse()?;
       let seq = self.parse_seq(ps, rule_name)?;
       Ok(self.alloc_expr(span, SpannedExpr(seq)))

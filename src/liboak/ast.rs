@@ -96,8 +96,13 @@ impl<ExprInfo> Grammar<ExprInfo>
 
   /// The span type of the underlying type is given by the trait's associated type `StreamSpan::Output`.
   pub fn span_type(&self) -> syn::Type {
+    let range_ty: syn::Type = self.range_type();
+    parse_quote!(<#range_ty as StreamSpan>::Output)
+  }
+
+  pub fn range_type(&self) -> syn::Type {
     let stream_ty = self.stream_type();
-    parse_quote!(<Range<#stream_ty> as StreamSpan>::Output)
+    parse_quote!(Range<#stream_ty>)
   }
 }
 
@@ -170,6 +175,7 @@ pub enum Expression
   SemanticAction(usize, bool, syn::Expr), // expr > function, the boolean is true if boxed.
   TypeAscription(usize, IType), // expr:() or expr:(^) or expr:<rust-ty>
   SpannedExpr(usize), // .. expr
+  RangeExpr(usize), // ... expr
 }
 
 #[derive(Clone, Debug)]

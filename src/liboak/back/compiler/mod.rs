@@ -78,7 +78,8 @@ pub fn parser_compiler(grammar: &TGrammar, idx: usize) -> Box<dyn CompileExpr> {
       ExternalNonTerminalSymbol(path) => Box::new(NonTerminalCompiler::external_parser(path, idx)),
       SemanticAction(expr_idx, boxed, action) => Box::new(SemanticActionCompiler::parser(expr_idx, boxed, action, idx)),
       TypeAscription(expr_idx, _) => parser_compiler(grammar, expr_idx),
-      SpannedExpr(expr_idx) => Box::new(SpannedExprCompiler::parser(expr_idx)),
+      SpannedExpr(expr_idx) => Box::new(SpannedExprCompiler::parser(expr_idx, false)),
+      RangeExpr(expr_idx) => Box::new(SpannedExprCompiler::parser(expr_idx, true)),
       NotPredicate(_)
     | AndPredicate(_) => unreachable!(
         "BUG: Syntactic predicate can not be compiled to parser (they do not generate data)."),
@@ -100,8 +101,9 @@ pub fn recognizer_compiler(grammar: &TGrammar, idx: usize) -> Box<dyn CompileExp
     AndPredicate(expr_idx) => Box::new(SyntacticPredicateCompiler::recognizer(expr_idx, Kind::And)),
     NonTerminalSymbol(id) => Box::new(NonTerminalCompiler::recognizer(id)),
     ExternalNonTerminalSymbol(path) => Box::new(NonTerminalCompiler::external_recognizer(path)),
-    SemanticAction(expr_idx, _, _) => recognizer_compiler(grammar, expr_idx),
-    TypeAscription(expr_idx, _) => recognizer_compiler(grammar, expr_idx),
-    SpannedExpr(expr_idx) => recognizer_compiler(grammar, expr_idx),
+      SemanticAction(expr_idx, _, _)
+    | TypeAscription(expr_idx, _)
+    | SpannedExpr(expr_idx)
+    | RangeExpr(expr_idx) => recognizer_compiler(grammar, expr_idx),
   }
 }

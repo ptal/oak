@@ -41,6 +41,10 @@ pub trait Visitor<R: Default> : ExprByIndex
     self.visit_expr(child)
   }
 
+  fn visit_range_expr(&mut self, _this: usize, child: usize) -> R {
+    self.visit_expr(child)
+  }
+
   fn visit_sequence(&mut self, _this: usize, children: Vec<usize>) -> R;
   fn visit_choice(&mut self, _this: usize, children: Vec<usize>) -> R;
 
@@ -143,6 +147,9 @@ pub fn walk_expr<R: Default, V: ?Sized>(visitor: &mut V, this: usize) -> R where
     }
     SpannedExpr(child) => {
       visitor.visit_spanned_expr(this, child)
+    }
+    RangeExpr(child) => {
+      visitor.visit_range_expr(this, child)
     }
   }
 }

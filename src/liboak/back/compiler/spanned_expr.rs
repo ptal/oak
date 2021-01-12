@@ -15,15 +15,14 @@
 use back::compiler::*;
 
 pub struct SpannedExprCompiler{
-  expr_idx: usize
+  expr_idx: usize,
+  is_ranged: bool
 }
 
 impl SpannedExprCompiler
 {
-  pub fn parser(expr_idx: usize) -> SpannedExprCompiler {
-    SpannedExprCompiler {
-      expr_idx: expr_idx
-    }
+  pub fn parser(expr_idx: usize, is_ranged: bool) -> SpannedExprCompiler {
+    SpannedExprCompiler { expr_idx, is_ranged }
   }
 }
 
@@ -37,11 +36,18 @@ impl CompileExpr for SpannedExprCompiler
     // The `n` next variable belongs to expr_idx so we pop the next one after these.
     let result = context.next_free_var_skip(self.expr_idx);
 
+    let mut result_expr: syn::Expr = parse_quote!(
+      Range { start: #lo_sp.clone(), end: #hi_sp }
+    );
+    if !self.is_ranged {
+      result_expr = parse_quote!((#result_expr).stream_span());
+    }
+
     let spanned_expr = continuation
       .map_success(|success, _| {
         parse_quote!({
           let #hi_sp = state.mark();
-          let #result = Range { start: #lo_sp.clone(), end: #hi_sp }.stream_span();
+          let #result = #result_expr;
           #success
         })
       })
