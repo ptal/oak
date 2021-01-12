@@ -32,27 +32,28 @@ impl CompileExpr for SpannedExprCompiler
     continuation: Continuation) -> syn::Expr
   {
     let lo_sp = context.next_mark_name();
-    let hi_sp = context.next_mark_name();
     // The `n` next variable belongs to expr_idx so we pop the next one after these.
     let result = context.next_free_var_skip(self.expr_idx);
 
     let mut result_expr: syn::Expr = parse_quote!(
-      Range { start: #lo_sp.clone(), end: #hi_sp }
+      Range { start: #lo_sp.clone(), end: state.mark() }
     );
     if !self.is_ranged {
       result_expr = parse_quote!((#result_expr).stream_span());
     }
 
+    context.push_mark(lo_sp.clone());
+
     let spanned_expr = continuation
       .map_success(|success, _| {
         parse_quote!({
-          let #hi_sp = state.mark();
           let #result = #result_expr;
           #success
         })
       })
       .compile_success(context, parser_compiler, self.expr_idx)
       .unwrap_success();
+    context.pop_mark();
     parse_quote!({
       let #lo_sp = state.mark();
       #spanned_expr

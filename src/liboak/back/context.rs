@@ -29,6 +29,7 @@ pub struct Context<'a>
   closures: Vec<syn::Stmt>,
   name_factory: NameFactory,
   free_variables: Vec<Ident>,
+  mark_variables: Vec<Ident>,
   mut_ref_free_variables: Vec<(Ident, syn::Type)>,
   num_combinators_compiled: usize
 }
@@ -42,6 +43,7 @@ impl<'a> Context<'a>
       closures: vec![],
       name_factory: NameFactory::new(),
       free_variables: vec![],
+      mark_variables: vec![],
       mut_ref_free_variables: vec![],
       num_combinators_compiled: 0
     }
@@ -88,8 +90,13 @@ impl<'a> Context<'a>
     } else {
       None
     };
+    let ps_ty = self.parse_state_ty();
+    parse_quote!(#mut_kw state: #ps_ty)
+  }
+
+  fn parse_state_ty(&self) -> syn::Type {
     let stream_ty = self.grammar.stream_type();
-    parse_quote!(#mut_kw state: oak_runtime::ParseState<#stream_ty, ()>)
+    parse_quote!(oak_runtime::ParseState<#stream_ty, ()>)
   }
 
   pub fn compile(&mut self, compiler: ExprCompilerFn, idx: usize,
@@ -138,8 +145,7 @@ impl<'a> Context<'a>
   }
 
   pub fn do_not_duplicate_success(&self) -> bool {
-    // self.num_combinators_compiled > 0
-    false
+    self.num_combinators_compiled > 0
   }
 
   pub fn success_as_closure(&mut self, continuation: Continuation) -> Continuation {
@@ -159,6 +165,7 @@ impl<'a> Context<'a>
   }
 
   fn closure_params(&self) -> Vec<syn::FnArg> {
+    let stream_ty = self.grammar.stream_type();
     vec![self.state_param(true)]
       .into_iter()
       .chain(self.mut_ref_free_variables
@@ -167,6 +174,9 @@ impl<'a> Context<'a>
       .chain(self.free_variables
         .iter()
         .map(|var| parse_quote!(#var:_)))
+      .chain(self.mark_variables
+        .iter()
+        .map(|var| parse_quote!(#var: #stream_ty)))
       .collect()
   }
 
@@ -179,6 +189,9 @@ impl<'a> Context<'a>
       .chain(self.free_variables
         .iter()
         .map(|var| parse_quote!(#var)))
+      .chain(self.mark_variables
+        .iter()
+        .map(|var| parse_quote!(#var.clone())))
       .collect()
   }
 
@@ -202,6 +215,16 @@ impl<'a> Context<'a>
     let card = self.expr_cardinality(expr_idx);
     let len_fv = self.free_variables.len();
     self.free_variables.remove(len_fv-1-card)
+  }
+
+  // Push a mark variable (e.g., `mark1 = state.mark()`) in the set of free variables.
+  // This is useful if a value constructor relies on a mark to be built, e.g. with the spanned operators `..` and `...`.
+  pub fn push_mark(&mut self, mark: Ident) {
+    self.mark_variables.push(mark);
+  }
+
+  pub fn pop_mark(&mut self) {
+    self.mark_variables.pop();
   }
 
   pub fn free_variables(&self) -> Vec<Ident> {

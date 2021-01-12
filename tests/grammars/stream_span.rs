@@ -25,6 +25,8 @@ oak! {
 
   span_a = .. "a"
 
+  expr3 = .. ("a" / "b") "c"
+
   pub struct Expr {
     pub full_sp: Span,
     pub span_a: Span,
@@ -56,10 +58,18 @@ fn test_state<'a>(state: ParseState<StrStream<'a>, Expr>)
   assert_eq!(data.c3_sp, make_span(2, 3));
 }
 
+fn test_state_expr3<'a>(state: ParseState<StrStream<'a>, Span>) {
+  assert_eq!(state.unwrap_data(), make_span(0,2))
+}
+
 #[test]
 fn test_stream_span() {
   let state = parse_expr("abcb".into_state());
   let state2 = parse_expr2("abcb".into_state());
+  let state3 = parse_expr3("ac".into_state());
+  let state4 = parse_expr3("bc".into_state());
   test_state(state);
   test_state(state2);
+  test_state_expr3(state3);
+  test_state_expr3(state4);
 }

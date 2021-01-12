@@ -50,7 +50,12 @@ impl CharacterClassCompiler
   fn compile_interval(&self, char_interval: CharacterInterval, x: Ident) -> syn::Expr
   {
     let CharacterInterval{lo, hi} = char_interval;
-    parse_quote!((#x >= #lo && #x <= #hi))
+    if lo == hi {
+      parse_quote!(#x == #lo)
+    }
+    else {
+      parse_quote!((#x >= #lo && #x <= #hi))
+    }
   }
 
   fn compile_condition(&self, x: Ident) -> syn::Expr {

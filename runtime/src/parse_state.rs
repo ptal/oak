@@ -149,8 +149,8 @@ impl<S, T> ParseState<S, T> where
     !self.is_failed()
   }
 
-  #[inline]
-  pub fn error(&mut self, expect: &'static str) {
+  #[inline(always)]
+  pub fn error(&mut self, _expect: &'static str) {
     self.failed = true;
     if self.current > self.farthest_read {
       self.farthest_read = self.current.clone();
@@ -173,6 +173,7 @@ impl<S, T> ParseState<S, T> where
     }
   }
 
+  #[inline]
   pub fn failure<U>(self) -> ParseState<S, U> {
     ParseState {
       farthest_read: self.farthest_read,
