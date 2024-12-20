@@ -8,7 +8,7 @@
 Compiled on the nightly channel of Rust. Use [rustup](http://www.rustup.rs) for managing compiler channels.
 You can download and set up the exact same version of the compiler used with `rustup override add 2021-01-06`.
 
-Please consult the [Oak manual](http://hyc.io/oak).
+Please consult the [Oak manual](https://ptal.github.io/oak/index.html).
 
 ## Features
 
