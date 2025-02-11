@@ -82,10 +82,8 @@ impl<'a> StrStream<'a>
     self.raw_data[self.bytes_offset..].chars().next()
   }
 
-  pub fn slice(&self, end: StrStream<'a>) -> &'a str {
-    unsafe {
-      self.raw_data.get_unchecked(self.bytes_offset..end.bytes_offset)
-    }
+  pub fn slice(&self, end: StrStream<'a>) -> Option<&'a str> {
+    self.raw_data.get(self.bytes_offset..end.bytes_offset)
   }
 }
 
