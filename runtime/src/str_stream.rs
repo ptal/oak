@@ -81,10 +81,6 @@ impl<'a> StrStream<'a>
   pub fn current_char(&self) -> Option<char> {
     self.raw_data[self.bytes_offset..].chars().next()
   }
-
-  pub fn slice(&self, end: StrStream<'a>) -> Option<&'a str> {
-    self.raw_data.get(self.bytes_offset..end.bytes_offset)
-  }
 }
 
 impl<'a> Iterator for StrStream<'a>
